@@ -69,10 +69,10 @@ public final class RpcClientConfigurationConstants {
   public final static Integer DEFAULT_BATCH_SIZE = 100;
 
   /**
-   * Default connection timeout in milliseconds.
+   * Default connection, handshake, and initial request timeout in milliseconds.
    */
   public final static long DEFAULT_CONNECT_TIMEOUT_MILLIS =
-      TimeUnit.MILLISECONDS.convert(5, TimeUnit.SECONDS);
+      TimeUnit.MILLISECONDS.convert(20, TimeUnit.SECONDS);
 
   /**
    * Default request timeout in milliseconds.
@@ -114,6 +114,44 @@ public final class RpcClientConfigurationConstants {
 
   public static final String HOST_SELECTOR_ROUND_ROBIN = "ROUND_ROBIN";
   public static final String HOST_SELECTOR_RANDOM = "RANDOM";
+
+  public static final String CONFIG_MAX_BACKOFF = "maxBackoff";
+  public static final String CONFIG_BACKOFF = "backoff";
+  public static final String DEFAULT_BACKOFF = "false";
+
+  /**
+   * Maximum number of connections each Thrift Rpc client can open to a given
+   * host.
+   */
+  public static final String CONFIG_CONNECTION_POOL_SIZE = "maxConnections";
+  public static final int DEFAULT_CONNECTION_POOL_SIZE = 5;
+
+  /**
+   * The following are const for the NettyAvro Client.  To enable compression
+   * and set a compression level
+   */
+  public static final String CONFIG_COMPRESSION_TYPE = "compression-type";
+  public static final String CONFIG_COMPRESSION_LEVEL = "compression-level";
+  public static final int DEFAULT_COMPRESSION_LEVEL = 6;
+
+
+  /**
+   * Configuration constants for SSL support
+   */
+  public static final String CONFIG_SSL = "ssl";
+  public static final String CONFIG_TRUST_ALL_CERTS = "trust-all-certs";
+  public static final String CONFIG_TRUSTSTORE = "truststore";
+  public static final String CONFIG_TRUSTSTORE_PASSWORD = "truststore-password";
+  public static final String CONFIG_TRUSTSTORE_TYPE = "truststore-type";
+  public static final String CONFIG_EXCLUDE_PROTOCOLS = "exclude-protocols";
+
+  public static final String KERBEROS_KEY = "kerberos";
+
+  /**
+   * Configuration constants for the NettyAvroRpcClient
+   * NioClientSocketChannelFactory
+   */
+  public static final String MAX_IO_WORKERS = "maxIoWorkers";
 
   private RpcClientConfigurationConstants() {
     // disable explicit object creation

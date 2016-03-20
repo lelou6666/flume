@@ -30,10 +30,21 @@ public class NetcatSourceConfigurationConstants {
    */
   public static final String CONFIG_PORT = "port";
 
+
+  /**
+   * Ack every event received with an "OK" back to the sender
+   */
+  public static final String CONFIG_ACKEVENT = "ack-every-event";
+
   /**
    * Maximum line length per event.
    */
   public static final String CONFIG_MAX_LINE_LENGTH = "max-line-length";
   public static final int DEFAULT_MAX_LINE_LENGTH = 512;
 
+ /**
+  * Encoding for the netcat source
+  */
+  public static final String CONFIG_SOURCE_ENCODING = "encoding";
+  public static final String DEFAULT_ENCODING = "utf-8";
 }

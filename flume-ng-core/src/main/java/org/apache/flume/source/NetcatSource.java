@@ -40,6 +40,7 @@ import org.apache.flume.Context;
 import org.apache.flume.CounterGroup;
 import org.apache.flume.Event;
 import org.apache.flume.EventDrivenSource;
+import org.apache.flume.FlumeException;
 import org.apache.flume.Source;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.conf.Configurables;
@@ -111,6 +112,8 @@ public class NetcatSource extends AbstractSource implements Configurable,
   private String hostName;
   private int port;
   private int maxLineLength;
+  private boolean ackEveryEvent;
+  private String sourceEncoding;
 
   private CounterGroup counterGroup;
   private ServerSocketChannel serverSocket;
@@ -130,22 +133,26 @@ public class NetcatSource extends AbstractSource implements Configurable,
   public void configure(Context context) {
     String hostKey = NetcatSourceConfigurationConstants.CONFIG_HOSTNAME;
     String portKey = NetcatSourceConfigurationConstants.CONFIG_PORT;
+    String ackEventKey = NetcatSourceConfigurationConstants.CONFIG_ACKEVENT;
 
     Configurables.ensureRequiredNonNull(context, hostKey, portKey);
 
     hostName = context.getString(hostKey);
     port = context.getInteger(portKey);
+    ackEveryEvent = context.getBoolean(ackEventKey, true);
     maxLineLength = context.getInteger(
         NetcatSourceConfigurationConstants.CONFIG_MAX_LINE_LENGTH,
         NetcatSourceConfigurationConstants.DEFAULT_MAX_LINE_LENGTH);
+    sourceEncoding = context.getString(
+        NetcatSourceConfigurationConstants.CONFIG_SOURCE_ENCODING,
+        NetcatSourceConfigurationConstants.DEFAULT_ENCODING
+    );
   }
 
   @Override
   public void start() {
 
     logger.info("Source starting");
-
-    super.start();
 
     counterGroup.incrementAndGet("open.attempts");
 
@@ -163,7 +170,7 @@ public class NetcatSource extends AbstractSource implements Configurable,
     } catch (IOException e) {
       counterGroup.incrementAndGet("open.errors");
       logger.error("Unable to bind to socket. Exception follows.", e);
-      return;
+      throw new FlumeException(e);
     }
 
     AcceptHandler acceptRunnable = new AcceptHandler(maxLineLength);
@@ -171,21 +178,22 @@ public class NetcatSource extends AbstractSource implements Configurable,
     acceptRunnable.counterGroup = counterGroup;
     acceptRunnable.handlerService = handlerService;
     acceptRunnable.shouldStop = acceptThreadShouldStop;
+    acceptRunnable.ackEveryEvent = ackEveryEvent;
     acceptRunnable.source = this;
     acceptRunnable.serverSocket = serverSocket;
+    acceptRunnable.sourceEncoding = sourceEncoding;
 
     acceptThread = new Thread(acceptRunnable);
 
     acceptThread.start();
 
     logger.debug("Source started");
+    super.start();
   }
 
   @Override
   public void stop() {
     logger.info("Source stopping");
-
-    super.stop();
 
     acceptThreadShouldStop.set(true);
 
@@ -238,6 +246,7 @@ public class NetcatSource extends AbstractSource implements Configurable,
     }
 
     logger.debug("Source stopped. Event metrics:{}", counterGroup);
+    super.stop();
   }
 
   private static class AcceptHandler implements Runnable {
@@ -247,6 +256,8 @@ public class NetcatSource extends AbstractSource implements Configurable,
     private ExecutorService handlerService;
     private EventDrivenSource source;
     private AtomicBoolean shouldStop;
+    private boolean ackEveryEvent;
+    private String sourceEncoding;
 
     private final int maxLineLength;
 
@@ -267,6 +278,8 @@ public class NetcatSource extends AbstractSource implements Configurable,
           request.socketChannel = socketChannel;
           request.counterGroup = counterGroup;
           request.source = source;
+          request.ackEveryEvent = ackEveryEvent;
+          request.sourceEncoding = sourceEncoding;
 
           handlerService.submit(request);
 
@@ -288,6 +301,8 @@ public class NetcatSource extends AbstractSource implements Configurable,
     private Source source;
     private CounterGroup counterGroup;
     private SocketChannel socketChannel;
+    private boolean ackEveryEvent;
+    private String sourceEncoding;
 
     private final int maxLineLength;
 
@@ -301,8 +316,8 @@ public class NetcatSource extends AbstractSource implements Configurable,
       Event event = null;
 
       try {
-        Reader reader = Channels.newReader(socketChannel, "utf-8");
-        Writer writer = Channels.newWriter(socketChannel, "utf-8");
+        Reader reader = Channels.newReader(socketChannel, sourceEncoding);
+        Writer writer = Channels.newWriter(socketChannel, sourceEncoding);
         CharBuffer buffer = CharBuffer.allocate(maxLineLength);
         buffer.flip(); // flip() so fill() sees buffer as initially empty
 
@@ -393,7 +408,9 @@ public class NetcatSource extends AbstractSource implements Configurable,
             if (ex == null) {
               counterGroup.incrementAndGet("events.processed");
               numProcessed++;
-              writer.write("OK\n");
+              if (true == ackEveryEvent) {
+                writer.write("OK\n");
+              }
             } else {
               counterGroup.incrementAndGet("events.failed");
               logger.warn("Error processing event. Exception follows.", ex);

@@ -20,19 +20,21 @@
 package org.apache.flume.sink;
 
 import java.util.List;
+import java.util.Properties;
 
 import org.apache.flume.Channel;
 import org.apache.flume.ChannelException;
 import org.apache.flume.Context;
-import org.apache.flume.CounterGroup;
 import org.apache.flume.Event;
 import org.apache.flume.EventDeliveryException;
 import org.apache.flume.FlumeException;
 import org.apache.flume.Sink;
 import org.apache.flume.Transaction;
 import org.apache.flume.api.RpcClient;
+import org.apache.flume.api.RpcClientConfigurationConstants;
 import org.apache.flume.api.RpcClientFactory;
 import org.apache.flume.conf.Configurable;
+import org.apache.flume.instrumentation.SinkCounter;
 import org.apache.flume.source.AvroSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,26 +76,38 @@ import com.google.common.collect.Lists;
  * <tr>
  * <th>Parameter</th>
  * <th>Description</th>
- * <th>Unit / Type</th>
+ * <th>Unit (data type)</th>
  * <th>Default</th>
  * </tr>
  * <tr>
  * <td><tt>hostname</tt></td>
  * <td>The hostname to which events should be sent.</td>
- * <td>Hostname or IP / String</td>
+ * <td>Hostname or IP (String)</td>
  * <td>none (required)</td>
  * </tr>
  * <tr>
  * <td><tt>port</tt></td>
  * <td>The port to which events should be sent on <tt>hostname</tt>.</td>
- * <td>TCP port / int</td>
+ * <td>TCP port (int)</td>
  * <td>none (required)</td>
  * </tr>
  * <tr>
  * <td><tt>batch-size</tt></td>
  * <td>The maximum number of events to send per RPC.</td>
- * <td>events / int</td>
+ * <td>events (int)</td>
  * <td>100</td>
+ * </tr>
+ * <tr>
+ * <td><tt>connect-timeout</tt></td>
+ * <td>Maximum time to wait for the first Avro handshake and RPC request</td>
+ * <td>milliseconds (long)</td>
+ * <td>20000</td>
+ * </tr>
+ * <tr>
+ * <td><tt>request-timeout</tt></td>
+ * <td>Maximum time to wait RPC requests after the first</td>
+ * <td>milliseconds (long)</td>
+ * <td>20000</td>
  * </tr>
  * </table>
  * <p>
@@ -103,170 +117,13 @@ import com.google.common.collect.Lists;
  * TODO
  * </p>
  */
-public class AvroSink extends AbstractSink implements Configurable {
+public class AvroSink extends AbstractRpcSink {
 
   private static final Logger logger = LoggerFactory.getLogger(AvroSink.class);
-  private static final Integer defaultBatchSize = 100;
-
-  private String hostname;
-  private Integer port;
-  private Integer batchSize;
-
-  private RpcClient client;
-  private CounterGroup counterGroup;
-
-  public AvroSink() {
-    counterGroup = new CounterGroup();
-  }
 
   @Override
-  public void configure(Context context) {
-    hostname = context.getString("hostname");
-    port = context.getInteger("port");
-
-    batchSize = context.getInteger("batch-size");
-    if (batchSize == null) {
-      batchSize = defaultBatchSize;
-    }
-
-    Preconditions.checkState(hostname != null, "No hostname specified");
-    Preconditions.checkState(port != null, "No port specified");
+  protected RpcClient initializeRpcClient(Properties props) {
+    logger.info("Attempting to create Avro Rpc client.");
+    return RpcClientFactory.getInstance(props);
   }
-
-  /**
-   * If this function is called successively without calling
-   * {@see #destroyConnection()}, only the first call has any effect.
-   * @throws FlumeException if an RPC client connection could not be opened
-   */
-  private void createConnection() throws FlumeException {
-
-    if (client == null) {
-      logger.debug(
-          "Building RpcClient with hostname:{}, port:{}, batchSize:{}",
-          new Object[] { hostname, port, batchSize });
-
-       client = RpcClientFactory.getDefaultInstance(hostname, port, batchSize);
-    }
-
-  }
-
-  private void destroyConnection() {
-    if (client != null) {
-      logger.debug("Closing avro client:{}", client);
-      try {
-        client.close();
-      } catch (FlumeException e) {
-        logger.error("Attempt to close avro client failed. Exception follows.",
-            e);
-      }
-    }
-
-    client = null;
-  }
-
-  /**
-   * Ensure the connection exists and is active.
-   * If the connection is not active, destroy it and recreate it.
-   *
-   * @throws FlumeException If there are errors closing or opening the RPC
-   * connection.
-   */
-  private void verifyConnection() throws FlumeException {
-    if (client == null) {
-      createConnection();
-    } else if (!client.isActive()) {
-      destroyConnection();
-      createConnection();
-    }
-  }
-
-  /**
-   * The start() of AvroSink is more of an optimization that allows connection
-   * to be created before the process() loop is started. In case it so happens
-   * that the start failed, the process() loop will itself attempt to reconnect
-   * as necessary. This is the expected behavior since it is possible that the
-   * downstream source becomes unavailable in the middle of the process loop
-   * and the sink will have to retry the connection again.
-   */
-  @Override
-  public void start() {
-    logger.info("Avro sink starting");
-
-    try {
-      createConnection();
-    } catch (FlumeException e) {
-      logger.warn("Unable to create avro client using hostname:" + hostname
-          + ", port:" + port + ", batchSize: " + batchSize +
-          ". Exception follows.", e);
-
-      /* Try to prevent leaking resources. */
-      destroyConnection();
-    }
-
-    super.start();
-
-    logger.debug("Avro sink started");
-  }
-
-  @Override
-  public void stop() {
-    logger.info("Avro sink stopping");
-
-    destroyConnection();
-
-    super.stop();
-
-    logger.debug("Avro sink stopped. Metrics:{}", counterGroup);
-  }
-
-  @Override
-  public Status process() throws EventDeliveryException {
-    Status status = Status.READY;
-    Channel channel = getChannel();
-    Transaction transaction = channel.getTransaction();
-
-    try {
-      transaction.begin();
-
-      verifyConnection();
-
-      List<Event> batch = Lists.newLinkedList();
-
-      for (int i = 0; i < batchSize; i++) {
-        Event event = channel.take();
-
-        if (event == null) {
-          counterGroup.incrementAndGet("batch.underflow");
-          break;
-        }
-
-        batch.add(event);
-      }
-
-      if (batch.isEmpty()) {
-        counterGroup.incrementAndGet("batch.empty");
-        status = Status.BACKOFF;
-      } else {
-        client.appendBatch(batch);
-      }
-
-      transaction.commit();
-      counterGroup.incrementAndGet("batch.success");
-
-    } catch (ChannelException e) {
-      transaction.rollback();
-      logger.error("Unable to get event from channel. Exception follows.", e);
-      status = Status.BACKOFF;
-
-    } catch (Exception ex) {
-      transaction.rollback();
-      destroyConnection();
-      throw new EventDeliveryException("Failed to send message", ex);
-    } finally {
-      transaction.close();
-    }
-
-    return status;
-  }
-
 }

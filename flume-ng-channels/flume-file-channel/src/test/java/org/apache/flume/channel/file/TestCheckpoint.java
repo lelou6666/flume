@@ -30,9 +30,15 @@ import org.junit.Test;
 public class TestCheckpoint {
 
   File file;
+  File inflightPuts;
+  File inflightTakes;
+  File queueSet;
   @Before
   public void setup() throws IOException {
     file = File.createTempFile("Checkpoint", "");
+    inflightPuts = File.createTempFile("inflightPuts", "");
+    inflightTakes = File.createTempFile("inflightTakes", "");
+    queueSet = File.createTempFile("queueset", "");
     Assert.assertTrue(file.isFile());
     Assert.assertTrue(file.canWrite());
   }
@@ -41,16 +47,21 @@ public class TestCheckpoint {
     file.delete();
   }
   @Test
-  public void testSerialization() throws IOException {
+  public void testSerialization() throws Exception {
+    EventQueueBackingStore backingStore =
+        new EventQueueBackingStoreFileV2(file, 1, "test");
     FlumeEventPointer ptrIn = new FlumeEventPointer(10, 20);
-    FlumeEventQueue queueIn = new FlumeEventQueue(1);
+    FlumeEventQueue queueIn = new FlumeEventQueue(backingStore,
+        inflightTakes, inflightPuts, queueSet);
     queueIn.addHead(ptrIn);
-    Checkpoint checkpoint = new Checkpoint(file, 1);
-    Assert.assertEquals(0, checkpoint.getTimestamp());
-    checkpoint.write(queueIn);
-    FlumeEventQueue queueOut = checkpoint.read();
-    FlumeEventPointer ptrOut = queueOut.removeHead();
+    FlumeEventQueue queueOut = new FlumeEventQueue(backingStore,
+        inflightTakes, inflightPuts, queueSet);
+    Assert.assertEquals(0, queueOut.getLogWriteOrderID());
+    queueIn.checkpoint(false);
+    FlumeEventQueue queueOut2 = new FlumeEventQueue(backingStore,
+        inflightTakes, inflightPuts, queueSet);
+    FlumeEventPointer ptrOut = queueOut2.removeHead(0L);
     Assert.assertEquals(ptrIn, ptrOut);
-    Assert.assertTrue(checkpoint.getTimestamp() > 0);
+    Assert.assertTrue(queueOut2.getLogWriteOrderID() > 0);
   }
 }

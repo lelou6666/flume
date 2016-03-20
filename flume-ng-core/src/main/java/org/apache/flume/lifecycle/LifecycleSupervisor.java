@@ -27,6 +27,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.flume.FlumeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,13 +81,19 @@ public class LifecycleSupervisor implements LifecycleAware {
 
     if (monitorService != null) {
       monitorService.shutdown();
-
-      while (!monitorService.isTerminated()) {
+      try{
+        monitorService.awaitTermination(10, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        logger.error("Interrupted while waiting for monitor service to stop");
+      }
+      if(!monitorService.isTerminated()) {
+        monitorService.shutdownNow();
         try {
-          monitorService.awaitTermination(500, TimeUnit.MILLISECONDS);
+          while(!monitorService.isTerminated()) {
+            monitorService.awaitTermination(10, TimeUnit.SECONDS);
+          }
         } catch (InterruptedException e) {
-          logger.debug("Interrupted while waiting for monitor service to stop");
-          monitorService.shutdownNow();
+          logger.error("Interrupted while waiting for monitor service to stop");
         }
       }
     }
@@ -95,6 +102,7 @@ public class LifecycleSupervisor implements LifecycleAware {
         .entrySet()) {
 
       if (entry.getKey().getLifecycleState().equals(LifecycleState.START)) {
+        entry.getValue().status.desiredState = LifecycleState.STOP;
         entry.getKey().stop();
       }
     }
@@ -114,6 +122,13 @@ public class LifecycleSupervisor implements LifecycleAware {
 
   public synchronized void supervise(LifecycleAware lifecycleAware,
       SupervisorPolicy policy, LifecycleState desiredState) {
+    if(this.monitorService.isShutdown()
+        || this.monitorService.isTerminated()
+        || this.monitorService.isTerminating()){
+      throw new FlumeException("Supervise called on " + lifecycleAware + " " +
+          "after shutdown has been initiated. " + lifecycleAware + " will not" +
+          " be started");
+    }
 
     Preconditions.checkState(!supervisedProcesses.containsKey(lifecycleAware),
         "Refusing to supervise " + lifecycleAware + " more than once");
@@ -128,6 +143,7 @@ public class LifecycleSupervisor implements LifecycleAware {
 
     process.policy = policy;
     process.status.desiredState = desiredState;
+    process.status.error = false;
 
     MonitorRunnable monitorRunnable = new MonitorRunnable();
     monitorRunnable.lifecycleAware = lifecycleAware;
@@ -183,6 +199,10 @@ public class LifecycleSupervisor implements LifecycleAware {
     return lifecycleState;
   }
 
+  public synchronized boolean isComponentInErrorState(LifecycleAware component){
+    return supervisedProcesses.get(component).status.error;
+
+  }
   public static class MonitorRunnable implements Runnable {
 
     public ScheduledExecutorService monitorService;
@@ -196,65 +216,94 @@ public class LifecycleSupervisor implements LifecycleAware {
 
       long now = System.currentTimeMillis();
 
-      if (supervisoree.status.firstSeen == null) {
-        logger.debug("first time seeing {}", lifecycleAware);
+      try {
+        if (supervisoree.status.firstSeen == null) {
+          logger.debug("first time seeing {}", lifecycleAware);
 
-        supervisoree.status.firstSeen = now;
-      }
-
-      supervisoree.status.lastSeen = now;
-      synchronized (lifecycleAware) {
-        if (supervisoree.status.discard) {
-          // Unsupervise has already been called on this.
-          logger.info("Component has already been stopped {}", lifecycleAware);
-          return;
+          supervisoree.status.firstSeen = now;
         }
 
-      supervisoree.status.lastSeenState = lifecycleAware.getLifecycleState();
+        supervisoree.status.lastSeen = now;
+        synchronized (lifecycleAware) {
+          if (supervisoree.status.discard) {
+            // Unsupervise has already been called on this.
+            logger.info("Component has already been stopped {}", lifecycleAware);
+            return;
+          } else if (supervisoree.status.error) {
+            logger.info("Component {} is in error state, and Flume will not"
+                + "attempt to change its state", lifecycleAware);
+            return;
+          }
 
-      if (!lifecycleAware.getLifecycleState().equals(
-          supervisoree.status.desiredState)) {
+          supervisoree.status.lastSeenState = lifecycleAware.getLifecycleState();
 
-        logger
-            .debug("Want to transition {} from {} to {} (failures:{})",
-                new Object[] { lifecycleAware,
-                    supervisoree.status.lastSeenState,
+          if (!lifecycleAware.getLifecycleState().equals(
+              supervisoree.status.desiredState)) {
+
+            logger.debug("Want to transition {} from {} to {} (failures:{})",
+                new Object[] { lifecycleAware, supervisoree.status.lastSeenState,
                     supervisoree.status.desiredState,
                     supervisoree.status.failures });
 
-        switch (supervisoree.status.desiredState) {
-        case START:
-          try {
-            lifecycleAware.start();
-          } catch (Exception e) {
-            logger.error("Unable to start " + lifecycleAware
-                + " - Exception follows.", e);
-            supervisoree.status.failures++;
-          }
-          break;
-        case STOP:
-          try {
-            lifecycleAware.stop();
-          } catch (Exception e) {
-            logger.error("Unable to stop " + lifecycleAware
-                + " - Exception follows.", e);
-            supervisoree.status.failures++;
-          }
-          break;
-        default:
-          logger.warn("I refuse to acknowledge {} as a desired state",
-              supervisoree.status.desiredState);
-        }
+            switch (supervisoree.status.desiredState) {
+              case START:
+                try {
+                  lifecycleAware.start();
+                } catch (Throwable e) {
+                  logger.error("Unable to start " + lifecycleAware
+                      + " - Exception follows.", e);
+                  if (e instanceof Error) {
+                    // This component can never recover, shut it down.
+                    supervisoree.status.desiredState = LifecycleState.STOP;
+                    try {
+                      lifecycleAware.stop();
+                      logger.warn("Component {} stopped, since it could not be"
+                          + "successfully started due to missing dependencies",
+                          lifecycleAware);
+                    } catch (Throwable e1) {
+                      logger.error("Unsuccessful attempt to "
+                          + "shutdown component: {} due to missing dependencies."
+                          + " Please shutdown the agent"
+                          + "or disable this component, or the agent will be"
+                          + "in an undefined state.", e1);
+                      supervisoree.status.error = true;
+                      if (e1 instanceof Error) {
+                        throw (Error) e1;
+                      }
+                      // Set the state to stop, so that the conf poller can
+                      // proceed.
+                    }
+                  }
+                  supervisoree.status.failures++;
+                }
+                break;
+              case STOP:
+                try {
+                  lifecycleAware.stop();
+                } catch (Throwable e) {
+                  logger.error("Unable to stop " + lifecycleAware
+                      + " - Exception follows.", e);
+                  if (e instanceof Error) {
+                    throw (Error) e;
+                  }
+                  supervisoree.status.failures++;
+                }
+                break;
+              default:
+                logger.warn("I refuse to acknowledge {} as a desired state",
+                    supervisoree.status.desiredState);
+            }
 
-          if (!supervisoree.policy.isValid(
-              lifecycleAware, supervisoree.status)) {
-          logger.error(
-              "Policy {} of {} has been violated - supervisor should exit!",
-              supervisoree.policy, lifecycleAware);
+            if (!supervisoree.policy.isValid(lifecycleAware, supervisoree.status)) {
+              logger.error(
+                  "Policy {} of {} has been violated - supervisor should exit!",
+                  supervisoree.policy, lifecycleAware);
+            }
+          }
         }
+      } catch(Throwable t) {
+        logger.error("Unexpected error", t);
       }
-      }
-
       logger.debug("Status check complete");
     }
   }
@@ -277,12 +326,14 @@ public class LifecycleSupervisor implements LifecycleAware {
     public LifecycleState desiredState;
     public int failures;
     public boolean discard;
+    public volatile boolean error;
 
     @Override
     public String toString() {
       return "{ lastSeen:" + lastSeen + " lastSeenState:" + lastSeenState
           + " desiredState:" + desiredState + " firstSeen:" + firstSeen
-          + " failures:" + failures + " discard:" + discard + " }";
+          + " failures:" + failures + " discard:" + discard + " error:" +
+          error + " }";
     }
 
   }
@@ -320,5 +371,6 @@ public class LifecycleSupervisor implements LifecycleAware {
     }
 
   }
+
 
 }
