@@ -16,13 +16,15 @@
  */
 package org.apache.flume.conf;
 
+import java.util.Locale;
+
 import org.apache.flume.conf.ComponentConfiguration.ComponentType;
-import org.apache.flume.conf.source.SourceConfiguration.SourceConfigurationType;
-import org.apache.flume.conf.sink.SinkGroupConfiguration;
-import org.apache.flume.conf.sink.SinkConfiguration.SinkConfigurationType;
-import org.apache.flume.conf.sink.SinkProcessorConfiguration.SinkProcessorConfigurationType;
-import org.apache.flume.conf.channel.ChannelSelectorConfiguration.ChannelSelectorConfigurationType;
 import org.apache.flume.conf.channel.ChannelConfiguration.ChannelConfigurationType;
+import org.apache.flume.conf.channel.ChannelSelectorConfiguration.ChannelSelectorConfigurationType;
+import org.apache.flume.conf.sink.SinkConfiguration.SinkConfigurationType;
+import org.apache.flume.conf.sink.SinkGroupConfiguration;
+import org.apache.flume.conf.sink.SinkProcessorConfiguration.SinkProcessorConfigurationType;
+import org.apache.flume.conf.source.SourceConfiguration.SourceConfigurationType;
 
 public class ComponentConfigurationFactory {
   @SuppressWarnings("unchecked")
@@ -38,24 +40,24 @@ public class ComponentConfigurationFactory {
     try {
       confType = (Class<? extends ComponentConfiguration>) Class.forName(type);
       return confType.getConstructor(String.class).newInstance(type);
-    } catch (Exception e) {
+    } catch (Exception ignored) {
       try {
-        type = type.toUpperCase();
+        type = type.toUpperCase(Locale.ENGLISH);
         switch(component){
           case SOURCE:
-            return SourceConfigurationType.valueOf(type.toUpperCase())
+            return SourceConfigurationType.valueOf(type.toUpperCase(Locale.ENGLISH))
                 .getConfiguration(name);
           case SINK:
-            return SinkConfigurationType.valueOf(type.toUpperCase())
+            return SinkConfigurationType.valueOf(type.toUpperCase(Locale.ENGLISH))
                 .getConfiguration(name);
           case CHANNEL:
-            return ChannelConfigurationType.valueOf(type.toUpperCase())
+            return ChannelConfigurationType.valueOf(type.toUpperCase(Locale.ENGLISH))
                 .getConfiguration(name);
           case SINK_PROCESSOR:
-            return SinkProcessorConfigurationType.valueOf(type.toUpperCase())
+            return SinkProcessorConfigurationType.valueOf(type.toUpperCase(Locale.ENGLISH))
                 .getConfiguration(name);
           case CHANNELSELECTOR:
-            return ChannelSelectorConfigurationType.valueOf(type.toUpperCase())
+            return ChannelSelectorConfigurationType.valueOf(type.toUpperCase(Locale.ENGLISH))
                 .getConfiguration(name);
           case SINKGROUP:
             return new SinkGroupConfiguration(name);
@@ -64,8 +66,12 @@ public class ComponentConfigurationFactory {
                 "Cannot create configuration. Unknown Type specified: " +
                     type);
         }
-      } catch (Exception e2) {
-        throw new ConfigurationException("Could not create configuration!", e);
+      } catch (ConfigurationException e) {
+        throw e;
+      } catch (Exception e) {
+        throw new ConfigurationException("Could not create configuration! " +
+            " Due to " + e.getClass().getSimpleName() + ": " + e.getMessage(),
+            e);
       }
     }
   }

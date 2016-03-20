@@ -117,9 +117,10 @@ import com.google.common.collect.Lists;
  * TODO
  * </p>
  */
-public class AvroSink extends AbstractSink implements Configurable {
+public class AvroSink extends AbstractRpcSink {
 
   private static final Logger logger = LoggerFactory.getLogger(AvroSink.class);
+<<<<<<< HEAD
 
   private String hostname;
   private Integer port;
@@ -331,4 +332,12 @@ public class AvroSink extends AbstractSink implements Configurable {
     return status;
   }
 
+=======
+
+  @Override
+  protected RpcClient initializeRpcClient(Properties props) {
+    logger.info("Attempting to create Avro Rpc client.");
+    return RpcClientFactory.getInstance(props);
+  }
+>>>>>>> refs/remotes/apache/trunk
 }

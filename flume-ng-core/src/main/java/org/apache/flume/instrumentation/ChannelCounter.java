@@ -18,6 +18,11 @@
  */
 package org.apache.flume.instrumentation;
 
+<<<<<<< HEAD
+=======
+import org.apache.commons.lang.ArrayUtils;
+
+>>>>>>> refs/remotes/apache/trunk
 public class ChannelCounter extends MonitoredCounterGroup implements
     ChannelCounterMBean {
 
@@ -35,16 +40,34 @@ public class ChannelCounter extends MonitoredCounterGroup implements
   private static final String COUNTER_EVENT_TAKE_SUCCESS =
       "channel.event.take.success";
 
+<<<<<<< HEAD
   private static final String[] ATTRIBUTES = {
     COUNTER_CHANNEL_SIZE, COUNTER_EVENT_PUT_ATTEMPT,
     COUNTER_EVENT_TAKE_ATTEMPT, COUNTER_EVENT_PUT_SUCCESS,
     COUNTER_EVENT_TAKE_SUCCESS
+=======
+  private static final String COUNTER_CHANNEL_CAPACITY =
+          "channel.capacity";
+
+  private static final String[] ATTRIBUTES = {
+    COUNTER_CHANNEL_SIZE, COUNTER_EVENT_PUT_ATTEMPT,
+    COUNTER_EVENT_TAKE_ATTEMPT, COUNTER_EVENT_PUT_SUCCESS,
+    COUNTER_EVENT_TAKE_SUCCESS, COUNTER_CHANNEL_CAPACITY
+>>>>>>> refs/remotes/apache/trunk
   };
 
   public ChannelCounter(String name) {
     super(MonitoredCounterGroup.Type.CHANNEL, name, ATTRIBUTES);
   }
 
+<<<<<<< HEAD
+=======
+  public ChannelCounter(String name, String[] attributes) {
+    super(MonitoredCounterGroup.Type.CHANNEL, name,
+        (String[])ArrayUtils.addAll(attributes,ATTRIBUTES));
+  }
+
+>>>>>>> refs/remotes/apache/trunk
   @Override
   public long getChannelSize() {
     return get(COUNTER_CHANNEL_SIZE);
@@ -89,4 +112,26 @@ public class ChannelCounter extends MonitoredCounterGroup implements
   public long addToEventTakeSuccessCount(long delta) {
     return addAndGet(COUNTER_EVENT_TAKE_SUCCESS, delta);
   }
+<<<<<<< HEAD
+=======
+
+  public void setChannelCapacity(long capacity){
+    set(COUNTER_CHANNEL_CAPACITY, capacity);
+  }
+
+  @Override
+  public long getChannelCapacity(){
+    return get(COUNTER_CHANNEL_CAPACITY);
+  }
+
+  @Override
+  public double getChannelFillPercentage(){
+    long capacity = getChannelCapacity();
+    if(capacity != 0L) {
+      return ((getChannelSize()/(double)capacity) * 100);
+    }
+    return Double.MAX_VALUE;
+  }
+
+>>>>>>> refs/remotes/apache/trunk
 }

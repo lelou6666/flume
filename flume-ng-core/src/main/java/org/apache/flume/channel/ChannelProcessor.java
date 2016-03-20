@@ -100,6 +100,11 @@ public class ChannelProcessor implements Configurable {
       Context interceptorContext = new Context(
           interceptorContexts.getSubProperties(interceptorName + "."));
       String type = interceptorContext.getString("type");
+      if (type == null) {
+        LOG.error("Type not specified for interceptor " + interceptorName);
+        throw new FlumeException("Interceptor.Type not specified for " +
+          interceptorName);
+      }
       try {
         Interceptor.Builder builder = factory.newInstance(type);
         builder.configure(interceptorContext);
@@ -173,9 +178,9 @@ public class ChannelProcessor implements Configurable {
 
     // Process required channels
     for (Channel reqChannel : reqChannelQueue.keySet()) {
-      Transaction tx = null;
+      Transaction tx = reqChannel.getTransaction();
+      Preconditions.checkNotNull(tx, "Transaction object must not be null");
       try {
-        tx = reqChannel.getTransaction();
         tx.begin();
 
         List<Event> batch = reqChannelQueue.get(reqChannel);
@@ -204,9 +209,9 @@ public class ChannelProcessor implements Configurable {
 
     // Process optional channels
     for (Channel optChannel : optChannelQueue.keySet()) {
-      Transaction tx = null;
+      Transaction tx = optChannel.getTransaction();
+      Preconditions.checkNotNull(tx, "Transaction object must not be null");
       try {
-        tx = optChannel.getTransaction();
         tx.begin();
 
         List<Event> batch = optChannelQueue.get(optChannel);

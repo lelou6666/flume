@@ -17,7 +17,17 @@
  * under the License.
  */
 package org.apache.flume.instrumentation;
+<<<<<<< HEAD
 
+=======
+/**
+ * This interface represents a source counter mbean. Any class implementing
+ * this interface must sub-class
+ * {@linkplain org.apache.flume.instrumentation.MonitoredCounterGroup}. This
+ * interface might change between minor releases. Please see
+ * {@linkplain org.apache.flume.instrumentation.SourceCounter} class.
+ */
+>>>>>>> refs/remotes/apache/trunk
 public interface SourceCounterMBean {
 
   long getEventReceivedCount();
@@ -35,4 +45,11 @@ public interface SourceCounterMBean {
   long getStartTime();
 
   long getStopTime();
+<<<<<<< HEAD
+=======
+
+  String getType();
+
+  long getOpenConnectionCount();
+>>>>>>> refs/remotes/apache/trunk
 }

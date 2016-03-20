@@ -17,6 +17,11 @@
  */
 package org.apache.flume.instrumentation;
 
+<<<<<<< HEAD
+=======
+import org.apache.commons.lang.ArrayUtils;
+
+>>>>>>> refs/remotes/apache/trunk
 public class SinkCounter extends MonitoredCounterGroup implements
     SinkCounterMBean {
 
@@ -56,6 +61,15 @@ public class SinkCounter extends MonitoredCounterGroup implements
     super(MonitoredCounterGroup.Type.SINK, name, ATTRIBUTES);
   }
 
+<<<<<<< HEAD
+=======
+  public SinkCounter(String name, String[] attributes) {
+    super(MonitoredCounterGroup.Type.SINK, name,
+        (String[]) ArrayUtils.addAll(attributes,ATTRIBUTES));
+  }
+
+
+>>>>>>> refs/remotes/apache/trunk
   @Override
   public long getConnectionCreatedCount() {
     return get(COUNTER_CONNECTION_CREATED);

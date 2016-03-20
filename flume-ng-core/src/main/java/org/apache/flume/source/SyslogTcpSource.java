@@ -19,10 +19,13 @@
 package org.apache.flume.source;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.flume.ChannelException;
 import org.apache.flume.Context;
 import org.apache.flume.CounterGroup;
@@ -56,6 +59,7 @@ implements EventDrivenSource, Configurable {
   private Integer eventSize;
   private Map<String, String> formaterProp;
   private CounterGroup counterGroup = new CounterGroup();
+  private Set<String> keepFields;
 
   public class syslogTcpHandler extends SimpleChannelHandler {
 
@@ -63,6 +67,10 @@ implements EventDrivenSource, Configurable {
 
     public void setEventSize(int eventSize){
       syslogUtils.setEventSize(eventSize);
+    }
+
+    public void setKeepFields(Set<String> keepFields) {
+      syslogUtils.setKeepFields(keepFields);
     }
 
     public void setFormater(Map<String, String> prop) {
@@ -85,6 +93,10 @@ implements EventDrivenSource, Configurable {
         } catch (ChannelException ex) {
           counterGroup.incrementAndGet("events.dropped");
           logger.error("Error writting to channel, event dropped", ex);
+        } catch (RuntimeException ex) {
+          counterGroup.incrementAndGet("events.dropped");
+          logger.error("Error parsing event from syslog stream, event dropped", ex);
+          return;
         }
       }
 
@@ -103,6 +115,7 @@ implements EventDrivenSource, Configurable {
         syslogTcpHandler handler = new syslogTcpHandler();
         handler.setEventSize(eventSize);
         handler.setFormater(formaterProp);
+        handler.setKeepFields(keepFields);
         return Channels.pipeline(handler);
       }
     });
@@ -146,6 +159,20 @@ implements EventDrivenSource, Configurable {
     eventSize = context.getInteger("eventSize", SyslogUtils.DEFAULT_SIZE);
     formaterProp = context.getSubProperties(
         SyslogSourceConfigurationConstants.CONFIG_FORMAT_PREFIX);
+    keepFields = SyslogUtils.chooseFieldsToKeep(
+        context.getString(
+            SyslogSourceConfigurationConstants.CONFIG_KEEP_FIELDS,
+            SyslogSourceConfigurationConstants.DEFAULT_KEEP_FIELDS));
+  }
+
+  @VisibleForTesting
+  public int getSourcePort() {
+    SocketAddress localAddress = nettyChannel.getLocalAddress();
+    if (localAddress instanceof InetSocketAddress) {
+      InetSocketAddress addr = (InetSocketAddress) localAddress;
+      return addr.getPort();
+    }
+    return 0;
   }
 
 }

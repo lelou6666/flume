@@ -23,7 +23,11 @@ limitations under the License.
   <parent>
     <artifactId>flume-ng-sinks</artifactId>
     <groupId>org.apache.flume</groupId>
+<<<<<<< HEAD
     <version>1.2.0</version>
+=======
+    <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
   </parent>
 
   <groupId>org.apache.flume.flume-ng-sinks</groupId>

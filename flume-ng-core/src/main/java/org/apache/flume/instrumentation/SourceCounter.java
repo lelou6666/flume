@@ -18,6 +18,11 @@
  */
 package org.apache.flume.instrumentation;
 
+<<<<<<< HEAD
+=======
+import org.apache.commons.lang.ArrayUtils;
+
+>>>>>>> refs/remotes/apache/trunk
 public class SourceCounter extends MonitoredCounterGroup implements
     SourceCounterMBean {
 
@@ -35,13 +40,24 @@ public class SourceCounter extends MonitoredCounterGroup implements
       "src.append-batch.received";
   private static final String COUNTER_APPEND_BATCH_ACCEPTED =
       "src.append-batch.accepted";
+<<<<<<< HEAD
+=======
+  
+  private static final String COUNTER_OPEN_CONNECTION_COUNT =
+          "src.open-connection.count";
+>>>>>>> refs/remotes/apache/trunk
 
 
   private static final String[] ATTRIBUTES =
     {
       COUNTER_EVENTS_RECEIVED, COUNTER_EVENTS_ACCEPTED,
       COUNTER_APPEND_RECEIVED, COUNTER_APPEND_ACCEPTED,
+<<<<<<< HEAD
       COUNTER_APPEND_BATCH_RECEIVED, COUNTER_APPEND_BATCH_ACCEPTED
+=======
+      COUNTER_APPEND_BATCH_RECEIVED, COUNTER_APPEND_BATCH_ACCEPTED,
+      COUNTER_OPEN_CONNECTION_COUNT
+>>>>>>> refs/remotes/apache/trunk
     };
 
 
@@ -49,6 +65,14 @@ public class SourceCounter extends MonitoredCounterGroup implements
     super(MonitoredCounterGroup.Type.SOURCE, name, ATTRIBUTES);
   }
 
+<<<<<<< HEAD
+=======
+  public SourceCounter(String name, String[] attributes) {
+    super(Type.SOURCE, name,
+        (String[]) ArrayUtils.addAll(attributes,ATTRIBUTES));
+  }
+
+>>>>>>> refs/remotes/apache/trunk
   @Override
   public long getEventReceivedCount() {
     return get(COUNTER_EVENTS_RECEIVED);
@@ -110,4 +134,15 @@ public class SourceCounter extends MonitoredCounterGroup implements
   public long incrementAppendBatchAcceptedCount() {
     return increment(COUNTER_APPEND_BATCH_ACCEPTED);
   }
+<<<<<<< HEAD
+=======
+
+  public long getOpenConnectionCount() {
+    return get(COUNTER_OPEN_CONNECTION_COUNT);
+  }
+
+  public void setOpenConnectionCount(long openConnectionCount){
+    set(COUNTER_OPEN_CONNECTION_COUNT, openConnectionCount);
+  }
+>>>>>>> refs/remotes/apache/trunk
 }
