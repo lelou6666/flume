@@ -11,5 +11,15 @@ bin/.settings
 .eclipse
 pmd_report.html
 */bin
+<<<<<<< HEAD
 /plugins/*/bin
 /plugins/*/target
+=======
+target
+patchprocess
+derby.log
+.idea
+*.iml
+nb-configuration.xml
+.DS_Store
+>>>>>>> refs/remotes/apache/trunk
