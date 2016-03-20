@@ -28,6 +28,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.flume.Context;
@@ -67,6 +68,7 @@ public class MultiportSyslogTCPSource extends AbstractSource implements
   private SourceCounter sourceCounter = null;
   private Charset defaultCharset;
   private ThreadSafeDecoder defaultDecoder;
+  private Set<String> keepFields;
 
   public MultiportSyslogTCPSource() {
     portCharsets = new ConcurrentHashMap<Integer, ThreadSafeDecoder>();
@@ -138,6 +140,11 @@ public class MultiportSyslogTCPSource extends AbstractSource implements
         SyslogSourceConfigurationConstants.CONFIG_READBUF_SIZE,
         SyslogSourceConfigurationConstants.DEFAULT_READBUF_SIZE);
 
+    keepFields = SyslogUtils.chooseFieldsToKeep(
+        context.getString(
+            SyslogSourceConfigurationConstants.CONFIG_KEEP_FIELDS,
+            SyslogSourceConfigurationConstants.DEFAULT_KEEP_FIELDS));
+
     if (sourceCounter == null) {
       sourceCounter = new SourceCounter(getName());
     }
@@ -159,7 +166,7 @@ public class MultiportSyslogTCPSource extends AbstractSource implements
 
     acceptor.setHandler(new MultiportSyslogHandler(maxEventSize, batchSize,
         getChannelProcessor(), sourceCounter, portHeader, defaultDecoder,
-        portCharsets));
+        portCharsets, keepFields));
 
     for (int port : ports) {
       InetSocketAddress addr;
@@ -213,11 +220,13 @@ public class MultiportSyslogTCPSource extends AbstractSource implements
     private final LineSplitter lineSplitter;
     private final ThreadSafeDecoder defaultDecoder;
     private final ConcurrentMap<Integer, ThreadSafeDecoder> portCharsets;
+    private Set<String> keepFields;
 
     public MultiportSyslogHandler(int maxEventSize, int batchSize,
         ChannelProcessor cp, SourceCounter ctr, String portHeader,
         ThreadSafeDecoder defaultDecoder,
-        ConcurrentMap<Integer, ThreadSafeDecoder> portCharsets) {
+        ConcurrentMap<Integer, ThreadSafeDecoder> portCharsets,
+        Set<String> keepFields) {
       channelProcessor = cp;
       sourceCounter = ctr;
       this.maxEventSize = maxEventSize;
@@ -225,6 +234,7 @@ public class MultiportSyslogTCPSource extends AbstractSource implements
       this.portHeader = portHeader;
       this.defaultDecoder = defaultDecoder;
       this.portCharsets = portCharsets;
+      this.keepFields = keepFields;
       syslogParser = new SyslogParser();
       lineSplitter = new LineSplitter(maxEventSize);
     }
@@ -321,7 +331,7 @@ public class MultiportSyslogTCPSource extends AbstractSource implements
     /**
      * Decodes a syslog-formatted ParsedLine into a Flume Event.
      * @param parsedBuf Buffer containing characters to be parsed
-     * @param port Incoming port
+     * @param decoder Character set is configurable on a per-port basis.
      * @return
      */
     Event parseEvent(ParsedBuffer parsedBuf, CharsetDecoder decoder) {
@@ -351,7 +361,7 @@ public class MultiportSyslogTCPSource extends AbstractSource implements
 
       Event event;
       try {
-        event = syslogParser.parseMessage(msg, decoder.charset());
+        event = syslogParser.parseMessage(msg, decoder.charset(), keepFields);
         if (parsedBuf.incomplete) {
           event.getHeaders().put(SyslogUtils.EVENT_STATUS,
               SyslogUtils.SyslogStatus.INCOMPLETE.getSyslogStatus());

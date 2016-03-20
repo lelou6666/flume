@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -45,14 +46,14 @@ import org.slf4j.LoggerFactory;
 /**
  * <p>
  * FlumeConfiguration is an in memory representation of the hierarchical
- * configuration namespace required by the PropertiesFileConfigurationProvider.
- * This class is instantiated with a properties object which is parsed to
- * construct the hierarchy in memory. Once the entire set of properties have
+ * configuration namespace required by the ConfigurationProvider.
+ * This class is instantiated with a map or properties object which is parsed
+ * to construct the hierarchy in memory. Once the entire set of properties have
  * been parsed and populated, a validation routine is run that identifies and
  * removes invalid components.
  * </p>
  *
- * @see org.apache.flume.conf.properties.PropertiesFileConfigurationProvider
+ * @see org.apache.flume.node.ConfigurationProvider
  *
  */
 public class FlumeConfiguration {
@@ -457,7 +458,7 @@ public class FlumeConfiguration {
               configSpecified = true;
             }
           } else {
-            config = chType.toString().toUpperCase();
+            config = chType.toString().toUpperCase(Locale.ENGLISH);
             configSpecified = true;
           }
 
@@ -553,7 +554,7 @@ public class FlumeConfiguration {
               configSpecified = true;
             }
           } else {
-            config = srcType.toString().toUpperCase();
+            config = srcType.toString().toUpperCase(Locale.ENGLISH);
             configSpecified = true;
           }
           try {
@@ -667,7 +668,7 @@ public class FlumeConfiguration {
               configSpecified = true;
             }
           } else {
-            config = sinkType.toString().toUpperCase();
+            config = sinkType.toString().toUpperCase(Locale.ENGLISH);
             configSpecified = true;
           }
           try {

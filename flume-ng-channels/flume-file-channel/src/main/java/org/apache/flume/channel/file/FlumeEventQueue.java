@@ -30,14 +30,15 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.ArrayUtils;
+import org.mapdb.DB;
+import org.mapdb.DBMaker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
@@ -59,16 +60,26 @@ final class FlumeEventQueue {
   private final String channelNameDescriptor;
   private final InflightEventWrapper inflightTakes;
   private final InflightEventWrapper inflightPuts;
+  private long searchTime = 0;
+  private long searchCount = 0;
+  private long copyTime = 0;
+  private long copyCount = 0;
+  private DB db;
+  private Set<Long> queueSet;
 
   /**
    * @param capacity max event capacity of queue
    * @throws IOException
    */
   FlumeEventQueue(EventQueueBackingStore backingStore, File inflightTakesFile,
-          File inflightPutsFile) throws Exception {
+          File inflightPutsFile, File queueSetDBDir) throws Exception {
     Preconditions.checkArgument(backingStore.getCapacity() > 0,
         "Capacity must be greater than zero");
+    Preconditions.checkNotNull(backingStore, "backingStore");
     this.channelNameDescriptor = "[channel=" + backingStore.getName() + "]";
+    Preconditions.checkNotNull(inflightTakesFile, "inflightTakesFile");
+    Preconditions.checkNotNull(inflightPutsFile, "inflightPutsFile");
+    Preconditions.checkNotNull(queueSetDBDir, "queueSetDBDir");
     this.backingStore = backingStore;
     try {
       inflightPuts = new InflightEventWrapper(inflightPutsFile);
@@ -77,6 +88,33 @@ final class FlumeEventQueue {
       LOG.error("Could not read checkpoint.", e);
       throw e;
     }
+    if(queueSetDBDir.isDirectory()) {
+      FileUtils.deleteDirectory(queueSetDBDir);
+    } else if(queueSetDBDir.isFile() && !queueSetDBDir.delete()) {
+      throw new IOException("QueueSetDir " + queueSetDBDir + " is a file and"
+          + " could not be deleted");
+    }
+    if(!queueSetDBDir.mkdirs()) {
+      throw new IllegalStateException("Could not create QueueSet Dir "
+          + queueSetDBDir);
+    }
+    File dbFile = new File(queueSetDBDir, "db");
+    db = DBMaker.newFileDB(dbFile)
+        .closeOnJvmShutdown()
+        .transactionDisable()
+        .syncOnCommitDisable()
+        .deleteFilesAfterClose()
+        .cacheDisable()
+        .mmapFileEnableIfSupported()
+        .make();
+    queueSet =
+      db.createHashSet("QueueSet " + " - " + backingStore.getName()).make();
+    long start = System.currentTimeMillis();
+    for (int i = 0; i < backingStore.getSize(); i++) {
+      queueSet.add(get(i));
+    }
+    LOG.info("QueueSet population inserting " + backingStore.getSize()
+        + " took " + (System.currentTimeMillis() - start));
   }
 
   SetMultimap<Long, Long> deserializeInflightPuts()
@@ -101,6 +139,7 @@ final class FlumeEventQueue {
       LOG.debug("Checkpoint not required");
       return false;
     }
+    backingStore.beginCheckpoint();
     inflightPuts.serializeAndWrite();
     inflightTakes.serializeAndWrite();
     backingStore.checkpoint();
@@ -184,8 +223,10 @@ final class FlumeEventQueue {
   }
 
   /**
-   * Remove FlumeEventPointer from queue, will normally
-   * only be used when recovering from a crash
+   * Remove FlumeEventPointer from queue, will
+   * only be used when recovering from a crash. It is not
+   * legal to call this method after replayComplete has been
+   * called.
    * @param FlumeEventPointer to be removed
    * @return true if the FlumeEventPointer was found
    * and removed
@@ -193,14 +234,25 @@ final class FlumeEventQueue {
   synchronized boolean remove(FlumeEventPointer e) {
     long value = e.toLong();
     Preconditions.checkArgument(value != EMPTY);
+    if (queueSet == null) {
+     throw new IllegalStateException("QueueSet is null, thus replayComplete"
+         + " has been called which is illegal");
+    }
+    if (!queueSet.contains(value)) {
+      return false;
+    }
+    searchCount++;
+    long start = System.currentTimeMillis();
     for (int i = 0; i < backingStore.getSize(); i++) {
       if(get(i) == value) {
         remove(i, 0);
         FlumeEventPointer ptr = FlumeEventPointer.fromLong(value);
         backingStore.decrementFileID(ptr.getFileID());
+        searchTime += System.currentTimeMillis() - start;
         return true;
       }
     }
+    searchTime += System.currentTimeMillis() - start;
     return false;
   }
   /**
@@ -263,6 +315,9 @@ final class FlumeEventQueue {
       }
     }
     set(index, value);
+    if (queueSet != null) {
+      queueSet.add(value);
+    }
     return true;
   }
 
@@ -281,7 +336,12 @@ final class FlumeEventQueue {
       throw new IndexOutOfBoundsException("index = " + index
           + ", queueSize " + backingStore.getSize() +" " + channelNameDescriptor);
     }
+    copyCount++;
+    long start = System.currentTimeMillis();
     long value = get(index);
+    if (queueSet != null) {
+      queueSet.remove(value);
+    }
     //if txn id = 0, we are recovering from a crash.
     if(transactionID != 0) {
       inflightTakes.addEvent(transactionID, value);
@@ -306,9 +366,9 @@ final class FlumeEventQueue {
       }
     }
     backingStore.setSize(backingStore.getSize() - 1);
+    copyTime += System.currentTimeMillis() - start;
     return value;
   }
-
 
   protected synchronized int getSize() {
     return backingStore.getSize() + inflightTakes.getSize();
@@ -321,13 +381,49 @@ final class FlumeEventQueue {
     return backingStore.getCapacity();
   }
 
-  synchronized void close() {
+  synchronized void close() throws IOException {
+    try {
+      if (db != null) {
+        db.close();
+      }
+    } catch(Exception ex) {
+      LOG.warn("Error closing db", ex);
+    }
     try {
       backingStore.close();
+      inflightPuts.close();
+      inflightTakes.close();
     } catch (IOException e) {
       LOG.warn("Error closing backing store", e);
     }
   }
+
+  /**
+   * Called when ReplayHandler has completed and thus remove(FlumeEventPointer)
+   * will no longer be called.
+   */
+  synchronized void replayComplete() {
+    String msg = "Search Count = " + searchCount + ", Search Time = " +
+        searchTime + ", Copy Count = " + copyCount + ", Copy Time = " +
+        copyTime;
+    LOG.info(msg);
+    if(db != null) {
+      db.close();
+    }
+    queueSet = null;
+    db = null;
+  }
+
+  @VisibleForTesting
+  long getSearchCount() {
+    return searchCount;
+  }
+
+  @VisibleForTesting
+  long getCopyCount() {
+    return copyCount;
+  }
+
   /**
    * A representation of in flight events which have not yet been committed.
    * None of the methods are thread safe, and should be called from thread
@@ -335,10 +431,11 @@ final class FlumeEventQueue {
    */
   class InflightEventWrapper {
     private SetMultimap<Long, Long> inflightEvents = HashMultimap.create();
-    private RandomAccessFile file;
+    // Both these are volatile for safe publication, they are never accessed by
+    // more than 1 thread at a time.
+    private volatile RandomAccessFile file;
     private volatile java.nio.channels.FileChannel fileChannel;
     private final MessageDigest digest;
-    private volatile Future<?> future;
     private final File inflightEventsFile;
     private volatile boolean syncRequired = false;
     private SetMultimap<Long, Integer> inflightFileIDs = HashMultimap.create();
@@ -387,26 +484,13 @@ final class FlumeEventQueue {
      * asynchronously written to disk.
      */
     public void serializeAndWrite() throws Exception {
-      //Check if there is a current write happening, if there is abort it.
-      if (future != null) {
-        try {
-          future.cancel(true);
-        } catch (Exception e) {
-          LOG.warn("Interrupted a write to inflights "
-                  + "file: " + inflightEventsFile.getName()
-                  + " to start a new write.");
-        }
-        while (!future.isDone()) {
-          TimeUnit.MILLISECONDS.sleep(100);
-        }
-      }
       Collection<Long> values = inflightEvents.values();
-      if(values.isEmpty()){
-        file.setLength(0L);
-      }
       if(!fileChannel.isOpen()){
         file = new RandomAccessFile(inflightEventsFile, "rw");
         fileChannel = file.getChannel();
+      }
+      if(values.isEmpty()){
+        file.setLength(0L);
       }
       //What is written out?
       //Checksum - 16 bytes
@@ -439,21 +523,9 @@ final class FlumeEventQueue {
         }
         byte[] checksum = digest.digest(buffer.array());
         file.write(checksum);
-        future = Executors.newSingleThreadExecutor().submit(
-                new Runnable() {
-                  @Override
-                  public void run() {
-                    try {
-                      buffer.position(0);
-                      fileChannel.write(buffer);
-                      fileChannel.force(true);
-                    } catch (IOException ex) {
-                      LOG.error("Error while writing inflight events to "
-                              + "inflights file: "
-                              + inflightEventsFile.getName());
-                    }
-                  }
-                });
+        buffer.position(0);
+        fileChannel.write(buffer);
+        fileChannel.force(true);
         syncRequired = false;
       } catch (IOException ex) {
         LOG.error("Error while writing checkpoint to disk.", ex);
@@ -523,6 +595,10 @@ final class FlumeEventQueue {
     //Needed for testing.
     public Collection<Long> getInFlightPointers() {
       return inflightEvents.values();
+    }
+
+    public void close() throws IOException {
+      file.close();
     }
   }
 }

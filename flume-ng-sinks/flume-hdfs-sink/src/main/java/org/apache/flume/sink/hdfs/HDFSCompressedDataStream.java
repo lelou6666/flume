@@ -26,15 +26,18 @@ import org.apache.flume.serialization.EventSerializerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
+import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class HDFSCompressedDataStream implements HDFSWriter {
+public class HDFSCompressedDataStream extends AbstractHDFSWriter {
 
   private static final Logger logger =
       LoggerFactory.getLogger(HDFSCompressedDataStream.class);
@@ -46,12 +49,20 @@ public class HDFSCompressedDataStream implements HDFSWriter {
   private String serializerType;
   private Context serializerContext;
   private EventSerializer serializer;
+  private boolean useRawLocalFileSystem;
+  private Compressor compressor;
 
   @Override
   public void configure(Context context) {
+    super.configure(context);
+
     serializerType = context.getString("serializer", "TEXT");
+    useRawLocalFileSystem = context.getBoolean("hdfs.useRawLocalFileSystem",
+        false);
     serializerContext = new Context(
         context.getSubProperties(EventSerializer.CTX_PREFIX));
+    logger.info("Serializer = " + serializerType + ", UseRawLocalFileSystem = "
+        + useRawLocalFileSystem);
   }
 
   @Override
@@ -67,7 +78,14 @@ public class HDFSCompressedDataStream implements HDFSWriter {
     Configuration conf = new Configuration();
     Path dstPath = new Path(filePath);
     FileSystem hdfs = dstPath.getFileSystem(conf);
-
+    if(useRawLocalFileSystem) {
+      if(hdfs instanceof LocalFileSystem) {
+        hdfs = ((LocalFileSystem)hdfs).getRaw();
+      } else {
+        logger.warn("useRawLocalFileSystem is set to true but file system " +
+            "is not of type LocalFileSystem: " + hdfs.getClass().getName());
+      }
+    }
     boolean appending = false;
     if (conf.getBoolean("hdfs.append.support", false) == true && hdfs.isFile
     (dstPath)) {
@@ -76,7 +94,10 @@ public class HDFSCompressedDataStream implements HDFSWriter {
     } else {
       fsOut = hdfs.create(dstPath);
     }
-    cmpOut = codec.createOutputStream(fsOut);
+    if(compressor == null) {
+      compressor = CodecPool.getCompressor(codec, conf);
+    }
+    cmpOut = codec.createOutputStream(fsOut, compressor);
     serializer = EventSerializerFactory.getInstance(serializerType,
         serializerContext, cmpOut);
     if (appending && !serializer.supportsReopen()) {
@@ -85,6 +106,9 @@ public class HDFSCompressedDataStream implements HDFSWriter {
       throw new IOException("serializer (" + serializerType
           + ") does not support append");
     }
+
+    registerCurrentStream(fsOut, hdfs, dstPath);
+
     if (appending) {
       serializer.afterReopen();
     } else {
@@ -115,7 +139,7 @@ public class HDFSCompressedDataStream implements HDFSWriter {
       isFinished = true;
     }
     fsOut.flush();
-    fsOut.sync();
+    hflushOrSync(this.fsOut);
   }
 
   @Override
@@ -127,8 +151,13 @@ public class HDFSCompressedDataStream implements HDFSWriter {
       isFinished = true;
     }
     fsOut.flush();
-    fsOut.sync();
+    hflushOrSync(fsOut);
     cmpOut.close();
+    if (compressor != null) {
+      CodecPool.returnCompressor(compressor);
+      compressor = null;
+    }
+    unregisterCurrentStream();
   }
 
 }

@@ -27,7 +27,6 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.Map;
 
 import org.apache.flume.Channel;
@@ -38,6 +37,8 @@ import org.apache.flume.conf.Configurables;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.collect.Maps;
+import org.elasticsearch.common.settings.ImmutableSettings;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.gateway.Gateway;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -46,12 +47,16 @@ import org.elasticsearch.node.NodeBuilder;
 import org.elasticsearch.node.internal.InternalNode;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.joda.time.DateTimeUtils;
+import org.junit.After;
+import org.junit.Before;
 
 public abstract class AbstractElasticSearchSinkTest {
 
   static final String DEFAULT_INDEX_NAME = "flume";
   static final String DEFAULT_INDEX_TYPE = "log";
   static final String DEFAULT_CLUSTER_NAME = "elasticsearch";
+  static final long FIXED_TIME_MILLIS = 123456789L;
 
   Node node;
   Client client;
@@ -66,12 +71,21 @@ public abstract class AbstractElasticSearchSinkTest {
     parameters.put(BATCH_SIZE, "1");
     parameters.put(TTL, "5");
 
-    timestampedIndexName = DEFAULT_INDEX_NAME + "-"
-        + ElasticSearchSink.df.format(new Date());
+    timestampedIndexName = DEFAULT_INDEX_NAME + '-'
+        + ElasticSearchIndexRequestBuilderFactory.df.format(FIXED_TIME_MILLIS);
   }
 
   void createNodes() throws Exception {
-    node = NodeBuilder.nodeBuilder().local(true).node();
+    Settings settings = ImmutableSettings
+        .settingsBuilder()
+        .put("number_of_shards", 1)
+        .put("number_of_replicas", 0)
+        .put("routing.hash.type", "simple")
+        .put("gateway.type", "none")
+        .put("path.data", "target/es-test")
+        .build();
+
+    node = NodeBuilder.nodeBuilder().settings(settings).local(true).node();
     client = node.client();
 
     client.admin().cluster().prepareHealth().setWaitForGreenStatus().execute()
@@ -82,6 +96,16 @@ public abstract class AbstractElasticSearchSinkTest {
     ((InternalNode) node).injector().getInstance(Gateway.class).reset();
     client.close();
     node.close();
+  }
+
+  @Before
+  public void setFixedJodaTime() {
+    DateTimeUtils.setCurrentMillisFixed(FIXED_TIME_MILLIS);
+  }
+
+  @After
+  public void resetJodaTime() {
+    DateTimeUtils.setCurrentMillisSystem();
   }
 
   Channel bindAndStartChannel(ElasticSearchSink fixture) {
@@ -97,13 +121,14 @@ public abstract class AbstractElasticSearchSinkTest {
 
   void assertMatchAllQuery(int expectedHits, Event... events) {
     assertSearch(expectedHits, performSearch(QueryBuilders.matchAllQuery()),
-        events);
+        null, events);
   }
 
   void assertBodyQuery(int expectedHits, Event... events) {
     // Perform Multi Field Match
     assertSearch(expectedHits,
-        performSearch(QueryBuilders.fieldQuery("@message", "event")));
+        performSearch(QueryBuilders.fieldQuery("@message", "event")),
+        null, events);
   }
 
   SearchResponse performSearch(QueryBuilder query) {
@@ -111,7 +136,7 @@ public abstract class AbstractElasticSearchSinkTest {
         .setTypes(DEFAULT_INDEX_TYPE).setQuery(query).execute().actionGet();
   }
 
-  void assertSearch(int expectedHits, SearchResponse response, Event... events) {
+  void assertSearch(int expectedHits, SearchResponse response, Map<String, Object> expectedBody, Event... events) {
     SearchHits hitResponse = response.getHits();
     assertEquals(expectedHits, hitResponse.getTotalHits());
 
@@ -127,7 +152,12 @@ public abstract class AbstractElasticSearchSinkTest {
       Event event = events[i];
       SearchHit hit = hits[i];
       Map<String, Object> source = hit.getSource();
-      assertEquals(new String(event.getBody()), source.get("@message"));
+      if (expectedBody == null) {
+        assertEquals(new String(event.getBody()), source.get("@message"));
+      } else {
+        assertEquals(expectedBody, source.get("@message"));
+      }
     }
   }
+
 }

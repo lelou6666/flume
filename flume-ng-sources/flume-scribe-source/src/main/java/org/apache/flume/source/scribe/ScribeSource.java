@@ -59,17 +59,24 @@ public class ScribeSource extends AbstractSource implements
 
   public static final String SCRIBE_CATEGORY = "category";
 
+  private static final int DEFAULT_PORT = 1499;
   private static final int DEFAULT_WORKERS = 5;
+  private static final int DEFAULT_MAX_READ_BUFFER_BYTES = 16384000;
 
   private TServer server;
-  private int port = 1499;
+  private int port;
   private int workers;
+  private int maxReadBufferBytes;
 
   private SourceCounter sourceCounter;
 
   @Override
   public void configure(Context context) {
-    port = context.getInteger("port", port);
+    port = context.getInteger("port", DEFAULT_PORT);
+    maxReadBufferBytes = context.getInteger("maxReadBufferBytes", DEFAULT_MAX_READ_BUFFER_BYTES);
+    if(maxReadBufferBytes <= 0){
+      maxReadBufferBytes = DEFAULT_MAX_READ_BUFFER_BYTES;
+    }
 
     workers = context.getInteger("workerThreads", DEFAULT_WORKERS);
     if (workers <= 0) {
@@ -91,8 +98,9 @@ public class ScribeSource extends AbstractSource implements
 
         args.workerThreads(workers);
         args.processor(processor);
-        args.transportFactory(new TFramedTransport.Factory());
+        args.transportFactory(new TFramedTransport.Factory(maxReadBufferBytes));
         args.protocolFactory(new TBinaryProtocol.Factory(false, false));
+        args.maxReadBufferBytes = maxReadBufferBytes;
 
         server = new THsHaServer(args);
 
@@ -141,7 +149,7 @@ public class ScribeSource extends AbstractSource implements
   class Receiver implements Iface {
 
     public ResultCode Log(List<LogEntry> list) throws TException {
-      if (list != null && list.size() > 0) {
+      if (list != null) {
         sourceCounter.addToEventReceivedCount(list.size());
 
         try {
@@ -149,21 +157,19 @@ public class ScribeSource extends AbstractSource implements
 
           for (LogEntry entry : list) {
             Map<String, String> headers = new HashMap<String, String>(1, 1);
-            headers.put(SCRIBE_CATEGORY, entry.getCategory());
+            String category = entry.getCategory();
 
-            ByteBuffer buffer = entry.getMessage();
-            int limit = buffer.limit();
-            int pos = buffer.position();
+            if (category != null) {
+              headers.put(SCRIBE_CATEGORY, category);
+            }
 
-            //Obtains actual data
-            byte[] buf = new byte[limit - pos];
-            System.arraycopy(buffer.array(), pos, buf, 0, buf.length);
-
-            Event event = EventBuilder.withBody(buf, headers);
+            Event event = EventBuilder.withBody(entry.getMessage().getBytes(), headers);
             events.add(event);
           }
 
-          getChannelProcessor().processEventBatch(events);
+          if (events.size() > 0) {
+            getChannelProcessor().processEventBatch(events);
+          }
 
           sourceCounter.addToEventAcceptedCount(list.size());
           return ResultCode.OK;

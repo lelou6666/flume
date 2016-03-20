@@ -33,7 +33,11 @@ def jira_request(result, url, username, password, data, headers):
   print "INFO: URL = %s, Username = %s, data = %s, headers = %s" % (url, username, data, str(headers))
   if username and password:
     base64string = base64.encodestring('%s:%s' % (username, password)).replace('\n', '')
+<<<<<<< HEAD
     request.add_header("Authorization", "Basic %s" % base64string)   
+=======
+    request.add_header("Authorization", "Basic %s" % base64string)
+>>>>>>> refs/remotes/apache/trunk
   return urllib2.urlopen(request)
 
 def jira_get_defect_html(result, defect, username, password):

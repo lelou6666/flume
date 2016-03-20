@@ -61,7 +61,6 @@ public class TestEmbeddedAgent {
   private Map<String, String> headers;
   private byte[] body;
 
-
   @Before
   public void setUp() throws Exception {
     headers = Maps.newHashMap();
@@ -93,6 +92,7 @@ public class TestEmbeddedAgent {
 
     agent = new EmbeddedAgent("test-" + serialNumber.incrementAndGet());
   }
+
   @After
   public void tearDown() throws Exception {
     if(agent != null) {
@@ -110,6 +110,7 @@ public class TestEmbeddedAgent {
       }
     }
   }
+
   @Test(timeout = 30000L)
   public void testPut() throws Exception {
     agent.configure(properties);
@@ -124,6 +125,7 @@ public class TestEmbeddedAgent {
     Assert.assertArrayEquals(body, event.getBody());
     Assert.assertEquals(headers, event.getHeaders());
   }
+
   @Test(timeout = 30000L)
   public void testPutAll() throws Exception {
     List<Event> events = Lists.newArrayList();
@@ -141,6 +143,53 @@ public class TestEmbeddedAgent {
     Assert.assertEquals(headers, event.getHeaders());
   }
 
+  @Test(timeout = 30000L)
+  public void testPutWithInterceptors() throws Exception {
+    properties.put("source.interceptors", "i1");
+    properties.put("source.interceptors.i1.type", "static");
+    properties.put("source.interceptors.i1.key", "key2");
+    properties.put("source.interceptors.i1.value", "value2");
+
+    agent.configure(properties);
+    agent.start();
+    agent.put(EventBuilder.withBody(body, headers));
+
+    Event event;
+    while((event = eventCollector.poll()) == null) {
+      Thread.sleep(500L);
+    }
+    Assert.assertNotNull(event);
+    Assert.assertArrayEquals(body, event.getBody());
+    Map<String, String> newHeaders = new HashMap<String, String>(headers);
+    newHeaders.put("key2", "value2");
+    Assert.assertEquals(newHeaders, event.getHeaders());
+  }
+
+
+  @Test(timeout = 30000L)
+  public void testEmbeddedAgentName() throws Exception {
+    EmbeddedAgent embedAgent = new EmbeddedAgent("test 1 2" + serialNumber.incrementAndGet());
+    List<Event> events = Lists.newArrayList();
+    events.add(EventBuilder.withBody(body, headers));
+    embedAgent.configure(properties);
+    embedAgent.start();
+    embedAgent.putAll(events);
+
+    Event event;
+    while((event = eventCollector.poll()) == null) {
+      Thread.sleep(500L);
+    }
+    Assert.assertNotNull(event);
+    Assert.assertArrayEquals(body, event.getBody());
+    Assert.assertEquals(headers, event.getHeaders());
+    if(embedAgent != null) {
+      try {
+        embedAgent.stop();
+      } catch (Exception e) {
+        LOGGER.debug("Error shutting down agent", e);
+      }
+    }
+  }
 
 
   static class EventCollector implements AvroSourceProtocol {

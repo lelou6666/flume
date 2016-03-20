@@ -23,29 +23,30 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.flume.ChannelException;
 import org.apache.flume.Context;
-import org.apache.flume.CounterGroup;
 import org.apache.flume.Event;
 import org.apache.flume.EventDeliveryException;
-import org.apache.flume.PollableSource;
+import org.apache.flume.FlumeException;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.event.EventBuilder;
+import org.apache.flume.instrumentation.SourceCounter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SequenceGeneratorSource extends AbstractSource implements
-    PollableSource, Configurable {
+public class SequenceGeneratorSource extends AbstractPollableSource implements
+        Configurable {
 
   private static final Logger logger = LoggerFactory
       .getLogger(SequenceGeneratorSource.class);
 
   private long sequence;
   private int batchSize;
-  private CounterGroup counterGroup;
+  private SourceCounter sourceCounter;
   private List<Event> batchArrayList;
+  private long totalEvents;
+  private long eventsSent = 0;
 
   public SequenceGeneratorSource() {
     sequence = 0;
-    counterGroup = new CounterGroup();
   }
 
   /**
@@ -53,51 +54,71 @@ public class SequenceGeneratorSource extends AbstractSource implements
    * <li>batchSize = type int that defines the size of event batches
    */
   @Override
-  public void configure(Context context) {
+  protected void doConfigure(Context context) throws FlumeException {
     batchSize = context.getInteger("batchSize", 1);
     if (batchSize > 1) {
       batchArrayList = new ArrayList<Event>(batchSize);
     }
+    totalEvents = context.getLong("totalEvents", Long.MAX_VALUE);
+    if (sourceCounter == null) {
+      sourceCounter = new SourceCounter(getName());
+    }
   }
 
   @Override
-  public Status process() throws EventDeliveryException {
-
+  protected Status doProcess() throws EventDeliveryException {
+    Status status = Status.READY;
+    int i = 0;
     try {
       if (batchSize <= 1) {
-        getChannelProcessor().processEvent(
-            EventBuilder.withBody(String.valueOf(sequence++).getBytes()));
+        if(eventsSent < totalEvents) {
+          getChannelProcessor().processEvent(
+                  EventBuilder.withBody(String.valueOf(sequence++).getBytes()));
+          sourceCounter.incrementEventAcceptedCount();
+          eventsSent++;
+        } else {
+          status = Status.BACKOFF;
+        }
       } else {
         batchArrayList.clear();
-        for (int i = 0; i < batchSize; i++) {
-          batchArrayList.add(i, EventBuilder.withBody(String.valueOf(sequence++).getBytes()));
+        for (i = 0; i < batchSize; i++) {
+          if(eventsSent < totalEvents){
+            batchArrayList.add(i, EventBuilder.withBody(String
+                    .valueOf(sequence++).getBytes()));
+            eventsSent++;
+          } else {
+            status = Status.BACKOFF;
+          }
         }
-        getChannelProcessor().processEventBatch(batchArrayList);
+        if(!batchArrayList.isEmpty()) {
+          getChannelProcessor().processEventBatch(batchArrayList);
+          sourceCounter.incrementAppendBatchAcceptedCount();
+          sourceCounter.addToEventAcceptedCount(batchArrayList.size());
+        }
       }
-      counterGroup.incrementAndGet("events.successful");
+
     } catch (ChannelException ex) {
-      counterGroup.incrementAndGet("events.failed");
+      eventsSent -= i;
+      logger.error( getName() + " source could not write to channel.", ex);
     }
 
-    return Status.READY;
+    return status;
   }
 
   @Override
-  public void start() {
-    logger.info("Sequence generator source starting");
-
-    super.start();
-
-    logger.debug("Sequence generator source started");
+  protected void doStart() throws FlumeException {
+    logger.info("Sequence generator source do starting");
+    sourceCounter.start();
+    logger.debug("Sequence generator source do started");
   }
 
   @Override
-  public void stop() {
-    logger.info("Sequence generator source stopping");
+  protected void doStop() throws FlumeException {
+    logger.info("Sequence generator source do stopping");
 
-    super.stop();
+    sourceCounter.stop();
 
-    logger.info("Sequence generator source stopped. Metrics:{}", counterGroup);
+    logger.info("Sequence generator source do stopped. Metrics:{}",getName(), sourceCounter);
   }
 
 }

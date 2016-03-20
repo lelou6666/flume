@@ -24,17 +24,24 @@ import org.apache.flume.Event;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class HDFSSequenceFile implements HDFSWriter {
+public class HDFSSequenceFile extends AbstractHDFSWriter {
 
+  private static final Logger logger =
+      LoggerFactory.getLogger(HDFSSequenceFile.class);
   private SequenceFile.Writer writer;
   private String writeFormat;
   private Context serializerContext;
-  private SeqFileFormatter formatter;
+  private SequenceFileSerializer serializer;
+  private boolean useRawLocalFileSystem;
+  private FSDataOutputStream outStream = null;
 
   public HDFSSequenceFile() {
     writer = null;
@@ -42,12 +49,19 @@ public class HDFSSequenceFile implements HDFSWriter {
 
   @Override
   public void configure(Context context) {
-    // use binary writable format by default
-    writeFormat = context.getString("hdfs.writeFormat", SeqFileFormatterType.Writable.name());
+    super.configure(context);
+
+    // use binary writable serialize by default
+    writeFormat = context.getString("hdfs.writeFormat",
+      SequenceFileSerializerType.Writable.name());
+    useRawLocalFileSystem = context.getBoolean("hdfs.useRawLocalFileSystem",
+        false);
     serializerContext = new Context(
-            context.getSubProperties(SeqFileFormatterFactory.CTX_PREFIX));
-    formatter = SeqFileFormatterFactory
-            .getFormatter(writeFormat, serializerContext);
+            context.getSubProperties(SequenceFileSerializerFactory.CTX_PREFIX));
+    serializer = SequenceFileSerializerFactory
+            .getSerializer(writeFormat, serializerContext);
+    logger.info("writeFormat = " + writeFormat + ", UseRawLocalFileSystem = "
+        + useRawLocalFileSystem);
   }
 
   @Override
@@ -61,32 +75,48 @@ public class HDFSSequenceFile implements HDFSWriter {
     Configuration conf = new Configuration();
     Path dstPath = new Path(filePath);
     FileSystem hdfs = dstPath.getFileSystem(conf);
+    open(dstPath, codeC, compType, conf, hdfs);
+  }
 
+  protected void open(Path dstPath, CompressionCodec codeC,
+      CompressionType compType, Configuration conf, FileSystem hdfs)
+          throws IOException {
+    if(useRawLocalFileSystem) {
+      if(hdfs instanceof LocalFileSystem) {
+        hdfs = ((LocalFileSystem)hdfs).getRaw();
+      } else {
+        logger.warn("useRawLocalFileSystem is set to true but file system " +
+            "is not of type LocalFileSystem: " + hdfs.getClass().getName());
+      }
+    }
     if (conf.getBoolean("hdfs.append.support", false) == true && hdfs.isFile
             (dstPath)) {
-      FSDataOutputStream outStream = hdfs.append(dstPath);
-      writer = SequenceFile.createWriter(conf, outStream, formatter.getKeyClass(),
-          formatter.getValueClass(), compType, codeC);
+      outStream = hdfs.append(dstPath);
     } else {
-      writer = SequenceFile.createWriter(hdfs, conf, dstPath,
-          formatter.getKeyClass(), formatter.getValueClass(), compType, codeC);
+      outStream = hdfs.create(dstPath);
     }
+    writer = SequenceFile.createWriter(conf, outStream,
+        serializer.getKeyClass(), serializer.getValueClass(), compType, codeC);
+
+    registerCurrentStream(outStream, hdfs, dstPath);
   }
 
   @Override
   public void append(Event e) throws IOException {
-    for (SeqFileFormatter.Record record : formatter.format(e)) {
+    for (SequenceFileSerializer.Record record : serializer.serialize(e)) {
       writer.append(record.getKey(), record.getValue());
     }
   }
 
   @Override
   public void sync() throws IOException {
-    writer.syncFs();
+    hflushOrSync(outStream);
   }
 
   @Override
   public void close() throws IOException {
     writer.close();
+    outStream.close();
+    unregisterCurrentStream();
   }
 }
