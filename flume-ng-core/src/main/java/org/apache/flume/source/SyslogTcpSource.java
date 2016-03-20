@@ -18,17 +18,21 @@
  */
 package org.apache.flume.source;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.flume.ChannelException;
 import org.apache.flume.Context;
+import org.apache.flume.CounterGroup;
 import org.apache.flume.Event;
 import org.apache.flume.EventDrivenSource;
 import org.apache.flume.conf.Configurable;
-import org.apache.flume.source.SyslogUtils;
+import org.apache.flume.conf.Configurables;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
@@ -46,28 +50,54 @@ import org.slf4j.LoggerFactory;
 public class SyslogTcpSource extends AbstractSource
 implements EventDrivenSource, Configurable {
 
-  public final static int SYSLOG_TCP_PORT = 514;
 
   private static final Logger logger = LoggerFactory
       .getLogger(SyslogTcpSource.class);
-  private int port = SYSLOG_TCP_PORT; // this is syslog-ng's default tcp port.
+  private int port;
   private String host = null;
   private Channel nettyChannel;
+  private Integer eventSize;
+  private Map<String, String> formaterProp;
+  private CounterGroup counterGroup = new CounterGroup();
+  private Set<String> keepFields;
 
   public class syslogTcpHandler extends SimpleChannelHandler {
+
+    private SyslogUtils syslogUtils = new SyslogUtils();
+
+    public void setEventSize(int eventSize){
+      syslogUtils.setEventSize(eventSize);
+    }
+
+    public void setKeepFields(Set<String> keepFields) {
+      syslogUtils.setKeepFields(keepFields);
+    }
+
+    public void setFormater(Map<String, String> prop) {
+      syslogUtils.addFormats(prop);
+    }
+
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent mEvent) {
-      try {
-        Event e = SyslogUtils.extractEvent((ChannelBuffer)mEvent.getMessage());
+      ChannelBuffer buff = (ChannelBuffer) mEvent.getMessage();
+      while (buff.readable()) {
+        Event e = syslogUtils.extractEvent(buff);
         if (e == null) {
+          logger.debug("Parsed partial event, event will be generated when " +
+              "rest of the event is received.");
+          continue;
+        }
+        try {
+          getChannelProcessor().processEvent(e);
+          counterGroup.incrementAndGet("events.success");
+        } catch (ChannelException ex) {
+          counterGroup.incrementAndGet("events.dropped");
+          logger.error("Error writting to channel, event dropped", ex);
+        } catch (RuntimeException ex) {
+          counterGroup.incrementAndGet("events.dropped");
+          logger.error("Error parsing event from syslog stream, event dropped", ex);
           return;
         }
-        getChannelProcessor().processEvent(e);
-      } catch (ChannelException ex) {
-        logger.error("Error writting to channel", ex);
-        return;
-      } catch (IOException eI) {
-        logger.error("Error reading from network", eI);
       }
 
     }
@@ -80,10 +110,17 @@ implements EventDrivenSource, Configurable {
 
     ServerBootstrap serverBootstrap = new ServerBootstrap(factory);
     serverBootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+      @Override
       public ChannelPipeline getPipeline() {
-        return Channels.pipeline(new syslogTcpHandler());
+        syslogTcpHandler handler = new syslogTcpHandler();
+        handler.setEventSize(eventSize);
+        handler.setFormater(formaterProp);
+        handler.setKeepFields(keepFields);
+        return Channels.pipeline(handler);
       }
     });
+
+    logger.info("Syslog TCP Source starting...");
 
     if (host == null) {
       nettyChannel = serverBootstrap.bind(new InetSocketAddress(port));
@@ -96,6 +133,9 @@ implements EventDrivenSource, Configurable {
 
   @Override
   public void stop() {
+    logger.info("Syslog TCP Source stopping...");
+    logger.info("Metrics:{}", counterGroup);
+
     if (nettyChannel != null) {
       nettyChannel.close();
       try {
@@ -112,8 +152,27 @@ implements EventDrivenSource, Configurable {
 
   @Override
   public void configure(Context context) {
-    port = Integer.parseInt(context.getString("port"));
-    host = context.getString("host");
+    Configurables.ensureRequiredNonNull(context,
+        SyslogSourceConfigurationConstants.CONFIG_PORT);
+    port = context.getInteger(SyslogSourceConfigurationConstants.CONFIG_PORT);
+    host = context.getString(SyslogSourceConfigurationConstants.CONFIG_HOST);
+    eventSize = context.getInteger("eventSize", SyslogUtils.DEFAULT_SIZE);
+    formaterProp = context.getSubProperties(
+        SyslogSourceConfigurationConstants.CONFIG_FORMAT_PREFIX);
+    keepFields = SyslogUtils.chooseFieldsToKeep(
+        context.getString(
+            SyslogSourceConfigurationConstants.CONFIG_KEEP_FIELDS,
+            SyslogSourceConfigurationConstants.DEFAULT_KEEP_FIELDS));
+  }
+
+  @VisibleForTesting
+  public int getSourcePort() {
+    SocketAddress localAddress = nettyChannel.getLocalAddress();
+    if (localAddress instanceof InetSocketAddress) {
+      InetSocketAddress addr = (InetSocketAddress) localAddress;
+      return addr.getPort();
+    }
+    return 0;
   }
 
 }

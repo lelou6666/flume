@@ -24,7 +24,11 @@
   <parent>
     <artifactId>flume-parent</artifactId>
     <groupId>org.apache.flume</groupId>
+<<<<<<< HEAD
     <version>1.1.0-incubating</version>
+=======
+    <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
   </parent>
 
   <artifactId>flume-ng-dist</artifactId>
@@ -43,12 +47,13 @@
             <goals>
               <goal>single</goal>
             </goals>
-            <inherited>false</inherited>
             <configuration>
+              <finalName>apache-flume-${project.version}</finalName>
               <descriptors>
-                <descriptor>src/main/assembly/dist.xml</descriptor>
+                <descriptor>src/main/assembly/bin.xml</descriptor>
                 <descriptor>src/main/assembly/src.xml</descriptor>
               </descriptors>
+              <tarLongFileMode>gnu</tarLongFileMode>
             </configuration>
           </execution>
         </executions>
@@ -62,14 +67,65 @@
     </plugins>
   </build>
 
+  <profiles>
+    <profile>
+      <id>hadoop-2</id>
+      <activation>
+        <property>
+          <name>flume.hadoop.profile</name>
+          <value>2</value>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.flume.flume-ng-sinks</groupId>
+          <artifactId>flume-dataset-sink</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.flume.flume-ng-sinks</groupId>
+          <artifactId>flume-hive-sink</artifactId>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>hbase-1</id>
+      <activation>
+        <property>
+          <name>!flume.hadoop.profile</name>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.flume.flume-ng-sinks</groupId>
+          <artifactId>flume-dataset-sink</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.flume.flume-ng-sinks</groupId>
+          <artifactId>flume-hive-sink</artifactId>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.flume</groupId>
+<<<<<<< HEAD
+=======
+      <artifactId>flume-ng-configuration</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.flume</groupId>
+>>>>>>> refs/remotes/apache/trunk
       <artifactId>flume-ng-sdk</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.flume</groupId>
       <artifactId>flume-ng-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.flume</groupId>
+      <artifactId>flume-ng-embedded-agent</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.flume</groupId>
@@ -81,7 +137,15 @@
     </dependency>
     <dependency>
       <groupId>org.apache.flume.flume-ng-channels</groupId>
+      <artifactId>flume-spillable-memory-channel</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.flume.flume-ng-channels</groupId>
       <artifactId>flume-jdbc-channel</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.flume.flume-ng-channels</groupId>
+      <artifactId>flume-kafka-channel</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.flume.flume-ng-sinks</groupId>
@@ -92,8 +156,45 @@
       <artifactId>flume-irc-sink</artifactId>
     </dependency>
     <dependency>
+<<<<<<< HEAD
       <groupId>org.apache.flume.flume-ng-legacy-sources</groupId>
       <artifactId>flume-thrift-source</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.flume.flume-ng-legacy-sources</groupId>
+      <artifactId>flume-avro-source</artifactId>
+=======
+      <groupId>org.apache.flume.flume-ng-sinks</groupId>
+      <artifactId>flume-ng-hbase-sink</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.flume.flume-ng-sinks</groupId>
+      <artifactId>flume-ng-elasticsearch-sink</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.flume.flume-ng-sinks</groupId>
+      <artifactId>flume-ng-morphline-solr-sink</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.flume.flume-ng-sinks</groupId>
+      <artifactId>flume-ng-kafka-sink</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.flume.flume-ng-sources</groupId>
+      <artifactId>flume-scribe-source</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.flume.flume-ng-sources</groupId>
+      <artifactId>flume-jms-source</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.flume.flume-ng-sources</groupId>
+      <artifactId>flume-twitter-source</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.flume.flume-ng-sources</groupId>
+      <artifactId>flume-kafka-source</artifactId>
+>>>>>>> refs/remotes/apache/trunk
     </dependency>
     <dependency>
       <groupId>org.apache.flume.flume-ng-legacy-sources</groupId>
@@ -101,16 +202,35 @@
     </dependency>
     <dependency>
       <groupId>org.apache.flume.flume-ng-legacy-sources</groupId>
-      <artifactId>flume-avro-source</artifactId>
+      <artifactId>flume-thrift-source</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.flume.flume-ng-legacy-sources</groupId>
-      <artifactId>flume-thrift-source</artifactId>
+<<<<<<< HEAD
+      <groupId>org.apache.flume.flume-ng-clients</groupId>
+      <artifactId>flume-ng-log4jappender</artifactId>
+    </dependency>
+=======
+      <groupId>org.apache.flume.flume-ng-sources</groupId>
+      <artifactId>flume-taildir-source</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.flume.flume-ng-clients</groupId>
       <artifactId>flume-ng-log4jappender</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.apache.flume.flume-ng-clients</groupId>
+      <artifactId>flume-ng-log4jappender</artifactId>
+      <classifier>jar-with-dependencies</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.flume</groupId>
+      <artifactId>flume-tools</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.flume</groupId>
+      <artifactId>flume-ng-auth</artifactId>
+    </dependency>
+>>>>>>> refs/remotes/apache/trunk
   </dependencies>
 
 </project>

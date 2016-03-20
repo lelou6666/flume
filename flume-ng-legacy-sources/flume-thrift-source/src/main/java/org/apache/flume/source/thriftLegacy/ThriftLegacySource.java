@@ -22,6 +22,7 @@ package org.apache.flume.source.thriftLegacy;
 import java.lang.InterruptedException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -31,6 +32,7 @@ import org.apache.flume.Context;
 import org.apache.flume.CounterGroup;
 import org.apache.flume.Event;
 import org.apache.flume.EventDrivenSource;
+import org.apache.flume.FlumeException;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.source.AbstractSource;
 import org.apache.flume.event.EventBuilder;
@@ -64,6 +66,12 @@ public class ThriftLegacySource  extends AbstractSource implements
   private TServerTransport serverTransport;
   private Thread thriftHandlerThread;
 
+<<<<<<< HEAD
+=======
+  // Charset#decode is threadsafe.
+  private Charset UTF_8 = Charset.forName("UTF-8");
+
+>>>>>>> refs/remotes/apache/trunk
   @SuppressWarnings("deprecation")
   private class ThriftFlumeEventServerImpl
         implements ThriftFlumeEventServer.Iface {
@@ -80,7 +88,8 @@ public class ThriftLegacySource  extends AbstractSource implements
       headers.put(PRIORITY, evt.getPriority().toString());
       headers.put(NANOS, Long.toString(evt.getNanos()));
       for (Entry<String, ByteBuffer> entry: evt.getFields().entrySet()) {
-        headers.put(entry.getKey().toString(), entry.getValue().toString());
+        headers.put(entry.getKey().toString(),
+          UTF_8.decode(entry.getValue()).toString());
       }
       headers.put(OG_EVENT, "yes");
 
@@ -136,8 +145,7 @@ public class ThriftLegacySource  extends AbstractSource implements
       server = new TThreadPoolServer(new TThreadPoolServer.
           Args(serverTransport).processor(processor));
     } catch (TTransportException e) {
-      e.printStackTrace();
-      return;
+      throw new FlumeException("Failed starting source", e);
     }
     ThriftHandler thriftHandler = new ThriftHandler(server);
     thriftHandlerThread = new Thread(thriftHandler);

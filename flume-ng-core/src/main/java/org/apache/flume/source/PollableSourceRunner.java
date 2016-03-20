@@ -24,7 +24,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.flume.CounterGroup;
 import org.apache.flume.EventDeliveryException;
 import org.apache.flume.PollableSource;
+import org.apache.flume.Source;
 import org.apache.flume.SourceRunner;
+import org.apache.flume.channel.ChannelProcessor;
 import org.apache.flume.lifecycle.LifecycleState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,8 +50,6 @@ public class PollableSourceRunner extends SourceRunner {
 
   private static final Logger logger = LoggerFactory
       .getLogger(PollableSourceRunner.class);
-  private static final long backoffSleepIncrement = 1000;
-  private static final long maxBackoffSleep = 5000;
 
   private AtomicBoolean shouldStop;
 
@@ -67,7 +67,8 @@ public class PollableSourceRunner extends SourceRunner {
   @Override
   public void start() {
     PollableSource source = (PollableSource) getSource();
-
+    ChannelProcessor cp = source.getChannelProcessor();
+    cp.initialize();
     source.start();
 
     runner = new PollingRunner();
@@ -77,6 +78,8 @@ public class PollableSourceRunner extends SourceRunner {
     runner.shouldStop = shouldStop;
 
     runnerThread = new Thread(runner);
+    runnerThread.setName(getClass().getSimpleName() + "-" + 
+        source.getClass().getSimpleName() + "-" + source.getName());
     runnerThread.start();
 
     lifecycleState = LifecycleState.START;
@@ -98,7 +101,10 @@ public class PollableSourceRunner extends SourceRunner {
       Thread.currentThread().interrupt();
     }
 
-    getSource().stop();
+    Source source = getSource();
+    source.stop();
+    ChannelProcessor cp = source.getChannelProcessor();
+    cp.close();
 
     lifecycleState = LifecycleState.STOP;
   }
@@ -133,7 +139,7 @@ public class PollableSourceRunner extends SourceRunner {
 
             Thread.sleep(Math.min(
                 counterGroup.incrementAndGet("runner.backoffs.consecutive")
-                * backoffSleepIncrement, maxBackoffSleep));
+                * source.getBackOffSleepIncrement(), source.getMaxBackOffSleepInterval()));
           } else {
             counterGroup.set("runner.backoffs.consecutive", 0L);
           }
@@ -146,9 +152,9 @@ public class PollableSourceRunner extends SourceRunner {
         } catch (Exception e) {
           counterGroup.incrementAndGet("runner.errors");
           logger.error("Unhandled exception, logging and sleeping for " +
-              maxBackoffSleep + "ms", e);
+              source.getMaxBackOffSleepInterval() + "ms", e);
           try {
-            Thread.sleep(maxBackoffSleep);
+            Thread.sleep(source.getMaxBackOffSleepInterval());
           } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
           }

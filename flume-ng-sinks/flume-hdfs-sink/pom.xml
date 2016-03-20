@@ -23,7 +23,11 @@ limitations under the License.
   <parent>
     <artifactId>flume-ng-sinks</artifactId>
     <groupId>org.apache.flume</groupId>
+<<<<<<< HEAD
     <version>1.1.0-incubating</version>
+=======
+    <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
   </parent>
 
   <groupId>org.apache.flume.flume-ng-sinks</groupId>
@@ -44,6 +48,11 @@ limitations under the License.
     <dependency>
       <groupId>org.apache.flume</groupId>
       <artifactId>flume-ng-sdk</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.flume</groupId>
+      <artifactId>flume-ng-configuration</artifactId>
     </dependency>
 
     <dependency>
@@ -74,8 +83,25 @@ limitations under the License.
     </dependency>
 
     <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-all</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>${hadoop.common.artifact.id}</artifactId>
+      <optional>true</optional>
+    </dependency>
+
+    <dependency>
+      <groupId>commons-lang</groupId>
+      <artifactId>commons-lang</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
     </dependency>
 
   </dependencies>
@@ -83,25 +109,100 @@ limitations under the License.
   <profiles>
 
     <profile>
-      <id>hadoop-0.23</id>
+      <id>hadoop-1.0</id>
       <activation>
         <property>
-          <name>hadoop.profile</name>
-          <value>23</value>
+          <name>flume.hadoop.profile</name>
+          <value>1</value>
         </property>
       </activation>
       <dependencies>
+
         <dependency>
           <groupId>org.apache.hadoop</groupId>
+<<<<<<< HEAD
           <artifactId>hadoop-hdfs</artifactId>
+=======
+          <artifactId>hadoop-test</artifactId>
+          <scope>test</scope>
         </dependency>
+
+        <!-- required because the hadoop-core pom is missing these deps
+            and MiniDFSCluster pulls in the webhdfs classes -->
         <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-auth</artifactId>
+          <groupId>com.sun.jersey</groupId>
+          <artifactId>jersey-core</artifactId>
+          <scope>test</scope>
+>>>>>>> refs/remotes/apache/trunk
         </dependency>
+
       </dependencies>
     </profile>
 
+    <profile>
+      <id>hadoop-2</id>
+      <activation>
+        <property>
+          <name>flume.hadoop.profile</name>
+          <value>2</value>
+        </property>
+      </activation>
+      <dependencies>
+
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+<<<<<<< HEAD
+          <artifactId>hadoop-auth</artifactId>
+=======
+          <artifactId>hadoop-hdfs</artifactId>
+          <optional>true</optional>
+        </dependency>
+
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-auth</artifactId>
+          <optional>true</optional>
+        </dependency>
+
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-minicluster</artifactId>
+          <scope>test</scope>
+>>>>>>> refs/remotes/apache/trunk
+        </dependency>
+
+      </dependencies>
+    </profile>
+
+    <profile>
+      <id>hbase-1</id>
+      <activation>
+        <property>
+          <name>!flume.hadoop.profile</name>
+        </property>
+      </activation>
+      <dependencies>
+
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-hdfs</artifactId>
+          <optional>true</optional>
+        </dependency>
+
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-auth</artifactId>
+          <optional>true</optional>
+        </dependency>
+
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-minicluster</artifactId>
+          <scope>test</scope>
+        </dependency>
+
+      </dependencies>
+    </profile>
   </profiles>
 
 </project>

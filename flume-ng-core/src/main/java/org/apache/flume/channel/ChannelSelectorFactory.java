@@ -19,13 +19,17 @@
 package org.apache.flume.channel;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.apache.flume.Channel;
 import org.apache.flume.ChannelSelector;
 import org.apache.flume.Context;
 import org.apache.flume.FlumeException;
+import org.apache.flume.conf.BasicConfigurationConstants;
 import org.apache.flume.conf.Configurables;
+import org.apache.flume.conf.channel.ChannelSelectorConfiguration;
+import org.apache.flume.conf.channel.ChannelSelectorType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +41,8 @@ public class ChannelSelectorFactory {
   public static ChannelSelector create(List<Channel> channels,
       Map<String, String> config) {
 
-    ChannelSelector selector = getSelectorForType(config.get("type"));
+    ChannelSelector selector = getSelectorForType(config.get(
+        BasicConfigurationConstants.CONFIG_TYPE));
 
     selector.setChannels(channels);
 
@@ -45,7 +50,18 @@ public class ChannelSelectorFactory {
     context.putAll(config);
 
     Configurables.configure(selector, context);
+    return selector;
+  }
 
+  public static ChannelSelector create(List<Channel> channels,
+      ChannelSelectorConfiguration conf) {
+    String type = ChannelSelectorType.REPLICATING.toString();
+    if (conf != null){
+      type = conf.getType();
+    }
+    ChannelSelector selector = getSelectorForType(type);
+    selector.setChannels(channels);
+    Configurables.configure(selector, conf);
     return selector;
   }
 
@@ -58,7 +74,7 @@ public class ChannelSelectorFactory {
     ChannelSelectorType  selectorType = ChannelSelectorType.OTHER;
 
     try {
-      selectorType = ChannelSelectorType.valueOf(type.toUpperCase());
+      selectorType = ChannelSelectorType.valueOf(type.toUpperCase(Locale.ENGLISH));
     } catch (IllegalArgumentException ex) {
       LOGGER.debug("Selector type {} is a custom type", type);
     }

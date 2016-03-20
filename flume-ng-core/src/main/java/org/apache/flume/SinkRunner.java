@@ -95,8 +95,6 @@ public class SinkRunner implements LifecycleAware {
   @Override
   public void stop() {
 
-    getPolicy().stop();
-
     if (runnerThread != null) {
       runner.shouldStop.set(true);
       runnerThread.interrupt();
@@ -114,6 +112,7 @@ public class SinkRunner implements LifecycleAware {
       }
     }
 
+    getPolicy().stop();
     lifecycleState = LifecycleState.STOP;
   }
 
@@ -157,13 +156,13 @@ public class SinkRunner implements LifecycleAware {
         } catch (InterruptedException e) {
           logger.debug("Interrupted while processing an event. Exiting.");
           counterGroup.incrementAndGet("runner.interruptions");
-        } catch (EventDeliveryException e) {
-          logger.error("Unable to deliver event. Exception follows.", e);
-          counterGroup.incrementAndGet("runner.deliveryErrors");
         } catch (Exception e) {
-          counterGroup.incrementAndGet("runner.errors");
-          logger.error("Unhandled exception, logging and sleeping for " +
-              maxBackoffSleep + "ms", e);
+          logger.error("Unable to deliver event. Exception follows.", e);
+          if (e instanceof EventDeliveryException) {
+            counterGroup.incrementAndGet("runner.deliveryErrors");
+          } else {
+            counterGroup.incrementAndGet("runner.errors");
+          }
           try {
             Thread.sleep(maxBackoffSleep);
           } catch (InterruptedException ex) {

@@ -22,14 +22,17 @@ import javax.sql.DataSource;
 public class JdbcTransactionFactory extends ThreadLocal<JdbcTransactionImpl> {
 
   private final DataSource dataSource;
+  private final JdbcChannelProviderImpl providerImpl;
 
-  protected JdbcTransactionFactory(DataSource dataSource) {
+  protected JdbcTransactionFactory(DataSource dataSource,
+      JdbcChannelProviderImpl providerImpl) {
     super();
     this.dataSource = dataSource;
+    this.providerImpl = providerImpl;
   }
 
   @Override
   protected JdbcTransactionImpl initialValue() {
-    return new JdbcTransactionImpl(dataSource, this);
+    return new JdbcTransactionImpl(dataSource, this, providerImpl);
   }
 }

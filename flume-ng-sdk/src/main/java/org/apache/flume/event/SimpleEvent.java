@@ -31,7 +31,7 @@ public class SimpleEvent implements Event {
 
   public SimpleEvent() {
     headers = new HashMap<String, String>();
-    body = null;
+    body = new byte[0];
   }
 
   @Override
@@ -51,12 +51,17 @@ public class SimpleEvent implements Event {
 
   @Override
   public void setBody(byte[] body) {
+    if(body == null){
+      body = new byte[0];
+    }
     this.body = body;
   }
 
   @Override
   public String toString() {
-    return "{ headers:" + headers + " body:" + body + " }";
+    Integer bodyLen = null;
+    if (body != null) bodyLen = body.length;
+    return "[Event headers = " + headers + ", body.length = " + bodyLen + " ]";
   }
 
 }

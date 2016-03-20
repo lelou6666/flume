@@ -25,12 +25,11 @@
   <id>src</id>
 
   <formats>
-    <!-- FIXME: This will become tar.gz or tar.bz2 after testing. -->
+    <format>dir</format>
     <format>tar.gz</format>
-    <format>zip</format>
   </formats>
 
-  <baseDirectory>flume-${project.version}</baseDirectory>
+  <baseDirectory>apache-flume-${project.version}-src</baseDirectory>
 
   <moduleSets>
 
@@ -38,14 +37,27 @@
       <useAllReactorProjects>true</useAllReactorProjects>
 
       <includes>
+<<<<<<< HEAD
+=======
+        <include>org.apache.flume:flume-ng-configuration</include>
+>>>>>>> refs/remotes/apache/trunk
         <include>org.apache.flume:flume-ng-sdk</include>
         <include>org.apache.flume:flume-ng-core</include>
         <include>org.apache.flume:flume-ng-node</include>
         <include>org.apache.flume:flume-ng-dist</include>
         <include>org.apache.flume:flume-ng-channels</include>
         <include>org.apache.flume:flume-ng-sinks</include>
+<<<<<<< HEAD
         <include>org.apache.flume:flume-ng-legacy-sources</include>
         <include>org.apache.flume:flume-ng-clients</include>
+=======
+        <include>org.apache.flume:flume-ng-sources</include>
+        <include>org.apache.flume:flume-ng-legacy-sources</include>
+        <include>org.apache.flume:flume-ng-clients</include>
+        <include>org.apache.flume:flume-ng-embedded-agent</include>
+        <include>org.apache.flume:flume-tools</include>
+        <include>org.apache.flume:flume-ng-auth</include>
+>>>>>>> refs/remotes/apache/trunk
       </includes>
 
       <sources>
@@ -77,29 +89,49 @@
       <directory>../</directory>
 
       <excludes>
+<<<<<<< HEAD
+=======
+        <exclude>flume-ng-configuration/**</exclude>
+>>>>>>> refs/remotes/apache/trunk
         <exclude>flume-ng-sdk/**</exclude>
         <exclude>flume-ng-core/**</exclude>
         <exclude>flume-ng-node/**</exclude>
+        <exclude>flume-ng-dist/**</exclude>
         <exclude>flume-ng-channels/**</exclude>
         <exclude>flume-ng-sinks/**</exclude>
+<<<<<<< HEAD
         <exclude>flume-ng-legacy-sources/**</exclude>
         <exclude>flume-ng-clients/**</exclude>
         <exclude>flume-ng-dist/**</exclude>
         <exclude>target/**</exclude>
+=======
+        <exclude>flume-ng-sources/**</exclude>
+        <exclude>flume-ng-legacy-sources/**</exclude>
+        <exclude>flume-ng-clients/**</exclude>
+        <exclude>flume-ng-embedded-agent/**</exclude>
+        <exclude>flume-tools/**</exclude>
+        <exclude>**/target/**</exclude>
+        <exclude>**/.classpath</exclude>
+        <exclude>**/.project</exclude>
+        <exclude>**/.settings/**</exclude>
+>>>>>>> refs/remotes/apache/trunk
         <exclude>lib/**</exclude>
       </excludes>
 
       <includes>
+        <include>.gitignore</include>
         <include>DEVNOTES</include>
         <include>README</include>
         <include>LICENSE</include>
         <include>NOTICE</include>
         <include>CHANGELOG</include>
-        <include>DISCLAIMER</include>
         <include>RELEASE-NOTES</include>
         <include>bin/**</include>
         <include>conf/**</include>
         <include>pom.xml</include>
+        <include>flume-ng-doc/**</include>
+        <include>flume-ng-tests/**</include>
+        <include>dev-support/**</include>
       </includes>
     </fileSet>
   </fileSets>

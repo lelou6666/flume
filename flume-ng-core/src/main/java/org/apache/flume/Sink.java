@@ -19,6 +19,8 @@
 
 package org.apache.flume;
 
+import org.apache.flume.annotations.InterfaceAudience;
+import org.apache.flume.annotations.InterfaceStability;
 import org.apache.flume.lifecycle.LifecycleAware;
 
 /**
@@ -35,11 +37,18 @@ import org.apache.flume.lifecycle.LifecycleAware;
  * Sinks are associated with unique names that can be used for separating
  * configuration and working namespaces.
  * </p>
+ * <p>
+ * While the {@link Sink#process()} call is guaranteed to only be accessed
+ * by a single thread, other calls may be concurrently accessed and should
+ * thus be protected.
+ * </p>
  *
  * @see org.apache.flume.Channel
  * @see org.apache.flume.SinkProcessor
  * @see org.apache.flume.SinkRunner
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public interface Sink extends LifecycleAware, NamedComponent {
   /**
    * <p>Sets the channel the sink will consume from</p>

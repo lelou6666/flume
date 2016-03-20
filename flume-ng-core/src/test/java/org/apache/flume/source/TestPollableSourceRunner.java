@@ -19,16 +19,20 @@
 
 package org.apache.flume.source;
 
+import com.google.common.collect.Lists;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.flume.Channel;
+import org.apache.flume.ChannelSelector;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.EventDeliveryException;
 import org.apache.flume.PollableSource;
 import org.apache.flume.Transaction;
 import org.apache.flume.channel.ChannelProcessor;
+import org.apache.flume.channel.ChannelSelectorFactory;
 import org.apache.flume.channel.MemoryChannel;
+import org.apache.flume.channel.ReplicatingChannelSelector;
 import org.apache.flume.conf.Configurables;
 import org.apache.flume.event.EventBuilder;
 import org.apache.flume.lifecycle.LifecycleState;
@@ -56,9 +60,13 @@ public class TestPollableSourceRunner {
 
     Configurables.configure(channel, new Context());
 
+    final ChannelSelector cs = new ReplicatingChannelSelector();
+    cs.setChannels(Lists.newArrayList(channel));
+
     PollableSource source = new PollableSource() {
 
       private String name;
+      private ChannelProcessor cp = new ChannelProcessor(cs);
 
       @Override
       public Status process() throws EventDeliveryException {
@@ -84,6 +92,16 @@ public class TestPollableSourceRunner {
         } finally {
           transaction.close();
         }
+      }
+
+      @Override
+      public long getBackOffSleepIncrement() {
+        return PollableSourceConstants.DEFAULT_BACKOFF_SLEEP_INCREMENT;
+      }
+
+      @Override
+      public long getMaxBackOffSleepInterval() {
+        return PollableSourceConstants.DEFAULT_MAX_BACKOFF_SLEEP;
       }
 
       @Override
@@ -114,13 +132,12 @@ public class TestPollableSourceRunner {
 
       @Override
       public void setChannelProcessor(ChannelProcessor channelProcessor) {
-        // Not used
+        cp = channelProcessor;
       }
 
       @Override
       public ChannelProcessor getChannelProcessor() {
-        // Not used
-        return null;
+        return cp;
       }
 
     };

@@ -21,11 +21,15 @@ package org.apache.flume.sink;
 
 import org.apache.flume.Channel;
 import org.apache.flume.Sink;
+import org.apache.flume.annotations.InterfaceAudience;
+import org.apache.flume.annotations.InterfaceStability;
 import org.apache.flume.lifecycle.LifecycleAware;
 import org.apache.flume.lifecycle.LifecycleState;
 
 import com.google.common.base.Preconditions;
 
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 abstract public class AbstractSink implements Sink, LifecycleAware {
 
   private Channel channel;
@@ -49,6 +53,7 @@ abstract public class AbstractSink implements Sink, LifecycleAware {
     lifecycleState = LifecycleState.STOP;
   }
 
+  @Override
   public synchronized Channel getChannel() {
     return channel;
   }
@@ -73,4 +78,7 @@ abstract public class AbstractSink implements Sink, LifecycleAware {
     return name;
   }
 
+  public String toString() {
+	  return this.getClass().getName() + "{name:" + name + ", channel:" + channel.getName() + "}";
+  }
 }
