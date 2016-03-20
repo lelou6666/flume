@@ -21,8 +21,13 @@ package org.apache.flume.channel.file;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
+<<<<<<< HEAD
+=======
+import com.google.common.collect.Iterables;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.*;
 import org.apache.flume.annotations.Disposable;
 import org.apache.flume.annotations.InterfaceAudience;
@@ -95,8 +100,15 @@ public class FileChannel extends BasicChannelSemantics {
   private String encryptionActiveKey;
   private String encryptionCipherProvider;
   private boolean useDualCheckpoints;
+<<<<<<< HEAD
   private boolean fsyncPerTransaction;
   private int fsyncInterval;
+=======
+  private boolean compressBackupCheckpoint;
+  private boolean fsyncPerTransaction;
+  private int fsyncInterval;
+  private boolean checkpointOnClose = true;
+>>>>>>> refs/remotes/apache/trunk
 
   @Override
   public synchronized void setName(String name) {
@@ -110,17 +122,24 @@ public class FileChannel extends BasicChannelSemantics {
     useDualCheckpoints = context.getBoolean(
         FileChannelConfiguration.USE_DUAL_CHECKPOINTS,
         FileChannelConfiguration.DEFAULT_USE_DUAL_CHECKPOINTS);
+
+    compressBackupCheckpoint = context.getBoolean(
+        FileChannelConfiguration.COMPRESS_BACKUP_CHECKPOINT,
+        FileChannelConfiguration.DEFAULT_COMPRESS_BACKUP_CHECKPOINT);
+
     String homePath = System.getProperty("user.home").replace('\\', '/');
 
     String strCheckpointDir =
         context.getString(FileChannelConfiguration.CHECKPOINT_DIR,
-            homePath + "/.flume/file-channel/checkpoint");
+            homePath + "/.flume/file-channel/checkpoint").trim();
 
     String strBackupCheckpointDir = context.getString
       (FileChannelConfiguration.BACKUP_CHECKPOINT_DIR, "").trim();
 
-    String[] strDataDirs = context.getString(FileChannelConfiguration.DATA_DIRS,
-        homePath + "/.flume/file-channel/data").split(",");
+    String[] strDataDirs = Iterables.toArray(
+        Splitter.on(",").trimResults().omitEmptyStrings().split(
+            context.getString(FileChannelConfiguration.DATA_DIRS,
+                homePath + "/.flume/file-channel/data")), String.class);
 
     checkpointDir = new File(strCheckpointDir);
 
@@ -241,6 +260,12 @@ public class FileChannel extends BasicChannelSemantics {
     fsyncInterval = context.getInteger(FileChannelConfiguration
       .FSYNC_INTERVAL, FileChannelConfiguration.DEFAULT_FSYNC_INTERVAL);
 
+<<<<<<< HEAD
+=======
+    checkpointOnClose = context.getBoolean(FileChannelConfiguration
+            .CHKPT_ONCLOSE, FileChannelConfiguration.DEFAULT_CHKPT_ONCLOSE);
+
+>>>>>>> refs/remotes/apache/trunk
     if(queueRemaining == null) {
       queueRemaining = new Semaphore(capacity, true);
     }
@@ -272,9 +297,14 @@ public class FileChannel extends BasicChannelSemantics {
       builder.setEncryptionKeyAlias(encryptionActiveKey);
       builder.setEncryptionCipherProvider(encryptionCipherProvider);
       builder.setUseDualCheckpoints(useDualCheckpoints);
+      builder.setCompressBackupCheckpoint(compressBackupCheckpoint);
       builder.setBackupCheckpointDir(backupCheckpointDir);
       builder.setFsyncPerTransaction(fsyncPerTransaction);
       builder.setFsyncInterval(fsyncInterval);
+<<<<<<< HEAD
+=======
+      builder.setCheckpointOnClose(checkpointOnClose);
+>>>>>>> refs/remotes/apache/trunk
       log = builder.build();
       log.replay();
       open = true;

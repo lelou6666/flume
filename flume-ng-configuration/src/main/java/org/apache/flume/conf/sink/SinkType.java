@@ -99,7 +99,17 @@ public enum SinkType {
    *
    * @see org.apache.flume.sink.solr.morphline.MorphlineSolrSink
    */
+<<<<<<< HEAD
   MORPHLINE_SOLR("org.apache.flume.sink.solr.morphline.MorphlineSolrSink");
+=======
+  MORPHLINE_SOLR("org.apache.flume.sink.solr.morphline.MorphlineSolrSink"),
+
+  /**
+   * Hive Sink
+   * @see org.apache.flume.sink.hive.HiveSink
+   */
+  HIVE("org.apache.flume.sink.hive.HiveSink");
+>>>>>>> refs/remotes/apache/trunk
 
   private final String sinkClassName;
 

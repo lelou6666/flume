@@ -15,7 +15,11 @@
 
 
 ================================================
+<<<<<<< HEAD
 Apache Flume 1.5.2 documentation
+=======
+Apache Flume 1.7.0-SNAPSHOT documentation
+>>>>>>> refs/remotes/apache/trunk
 ================================================
 
 Flume is a distributed, reliable, and available system for efficiently

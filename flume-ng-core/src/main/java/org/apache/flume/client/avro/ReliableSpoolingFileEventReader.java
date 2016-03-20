@@ -19,6 +19,10 @@
 
 package org.apache.flume.client.avro;
 
+<<<<<<< HEAD
+=======
+import com.google.common.annotations.VisibleForTesting;
+>>>>>>> refs/remotes/apache/trunk
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -45,6 +49,10 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.*;
 import java.util.regex.Pattern;
+<<<<<<< HEAD
+=======
+import java.util.ArrayList;
+>>>>>>> refs/remotes/apache/trunk
 
 /**
  * <p/>A {@link ReliableEventReader} which reads log data from files stored
@@ -98,6 +106,10 @@ public class ReliableSpoolingFileEventReader implements ReliableEventReader {
   /** Always contains the last file from which lines have been read. **/
   private Optional<FileInfo> lastFileRead = Optional.absent();
   private boolean committed = true;
+
+  /** Instance var to Cache directory listing **/
+  private Iterator<File> candidateFileIter = null;
+  private int listFilesCount = 0;
 
   /**
    * Create a ReliableSpoolingFileEventReader to watch the given directory.
@@ -193,6 +205,14 @@ public class ReliableSpoolingFileEventReader implements ReliableEventReader {
     }
 
     this.metaFile = new File(trackerDirectory, metaFileName);
+    if(metaFile.exists() && metaFile.length() == 0) {
+      deleteMetaFile();
+    }
+  }
+
+  @VisibleForTesting
+  int getListFilesCount() {
+    return listFilesCount;
   }
 
   /** Return the filename which generated the data from the last successful
@@ -238,8 +258,10 @@ public class ReliableSpoolingFileEventReader implements ReliableEventReader {
     List<Event> events = des.readEvents(numEvents);
 
     /* It's possible that the last read took us just up to a file boundary.
-     * If so, try to roll to the next file, if there is one. */
-    if (events.isEmpty()) {
+     * If so, try to roll to the next file, if there is one.
+     * Loop until events is not empty or there is no next file in case of 0 byte files */
+    while (events.isEmpty()) {
+      logger.info("Last read took us just up to a file boundary. Rolling to the next file, if there is one.");
       retireCurrentFile();
       currentFile = getNextFile();
       if (!currentFile.isPresent()) {
@@ -409,19 +431,32 @@ public class ReliableSpoolingFileEventReader implements ReliableEventReader {
    * If two or more files are equally old/young, then the file name with
    * lower lexicographical value is returned.
    * If the {@link #consumeOrder} variable is {@link ConsumeOrder#RANDOM}
+<<<<<<< HEAD
    * then returns any arbitrary file in the directory.
+=======
+   * then cache the directory listing to amortize retreival cost, and return
+   * any arbitary file from the directory.
+>>>>>>> refs/remotes/apache/trunk
    */
   private Optional<FileInfo> getNextFile() {
-    /* Filter to exclude finished or hidden files */
-    FileFilter filter = new FileFilter() {
-      public boolean accept(File candidate) {
-        String fileName = candidate.getName();
-        if ((candidate.isDirectory()) ||
+    List<File> candidateFiles = Collections.emptyList();
+
+    if (consumeOrder != ConsumeOrder.RANDOM ||
+      candidateFileIter == null ||
+      !candidateFileIter.hasNext()) {
+      /* Filter to exclude finished or hidden files */
+      FileFilter filter = new FileFilter() {
+        public boolean accept(File candidate) {
+          String fileName = candidate.getName();
+          if ((candidate.isDirectory()) ||
             (fileName.endsWith(completedSuffix)) ||
             (fileName.startsWith(".")) ||
             ignorePattern.matcher(fileName).matches()) {
-          return false;
+            return false;
+          }
+          return true;
         }
+<<<<<<< HEAD
         return true;
       }
     };
@@ -432,6 +467,19 @@ public class ReliableSpoolingFileEventReader implements ReliableEventReader {
     }
 
     File selectedFile = candidateFiles.get(0); // Select the first random file.
+=======
+      };
+      candidateFiles = Arrays.asList(spoolDirectory.listFiles(filter));
+      listFilesCount++;
+      candidateFileIter = candidateFiles.iterator();
+    }
+
+    if (!candidateFileIter.hasNext()) { // No matching file in spooling directory.
+      return Optional.absent();
+    }
+
+    File selectedFile = candidateFileIter.next();
+>>>>>>> refs/remotes/apache/trunk
     if (consumeOrder == ConsumeOrder.RANDOM) { // Selected file is random.
       return openFile(selectedFile);
     } else if (consumeOrder == ConsumeOrder.YOUNGEST) {
@@ -568,7 +616,11 @@ public class ReliableSpoolingFileEventReader implements ReliableEventReader {
         SpoolDirectorySourceConfigurationConstants.DEFAULT_INPUT_CHARSET;
     private DecodeErrorPolicy decodeErrorPolicy = DecodeErrorPolicy.valueOf(
         SpoolDirectorySourceConfigurationConstants.DEFAULT_DECODE_ERROR_POLICY
+<<<<<<< HEAD
             .toUpperCase());
+=======
+            .toUpperCase(Locale.ENGLISH));
+>>>>>>> refs/remotes/apache/trunk
     private ConsumeOrder consumeOrder = 
         SpoolDirectorySourceConfigurationConstants.DEFAULT_CONSUME_ORDER;    
     

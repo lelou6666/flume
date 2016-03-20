@@ -70,4 +70,11 @@ public class HBaseSinkConfigurationConstants {
 
   public static final Boolean DEFAULT_COALESCE_INCREMENTS = false;
 
+<<<<<<< HEAD
+=======
+  public static final int DEFAULT_MAX_CONSECUTIVE_FAILS = 10;
+
+  public static final String CONFIG_MAX_CONSECUTIVE_FAILS = "maxConsecutiveFails";
+
+>>>>>>> refs/remotes/apache/trunk
 }

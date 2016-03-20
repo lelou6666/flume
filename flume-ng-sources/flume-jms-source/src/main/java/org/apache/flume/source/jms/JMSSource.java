@@ -20,6 +20,7 @@ package org.apache.flume.source.jms;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 
 import javax.jms.ConnectionFactory;
@@ -101,7 +102,11 @@ public class JMSSource extends AbstractPollableSource {
         DESTINATION_NAME, "").trim();
 
     String destinationTypeName = context.getString(JMSSourceConfiguration.
-        DESTINATION_TYPE, "").trim().toUpperCase();
+        DESTINATION_TYPE, "").trim().toUpperCase(Locale.ENGLISH);
+
+    String destinationLocatorName = context.getString(JMSSourceConfiguration.
+        DESTINATION_LOCATOR, JMSSourceConfiguration.DESTINATION_LOCATOR_DEFAULT)
+      .trim().toUpperCase(Locale.ENGLISH);
 
     String destinationLocatorName = context.getString(JMSSourceConfiguration.
         DESTINATION_LOCATOR, JMSSourceConfiguration.DESTINATION_LOCATOR_DEFAULT)
@@ -219,6 +224,20 @@ public class JMSSource extends AbstractPollableSource {
           initialContextFactoryName);
       contextProperties.setProperty(
           javax.naming.Context.PROVIDER_URL, providerUrl);
+<<<<<<< HEAD
+=======
+
+      // Provide properties for connecting via JNDI
+      if (this.userName.isPresent()) {
+        contextProperties.setProperty(
+    	    javax.naming.Context.SECURITY_PRINCIPAL, this.userName.get());
+      }
+      if (this.password.isPresent()) {
+        contextProperties.setProperty(
+    	    javax.naming.Context.SECURITY_CREDENTIALS, this.password.get());
+      }
+
+>>>>>>> refs/remotes/apache/trunk
       initialContext = initialContextFactory.create(contextProperties);
     } catch (NamingException e) {
       throw new FlumeException(String.format(

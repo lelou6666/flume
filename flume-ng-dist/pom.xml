@@ -24,7 +24,11 @@
   <parent>
     <artifactId>flume-parent</artifactId>
     <groupId>org.apache.flume</groupId>
+<<<<<<< HEAD
     <version>1.5.2</version>
+=======
+    <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
   </parent>
 
   <artifactId>flume-ng-dist</artifactId>
@@ -68,7 +72,11 @@
       <id>hadoop-2</id>
       <activation>
         <property>
+<<<<<<< HEAD
           <name>hadoop.profile</name>
+=======
+          <name>flume.hadoop.profile</name>
+>>>>>>> refs/remotes/apache/trunk
           <value>2</value>
         </property>
       </activation>
@@ -77,6 +85,7 @@
           <groupId>org.apache.flume.flume-ng-sinks</groupId>
           <artifactId>flume-dataset-sink</artifactId>
         </dependency>
+<<<<<<< HEAD
       </dependencies>
     </profile>
     <profile>
@@ -85,6 +94,19 @@
         <property>
           <name>hadoop.profile</name>
           <value>hbase-98</value>
+=======
+        <dependency>
+          <groupId>org.apache.flume.flume-ng-sinks</groupId>
+          <artifactId>flume-hive-sink</artifactId>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>hbase-1</id>
+      <activation>
+        <property>
+          <name>!flume.hadoop.profile</name>
+>>>>>>> refs/remotes/apache/trunk
         </property>
       </activation>
       <dependencies>
@@ -92,6 +114,13 @@
           <groupId>org.apache.flume.flume-ng-sinks</groupId>
           <artifactId>flume-dataset-sink</artifactId>
         </dependency>
+<<<<<<< HEAD
+=======
+        <dependency>
+          <groupId>org.apache.flume.flume-ng-sinks</groupId>
+          <artifactId>flume-hive-sink</artifactId>
+        </dependency>
+>>>>>>> refs/remotes/apache/trunk
       </dependencies>
     </profile>
   </profiles>
@@ -130,6 +159,10 @@
       <artifactId>flume-jdbc-channel</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.apache.flume.flume-ng-channels</groupId>
+      <artifactId>flume-kafka-channel</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.apache.flume.flume-ng-sinks</groupId>
       <artifactId>flume-hdfs-sink</artifactId>
     </dependency>
@@ -150,6 +183,10 @@
       <artifactId>flume-ng-morphline-solr-sink</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.apache.flume.flume-ng-sinks</groupId>
+      <artifactId>flume-ng-kafka-sink</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.apache.flume.flume-ng-sources</groupId>
       <artifactId>flume-scribe-source</artifactId>
     </dependency>
@@ -162,12 +199,23 @@
       <artifactId>flume-twitter-source</artifactId>
     </dependency>
     <dependency>
+<<<<<<< HEAD
+=======
+      <groupId>org.apache.flume.flume-ng-sources</groupId>
+      <artifactId>flume-kafka-source</artifactId>
+    </dependency>
+    <dependency>
+>>>>>>> refs/remotes/apache/trunk
       <groupId>org.apache.flume.flume-ng-legacy-sources</groupId>
       <artifactId>flume-avro-source</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.flume.flume-ng-legacy-sources</groupId>
       <artifactId>flume-thrift-source</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.flume.flume-ng-sources</groupId>
+      <artifactId>flume-taildir-source</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.flume.flume-ng-clients</groupId>
@@ -181,6 +229,10 @@
     <dependency>
       <groupId>org.apache.flume</groupId>
       <artifactId>flume-tools</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.flume</groupId>
+      <artifactId>flume-ng-auth</artifactId>
     </dependency>
   </dependencies>
 

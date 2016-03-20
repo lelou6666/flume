@@ -36,6 +36,11 @@ import org.apache.flume.EventDeliveryException;
 import org.apache.flume.FlumeException;
 import org.apache.flume.Transaction;
 import org.apache.flume.annotations.InterfaceAudience;
+<<<<<<< HEAD
+=======
+import org.apache.flume.auth.FlumeAuthenticationUtil;
+import org.apache.flume.auth.PrivilegedExecutor;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.instrumentation.SinkCounter;
 import org.apache.flume.sink.AbstractSink;
@@ -54,7 +59,6 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import java.security.PrivilegedExceptionAction;
-import org.apache.hadoop.hbase.security.User;
 
 
 /**
@@ -103,11 +107,14 @@ public class HBaseSink extends AbstractSink implements Configurable {
   private Context serializerContext;
   private String kerberosPrincipal;
   private String kerberosKeytab;
-  private User hbaseUser;
   private boolean enableWal = true;
   private boolean batchIncrements = false;
   private Method refGetFamilyMap = null;
   private SinkCounter sinkCounter;
+  private PrivilegedExecutor privilegedExecutor;
+
+  // Internal hooks used for unit testing.
+  private DebugIncrementsCallback debugIncrCallback = null;
 
   // Internal hooks used for unit testing.
   private DebugIncrementsCallback debugIncrCallback = null;
@@ -132,17 +139,14 @@ public class HBaseSink extends AbstractSink implements Configurable {
     Preconditions.checkArgument(table == null, "Please call stop " +
         "before calling start on an old instance.");
     try {
-      if (HBaseSinkSecurityManager.isSecurityEnabled(config)) {
-        hbaseUser = HBaseSinkSecurityManager.login(config, null,
-          kerberosPrincipal, kerberosKeytab);
-      }
+      privilegedExecutor = FlumeAuthenticationUtil.getAuthenticator(kerberosPrincipal, kerberosKeytab);
     } catch (Exception ex) {
       sinkCounter.incrementConnectionFailedCount();
       throw new FlumeException("Failed to login to HBase using "
         + "provided credentials.", ex);
     }
     try {
-      table = runPrivileged(new PrivilegedExceptionAction<HTable>() {
+      table = privilegedExecutor.execute(new PrivilegedExceptionAction<HTable>() {
         @Override
         public HTable run() throws Exception {
           HTable table = new HTable(config, tableName);
@@ -160,7 +164,7 @@ public class HBaseSink extends AbstractSink implements Configurable {
           " from HBase", e);
     }
     try {
-      if (!runPrivileged(new PrivilegedExceptionAction<Boolean>() {
+      if (!privilegedExecutor.execute(new PrivilegedExceptionAction<Boolean>() {
         @Override
         public Boolean run() throws IOException {
           return table.getTableDescriptor().hasFamily(columnFamily);
@@ -233,8 +237,8 @@ public class HBaseSink extends AbstractSink implements Configurable {
       logger.error("Could not instantiate event serializer." , e);
       Throwables.propagate(e);
     }
-    kerberosKeytab = context.getString(HBaseSinkConfigurationConstants.CONFIG_KEYTAB, "");
-    kerberosPrincipal = context.getString(HBaseSinkConfigurationConstants.CONFIG_PRINCIPAL, "");
+    kerberosKeytab = context.getString(HBaseSinkConfigurationConstants.CONFIG_KEYTAB);
+    kerberosPrincipal = context.getString(HBaseSinkConfigurationConstants.CONFIG_PRINCIPAL);
 
     enableWal = context.getBoolean(HBaseSinkConfigurationConstants
       .CONFIG_ENABLE_WAL, HBaseSinkConfigurationConstants.DEFAULT_ENABLE_WAL);
@@ -371,7 +375,11 @@ public class HBaseSink extends AbstractSink implements Configurable {
   private void putEventsAndCommit(final List<Row> actions,
       final List<Increment> incs, Transaction txn) throws Exception {
 
+<<<<<<< HEAD
     runPrivileged(new PrivilegedExceptionAction<Void>() {
+=======
+    privilegedExecutor.execute(new PrivilegedExceptionAction<Void>() {
+>>>>>>> refs/remotes/apache/trunk
       @Override
       public Void run() throws Exception {
         for (Row r : actions) {
@@ -385,6 +393,7 @@ public class HBaseSink extends AbstractSink implements Configurable {
         }
         table.batch(actions);
         return null;
+<<<<<<< HEAD
       }
     });
 
@@ -421,11 +430,37 @@ public class HBaseSink extends AbstractSink implements Configurable {
     if(hbaseUser != null) {
       if (logger.isDebugEnabled()) {
         logger.debug("Calling runAs as hbase user: " + hbaseUser.getName());
+=======
+>>>>>>> refs/remotes/apache/trunk
       }
-      return hbaseUser.runAs(action);
-    } else {
-      return action.run();
-    }
+    });
+
+    privilegedExecutor.execute(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+
+        List<Increment> processedIncrements;
+        if (batchIncrements) {
+          processedIncrements = coalesceIncrements(incs);
+        } else {
+          processedIncrements = incs;
+        }
+
+        // Only used for unit testing.
+        if (debugIncrCallback != null) {
+          debugIncrCallback.onAfterCoalesce(processedIncrements);
+        }
+
+        for (final Increment i : processedIncrements) {
+          i.setWriteToWAL(enableWal);
+          table.increment(i);
+        }
+        return null;
+      }
+    });
+
+    txn.commit();
+    sinkCounter.addToEventDrainSuccessCount(actions.size());
   }
 
   /**
@@ -557,6 +592,138 @@ public class HBaseSink extends AbstractSink implements Configurable {
     }
   }
 
+<<<<<<< HEAD
+  /**
+   * The method getFamilyMap() is no longer available in Hbase 0.96.
+   * We must use reflection to determine which version we may use.
+   */
+  @VisibleForTesting
+  static Method reflectLookupGetFamilyMap() {
+    Method m = null;
+    String[] methodNames = { "getFamilyMapOfLongs", "getFamilyMap" };
+    for (String methodName : methodNames) {
+      try {
+        m = Increment.class.getMethod(methodName);
+        if (m != null && m.getReturnType().equals(Map.class)) {
+          logger.debug("Using Increment.{} for coalesce", methodName);
+          break;
+        }
+      } catch (NoSuchMethodException e) {
+        logger.debug("Increment.{} does not exist. Exception follows.",
+            methodName, e);
+      } catch (SecurityException e) {
+        logger.debug("No access to Increment.{}; Exception follows.",
+            methodName, e);
+      }
+    }
+    if (m == null) {
+      throw new UnsupportedOperationException(
+          "Cannot find Increment.getFamilyMap()");
+    }
+    return m;
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<byte[], NavigableMap<byte[], Long>> getFamilyMap(Increment inc) {
+    Preconditions.checkNotNull(refGetFamilyMap,
+                               "Increment.getFamilymap() not found");
+    Preconditions.checkNotNull(inc, "Increment required");
+    Map<byte[], NavigableMap<byte[], Long>> familyMap = null;
+    try {
+      Object familyObj = refGetFamilyMap.invoke(inc);
+      familyMap = (Map<byte[], NavigableMap<byte[], Long>>) familyObj;
+    } catch (IllegalAccessException e) {
+      logger.warn("Unexpected error calling getFamilyMap()", e);
+      Throwables.propagate(e);
+    } catch (InvocationTargetException e) {
+      logger.warn("Unexpected error calling getFamilyMap()", e);
+      Throwables.propagate(e);
+    }
+    return familyMap;
+  }
+
+  /**
+   * Perform "compression" on the given set of increments so that Flume sends
+   * the minimum possible number of RPC operations to HBase per batch.
+   * @param incs Input: Increment objects to coalesce.
+   * @return List of new Increment objects after coalescing the unique counts.
+   */
+  private List<Increment> coalesceIncrements(Iterable<Increment> incs) {
+    Preconditions.checkNotNull(incs, "List of Increments must not be null");
+    // Aggregate all of the increment row/family/column counts.
+    // The nested map is keyed like this: {row, family, qualifier} => count.
+    Map<byte[], Map<byte[], NavigableMap<byte[], Long>>> counters =
+        Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
+    for (Increment inc : incs) {
+      byte[] row = inc.getRow();
+      Map<byte[], NavigableMap<byte[], Long>> families = getFamilyMap(inc);
+      for (Map.Entry<byte[], NavigableMap<byte[],Long>> familyEntry : families.entrySet()) {
+        byte[] family = familyEntry.getKey();
+        NavigableMap<byte[], Long> qualifiers = familyEntry.getValue();
+        for (Map.Entry<byte[], Long> qualifierEntry : qualifiers.entrySet()) {
+          byte[] qualifier = qualifierEntry.getKey();
+          Long count = qualifierEntry.getValue();
+          incrementCounter(counters, row, family, qualifier, count);
+        }
+      }
+    }
+
+    // Reconstruct list of Increments per unique row/family/qualifier.
+    List<Increment> coalesced = Lists.newLinkedList();
+    for (Map.Entry<byte[], Map<byte[],NavigableMap<byte[], Long>>> rowEntry : counters.entrySet()) {
+      byte[] row = rowEntry.getKey();
+      Map <byte[], NavigableMap<byte[], Long>> families = rowEntry.getValue();
+      Increment inc = new Increment(row);
+      for (Map.Entry<byte[], NavigableMap<byte[], Long>> familyEntry : families.entrySet()) {
+        byte[] family = familyEntry.getKey();
+        NavigableMap<byte[], Long> qualifiers = familyEntry.getValue();
+        for (Map.Entry<byte[], Long> qualifierEntry : qualifiers.entrySet()) {
+          byte[] qualifier = qualifierEntry.getKey();
+          long count = qualifierEntry.getValue();
+          inc.addColumn(family, qualifier, count);
+        }
+      }
+      coalesced.add(inc);
+    }
+
+    return coalesced;
+  }
+
+  /**
+   * Helper function for {@link #coalesceIncrements} to increment a counter
+   * value in the passed data structure.
+   * @param counters Nested data structure containing the counters.
+   * @param row Row key to increment.
+   * @param family Column family to increment.
+   * @param qualifier Column qualifier to increment.
+   * @param count Amount to increment by.
+   */
+  private void incrementCounter(
+      Map<byte[], Map<byte[], NavigableMap<byte[], Long>>> counters,
+      byte[] row, byte[] family, byte[] qualifier, Long count) {
+
+    Map<byte[], NavigableMap<byte[], Long>> families = counters.get(row);
+    if (families == null) {
+      families = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
+      counters.put(row, families);
+    }
+
+    NavigableMap<byte[], Long> qualifiers = families.get(family);
+    if (qualifiers == null) {
+      qualifiers = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
+      families.put(family, qualifiers);
+    }
+
+    Long existingValue = qualifiers.get(qualifier);
+    if (existingValue == null) {
+      qualifiers.put(qualifier, count);
+    } else {
+      qualifiers.put(qualifier, existingValue + count);
+    }
+  }
+
+=======
+>>>>>>> refs/remotes/apache/trunk
   @VisibleForTesting
   @InterfaceAudience.Private
   HbaseEventSerializer getSerializer() {

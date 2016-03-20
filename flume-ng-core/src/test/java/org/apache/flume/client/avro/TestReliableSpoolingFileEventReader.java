@@ -23,6 +23,10 @@ import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import junit.framework.Assert;
 import org.apache.commons.io.FileUtils;
+<<<<<<< HEAD
+=======
+import org.apache.commons.lang.SystemUtils;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.Event;
 import org.apache.flume.client.avro.ReliableSpoolingFileEventReader.DeletePolicy;
 import org.apache.flume.source.SpoolDirectorySourceConfigurationConstants;
@@ -38,6 +42,10 @@ import java.io.FileFilter;
 import java.io.IOException;
 import java.util.*;
 import java.util.Map.Entry;
+<<<<<<< HEAD
+=======
+import java.util.concurrent.*;
+>>>>>>> refs/remotes/apache/trunk
 
 public class TestReliableSpoolingFileEventReader {
 
@@ -212,7 +220,11 @@ public class TestReliableSpoolingFileEventReader {
     FileUtils.write(fileName,
       "New file created in the end. Shoud be read randomly.\n");
     Set<String> actual = Sets.newHashSet();
+<<<<<<< HEAD
     readEventsForFilesInDir(WORK_DIR, reader, actual);      
+=======
+    readEventsForFilesInDir(WORK_DIR, reader, actual);
+>>>>>>> refs/remotes/apache/trunk
     Set<String> expected = Sets.newHashSet();
     createExpectedFromFilesInSetup(expected);
     expected.add("");
@@ -221,6 +233,55 @@ public class TestReliableSpoolingFileEventReader {
     Assert.assertEquals(expected, actual);    
   }
 
+<<<<<<< HEAD
+=======
+  @Test
+  public void testConsumeFileRandomlyNewFile() throws Exception {
+    // Atomic moves are not supported in Windows.
+    if (SystemUtils.IS_OS_WINDOWS) {
+      return;
+    }
+    final ReliableEventReader reader
+      = new ReliableSpoolingFileEventReader.Builder()
+      .spoolDirectory(WORK_DIR)
+      .consumeOrder(ConsumeOrder.RANDOM)
+      .build();
+    File fileName = new File(WORK_DIR, "new-file");
+    FileUtils.write(fileName,
+      "New file created in the end. Shoud be read randomly.\n");
+    Set<String> expected = Sets.newHashSet();
+    int totalFiles = WORK_DIR.listFiles().length;
+    final Set<String> actual = Sets.newHashSet();
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    final Semaphore semaphore1 = new Semaphore(0);
+    final Semaphore semaphore2 = new Semaphore(0);
+    Future<Void> wait = executor.submit(
+      new Callable<Void>() {
+        @Override
+        public Void call() throws Exception {
+          readEventsForFilesInDir(WORK_DIR, reader, actual, semaphore1, semaphore2);
+          return null;
+        }
+      }
+    );
+    semaphore1.acquire();
+    File finalFile = new File(WORK_DIR, "t-file");
+    FileUtils.write(finalFile, "Last file");
+    semaphore2.release();
+    wait.get();
+    int listFilesCount = ((ReliableSpoolingFileEventReader)reader)
+      .getListFilesCount();
+    finalFile.delete();
+    createExpectedFromFilesInSetup(expected);
+    expected.add("");
+    expected.add(
+      "New file created in the end. Shoud be read randomly.");
+    expected.add("Last file");
+    Assert.assertTrue(listFilesCount < (totalFiles + 2));
+    Assert.assertEquals(expected, actual);
+  }
+
+>>>>>>> refs/remotes/apache/trunk
 
   @Test
   public void testConsumeFileOldest() throws IOException, InterruptedException {
@@ -357,6 +418,38 @@ public class TestReliableSpoolingFileEventReader {
   @Test public void testLargeNumberOfFilesRANDOM() throws IOException {    
     templateTestForLargeNumberOfFiles(ConsumeOrder.RANDOM, null, 1000);
   }
+<<<<<<< HEAD
+=======
+
+  @Test
+  public void testZeroByteTrackerFile() throws IOException {
+    String trackerDirPath =
+            SpoolDirectorySourceConfigurationConstants.DEFAULT_TRACKER_DIR;
+    File trackerDir = new File(WORK_DIR, trackerDirPath);
+    if(!trackerDir.exists()) {
+      trackerDir.mkdir();
+    }
+    File trackerFile = new File(trackerDir, ReliableSpoolingFileEventReader.metaFileName);
+    if(trackerFile.exists()) {
+      trackerFile.delete();
+    }
+    trackerFile.createNewFile();
+
+    ReliableEventReader reader = new ReliableSpoolingFileEventReader.Builder()
+            .spoolDirectory(WORK_DIR).trackerDirPath(trackerDirPath).build();
+    final int expectedLines = 1;
+    int seenLines = 0;
+    List<Event> events = reader.readEvents(10);
+    int numEvents = events.size();
+    if (numEvents > 0) {
+      seenLines += numEvents;
+      reader.commit();
+    }
+    // This line will fail, if the zero-byte tracker file has not been handled
+    Assert.assertEquals(expectedLines, seenLines);
+  }
+
+>>>>>>> refs/remotes/apache/trunk
   private void templateTestForLargeNumberOfFiles(ConsumeOrder order, 
       Comparator<Long> comparator,
       int N) throws IOException {
@@ -414,6 +507,7 @@ public class TestReliableSpoolingFileEventReader {
       deleteDir(dir);
     }
   }
+<<<<<<< HEAD
     
   /* Read events, one for each file in the given directory. */
   private void readEventsForFilesInDir(File dir, ReliableEventReader reader, 
@@ -425,6 +519,38 @@ public class TestReliableSpoolingFileEventReader {
         actual.add(new String(e.getBody()));
       }
       reader.commit();
+=======
+
+  private void readEventsForFilesInDir(File dir, ReliableEventReader reader,
+    Collection<String> actual) throws IOException {
+    readEventsForFilesInDir(dir, reader, actual, null, null);
+  }
+    
+  /* Read events, one for each file in the given directory. */
+  private void readEventsForFilesInDir(File dir, ReliableEventReader reader, 
+      Collection<String> actual, Semaphore semaphore1, Semaphore semaphore2) throws IOException {
+    List<Event> events;
+    boolean executed = false;
+    for (int i=0; i < listFiles(dir).size(); i++) {
+      events = reader.readEvents(10);
+      for (Event e : events) {
+        actual.add(new String(e.getBody()));
+      }
+      reader.commit();
+      try {
+        if(!executed) {
+          executed = true;
+          if (semaphore1 != null) {
+            semaphore1.release();
+          }
+          if (semaphore2 != null) {
+            semaphore2.acquire();
+          }
+        }
+      } catch (Exception ex) {
+        throw new IOException(ex);
+      }
+>>>>>>> refs/remotes/apache/trunk
     }
   }    
   /* Create expected results out of the files created in the setup method. */

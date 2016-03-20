@@ -161,6 +161,17 @@ add_HBASE_paths() {
   fi
 }
 
+add_hive_paths(){
+  if [ -d "${HIVE_HOME}/lib" ]; then
+    info "Including Hive libraries found via ($HIVE_HOME) for Hive access"
+    FLUME_CLASSPATH="$FLUME_CLASSPATH:$HIVE_HOME/lib/*"
+  fi
+  if [ -d "${HCAT_HOME}/share/hcatalog" ]; then
+    info "Including HCatalog libraries found via ($HCAT_HOME) for Hive access"
+    FLUME_CLASSPATH="$FLUME_CLASSPATH:${HCAT_HOME}/share/hcatalog/*"
+  fi
+}
+
 set_LD_LIBRARY_PATH(){
 #Append the FLUME_JAVA_LIBRARY_PATH to whatever the user may have specified in
 #flume-env.sh
@@ -174,25 +185,28 @@ display_help() {
 Usage: $0 <command> [options]...
 
 commands:
-  help                  display this help text
-  agent                 run a Flume agent
-  avro-client           run an avro Flume client
-  version               show Flume version info
+  help                      display this help text
+  agent                     run a Flume agent
+  avro-client               run an avro Flume client
+  version                   show Flume version info
 
 global options:
-  --conf,-c <conf>      use configs in <conf> directory
-  --classpath,-C <cp>   append to the classpath
-  --dryrun,-d           do not actually start Flume, just print the command
-  --plugins-path <dirs> colon-separated list of plugins.d directories. See the
-                        plugins.d section in the user guide for more details.
-                        Default: \$FLUME_HOME/plugins.d
-  -Dproperty=value      sets a Java system property value
-  -Xproperty=value      sets a Java -X option
+  --conf,-c <conf>          use configs in <conf> directory
+  --classpath,-C <cp>       append to the classpath
+  --dryrun,-d               do not actually start Flume, just print the command
+  --plugins-path <dirs>     colon-separated list of plugins.d directories. See the
+                            plugins.d section in the user guide for more details.
+                            Default: \$FLUME_HOME/plugins.d
+  -Dproperty=value          sets a Java system property value
+  -Xproperty=value          sets a Java -X option
 
 agent options:
-  --conf-file,-f <file> specify a config file (required)
-  --name,-n <name>      the name of this agent (required)
-  --help,-h             display help text
+  --name,-n <name>          the name of this agent (required)
+  --conf-file,-f <file>     specify a config file (required if -z missing)
+  --zkConnString,-z <str>   specify the ZooKeeper connection to use (required if -f missing)
+  --zkBasePath,-p <path>    specify the base path in ZooKeeper for agent configs
+  --no-reload-conf          do not reload config file if changed
+  --help,-h                 display help text
 
 avro-client options:
   --rpcProps,-P <file>   RPC client properties file with server connection params
@@ -300,6 +314,18 @@ while [ -n "$*" ] ; do
     --plugins-path)
       opt_plugins_dirs=$1
       shift
+      ;;
+    -agentlib*)
+      arr_java_props[arr_java_props_ct]=$arg
+      ((++arr_java_props_ct))
+      ;;
+    -agentpath*)
+      arr_java_props[arr_java_props_ct]=$arg
+      ((++arr_java_props_ct))
+      ;;
+    -javaagent*)
+      arr_java_props[arr_java_props_ct]=$arg
+      ((++arr_java_props_ct))
       ;;
     -D*)
       arr_java_props[arr_java_props_ct]=$arg
@@ -414,6 +440,7 @@ fi
 # look for hadoop libs
 add_hadoop_paths
 add_HBASE_paths
+add_hive_paths
 
 # prepend conf dir to classpath
 if [ -n "$opt_conf" ]; then

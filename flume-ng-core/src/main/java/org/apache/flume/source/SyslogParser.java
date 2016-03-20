@@ -30,6 +30,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.collect.Maps;
 import java.nio.charset.Charset;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 import org.apache.flume.Event;
@@ -79,7 +80,11 @@ public class SyslogParser {
    * @return Parsed Flume Event
    * @throws IllegalArgumentException if unable to successfully parse message
    */
+<<<<<<< HEAD
   public Event parseMessage(String msg, Charset charset, boolean keepFields) {
+=======
+  public Event parseMessage(String msg, Charset charset, Set<String> keepFields) {
+>>>>>>> refs/remotes/apache/trunk
     Map<String, String> headers = Maps.newHashMap();
 
     int msgLen = msg.length();
@@ -98,6 +103,9 @@ public class SyslogParser {
     int facility = pri / 8;
     int severity = pri % 8;
 
+    // Remember priority
+    headers.put(SyslogUtils.SYSLOG_PRIORITY, priority);
+
     // put fac / sev into header
     headers.put(SyslogUtils.SYSLOG_FACILITY, String.valueOf(facility));
     headers.put(SyslogUtils.SYSLOG_SEVERITY, String.valueOf(severity));
@@ -108,20 +116,25 @@ public class SyslogParser {
     // update parsing position
     curPos = endBracketPos + 1;
 
-    // ignore version string
+    // remember version string
+    String version = null;
     if (msgLen > curPos + 2 && "1 ".equals(msg.substring(curPos, curPos + 2))) {
+      version = msg.substring(curPos, curPos+1);
+      headers.put(SyslogUtils.SYSLOG_VERSION, version);
       curPos += 2;
     }
 
     // now parse timestamp (handle different varieties)
 
     long ts;
+    String tsString;
     char dateStartChar = msg.charAt(curPos);
 
     try {
 
       // no timestamp specified; use relay current time
       if (dateStartChar == '-') {
+        tsString = Character.toString(dateStartChar);
         ts = System.currentTimeMillis();
         if (msgLen <= curPos + 2) {
           throw new IllegalArgumentException(
@@ -129,22 +142,23 @@ public class SyslogParser {
         }
         curPos += 2; // assume we skip past a space to get to the hostname
 
-        // rfc3164 imestamp
+      // rfc3164 timestamp
       } else if (dateStartChar >= 'A' && dateStartChar <= 'Z') {
         if (msgLen <= curPos + RFC3164_LEN) {
           throw new IllegalArgumentException("bad timestamp format");
         }
-        ts = parseRfc3164Time(
-            msg.substring(curPos, curPos + RFC3164_LEN));
+        tsString = msg.substring(curPos, curPos + RFC3164_LEN);
+        ts = parseRfc3164Time(tsString);
         curPos += RFC3164_LEN + 1;
 
-        // rfc 5424 timestamp
+      // rfc 5424 timestamp
       } else {
         int nextSpace = msg.indexOf(' ', curPos);
         if (nextSpace == -1) {
           throw new IllegalArgumentException("bad timestamp format");
         }
-        ts = parseRfc5424Date(msg.substring(curPos, nextSpace));
+        tsString = msg.substring(curPos, nextSpace);
+        ts = parseRfc5424Date(tsString);
         curPos = nextSpace + 1;
       }
 
@@ -167,9 +181,16 @@ public class SyslogParser {
 
     // EventBuilder will do a copy of its own, so no defensive copy of the body
     String data = "";
+<<<<<<< HEAD
     if (msgLen > nextSpace + 1 && !keepFields) {
       curPos = nextSpace + 1;
       data = msg.substring(curPos);
+=======
+    if (msgLen > nextSpace + 1 && !SyslogUtils.keepAllFields(keepFields)) {
+      curPos = nextSpace + 1;
+      data = msg.substring(curPos);
+      data = SyslogUtils.addFieldsToBody(keepFields, data, priority, version, tsString, hostname);
+>>>>>>> refs/remotes/apache/trunk
     } else {
       data = msg;
     }
@@ -226,9 +247,14 @@ public class SyslogParser {
       }
 
       // if they had a valid fractional second, append it rounded to millis
-      if (endMillisPos - (curPos + 1) > 0) {
-        float frac = Float.parseFloat(msg.substring(curPos, endMillisPos));
-        long milliseconds = (long) (frac * 1000f);
+      final int fractionalPositions = endMillisPos - (curPos + 1);
+      if (fractionalPositions > 0) {
+        long milliseconds = Long.parseLong(msg.substring(curPos + 1, endMillisPos));
+        if (fractionalPositions > 3) {
+          milliseconds /= Math.pow(10, (fractionalPositions - 3));
+        } else if (fractionalPositions < 3) {
+          milliseconds *= Math.pow(10, (3 - fractionalPositions));
+        }
         ts += milliseconds;
       } else {
         throw new IllegalArgumentException(
@@ -309,10 +335,10 @@ public class SyslogParser {
 
       // flume clock is ahead or there is some latency, and the year rolled
       if (fixed.isAfter(now) && fixed.minusMonths(1).isAfter(now)) {
-        fixed = date.withYear(year - 1);
+         fixed = date.minusYears(1);
       // flume clock is behind and the year rolled
       } else if (fixed.isBefore(now) && fixed.plusMonths(1).isBefore(now)) {
-        fixed = date.withYear(year + 1);
+        fixed = date.plusYears(1);
       }
       date = fixed;
     }

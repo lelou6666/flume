@@ -47,6 +47,23 @@ public class TestBucketPath {
     headers = new HashMap<String, String>();
     headers.put("timestamp", String.valueOf(cal.getTimeInMillis()));
   }
+
+  @Test
+  public void testDateFormatCache(){
+    TimeZone utcTimeZone = TimeZone.getTimeZone("UTC");
+    String test = "%c";
+    BucketPath.escapeString(
+            test, headers, utcTimeZone, false, Calendar.HOUR_OF_DAY, 12, false);
+    String escapedString = BucketPath.escapeString(
+            test, headers, false, Calendar.HOUR_OF_DAY, 12);
+    System.out.println("Escaped String: " + escapedString);
+    SimpleDateFormat format = new SimpleDateFormat("EEE MMM d HH:mm:ss yyyy");
+    Date d = new Date(cal.getTimeInMillis());
+    String expectedString = format.format(d);
+    System.out.println("Expected String: "+ expectedString);
+    Assert.assertEquals(expectedString, escapedString);
+  }
+
   @Test
   public void testDateFormatHours() {
     String test = "%c";
@@ -100,6 +117,37 @@ public class TestBucketPath {
     SimpleDateFormat format = new SimpleDateFormat("EEE MMM d HH:mm:ss yyyy");
     Date d = new Date(cal.getTimeInMillis());
     String expectedString = format.format(d);
+    System.out.println("Expected String: "+ expectedString);
+    Assert.assertEquals(expectedString, escapedString);
+  }
+
+
+  @Test
+  public void testNoPadding(){
+    Calendar calender;
+    Map<String, String> calender_timestamp;
+    calender = Calendar.getInstance();
+    
+    //Check single digit dates
+    calender.set(2014, (5-1), 3, 13, 46, 33);
+    calender_timestamp = new HashMap<String, String>();
+    calender_timestamp.put("timestamp", String.valueOf(calender.getTimeInMillis()));
+    SimpleDateFormat format = new SimpleDateFormat("M-d");
+    
+    String test = "%n-%e"; // eg 5-3
+    String escapedString = BucketPath.escapeString(
+        test, calender_timestamp, false, Calendar.HOUR_OF_DAY, 12);
+    Date d = new Date(calender.getTimeInMillis());
+    String expectedString = format.format(d);
+    
+    //Check two digit dates
+    calender.set(2014, (11-1), 13, 13, 46, 33);
+    calender_timestamp.put("timestamp", String.valueOf(calender.getTimeInMillis()));
+    escapedString +=  " " +  BucketPath.escapeString(
+        test, calender_timestamp, false, Calendar.HOUR_OF_DAY, 12);
+    System.out.println("Escaped String: " + escapedString);
+    d = new Date(calender.getTimeInMillis());
+    expectedString +=  " " + format.format(d);
     System.out.println("Expected String: "+ expectedString);
     Assert.assertEquals(expectedString, escapedString);
   }

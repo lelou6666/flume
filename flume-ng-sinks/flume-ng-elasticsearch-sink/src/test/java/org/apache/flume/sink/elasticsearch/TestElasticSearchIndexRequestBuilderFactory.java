@@ -158,6 +158,27 @@ public class TestElasticSearchIndexRequestBuilderFactory
   }
 
   @Test
+  public void shouldSetIndexNameTypeFromHeaderWhenPresent()
+      throws Exception {
+    String indexPrefix = "%{index-name}";
+    String indexType = "%{index-type}";
+    String indexValue = "testing-index-name-from-headers";
+    String typeValue = "testing-index-type-from-headers";
+
+    Event event = new SimpleEvent();
+    event.getHeaders().put("index-name", indexValue);
+    event.getHeaders().put("index-type", typeValue);
+
+    IndexRequestBuilder indexRequestBuilder = factory.createIndexRequest(
+        null, indexPrefix, indexType, event);
+
+    assertEquals(indexValue + '-'
+        + ElasticSearchIndexRequestBuilderFactory.df.format(FIXED_TIME_MILLIS),
+      indexRequestBuilder.request().index());
+    assertEquals(typeValue, indexRequestBuilder.request().type());
+  }
+
+  @Test
   public void shouldConfigureEventSerializer() throws Exception {
     assertFalse(serializer.configuredWithContext);
     factory.configure(new Context());
@@ -184,6 +205,7 @@ public class TestElasticSearchIndexRequestBuilderFactory
     public void configure(Context arg0) {
       configuredWithContext = true;
     }
+<<<<<<< HEAD
 
     @Override
     public void configure(ComponentConfiguration arg0) {
@@ -191,4 +213,13 @@ public class TestElasticSearchIndexRequestBuilderFactory
     }
   }
 
+=======
+
+    @Override
+    public void configure(ComponentConfiguration arg0) {
+      configuredWithComponentConfiguration = true;
+    }
+  }
+
+>>>>>>> refs/remotes/apache/trunk
 }

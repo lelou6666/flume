@@ -141,14 +141,27 @@ public class SinkConfiguration extends ComponentConfiguration {
      */
     ASYNCHBASE("org.apache.flume.sink.hbase.HBaseSinkConfiguration"),
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> refs/remotes/apache/trunk
     /**
      * MorphlineSolr sink
      *
      * @see org.apache.flume.sink.solr.morphline.MorphlineSolrSink
      */
     MORPHLINE_SOLR("org.apache.flume.sink.solr.morphline" +
+<<<<<<< HEAD
       ".MorphlineSolrSinkConfiguration");
+=======
+      ".MorphlineSolrSinkConfiguration"),
+
+    /**
+     * Hive Sink
+     * @see org.apache.flume.sink.hive.HiveSink
+     */
+    HIVE("org.apache.flume.sink.hive.HiveSinkConfiguration");
+>>>>>>> refs/remotes/apache/trunk
 
     private final String sinkConfigurationName;
 

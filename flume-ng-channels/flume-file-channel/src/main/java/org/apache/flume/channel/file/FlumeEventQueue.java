@@ -105,8 +105,15 @@ final class FlumeEventQueue {
         .syncOnCommitDisable()
         .deleteFilesAfterClose()
         .cacheDisable()
+<<<<<<< HEAD
         .make();
     queueSet = db.createTreeSet("QueueSet").make();
+=======
+        .mmapFileEnableIfSupported()
+        .make();
+    queueSet =
+      db.createHashSet("QueueSet " + " - " + backingStore.getName()).make();
+>>>>>>> refs/remotes/apache/trunk
     long start = System.currentTimeMillis();
     for (int i = 0; i < backingStore.getSize(); i++) {
       queueSet.add(get(i));

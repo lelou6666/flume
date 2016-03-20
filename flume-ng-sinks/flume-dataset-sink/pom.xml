@@ -16,14 +16,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<<<<<<< HEAD
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+=======
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+>>>>>>> refs/remotes/apache/trunk
 
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
     <artifactId>flume-ng-sinks</artifactId>
     <groupId>org.apache.flume</groupId>
+<<<<<<< HEAD
     <version>1.5.2</version>
+=======
+    <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
   </parent>
 
   <groupId>org.apache.flume.flume-ng-sinks</groupId>
@@ -36,6 +44,16 @@ limitations under the License.
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
       </plugin>
+<<<<<<< HEAD
+=======
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <version>2.3.7</version>
+        <inherited>true</inherited>
+        <extensions>true</extensions>
+      </plugin>
+>>>>>>> refs/remotes/apache/trunk
     </plugins>
   </build>
 
@@ -85,14 +103,45 @@ limitations under the License.
     </dependency>
 
     <dependency>
+<<<<<<< HEAD
+=======
+      <groupId>org.kitesdk</groupId>
+      <artifactId>kite-data-hive</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.kitesdk</groupId>
+      <artifactId>kite-data-hbase</artifactId>
+    </dependency>
+
+    <dependency>
+>>>>>>> refs/remotes/apache/trunk
       <groupId>org.apache.avro</groupId>
       <artifactId>avro</artifactId>
     </dependency>
 
     <dependency>
+<<<<<<< HEAD
       <!-- build will fail if this is not hadoop-common 2.*
            because kite uses hflush.
            -->
+=======
+      <groupId>org.apache.hive</groupId>
+      <artifactId>hive-exec</artifactId>
+      <optional>true</optional>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hive</groupId>
+      <artifactId>hive-metastore</artifactId>
+      <optional>true</optional>
+    </dependency>
+
+    <dependency>
+      <!-- build will fail if this is not hadoop-common 2.*
+      because kite uses hflush.
+      -->
+>>>>>>> refs/remotes/apache/trunk
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
       <version>${hadoop2.version}</version>

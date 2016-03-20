@@ -145,6 +145,11 @@ public final class RpcClientConfigurationConstants {
   public static final String CONFIG_TRUSTSTORE_TYPE = "truststore-type";
   public static final String CONFIG_EXCLUDE_PROTOCOLS = "exclude-protocols";
 
+<<<<<<< HEAD
+=======
+  public static final String KERBEROS_KEY = "kerberos";
+
+>>>>>>> refs/remotes/apache/trunk
   /**
    * Configuration constants for the NettyAvroRpcClient
    * NioClientSocketChannelFactory

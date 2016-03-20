@@ -18,6 +18,11 @@
 
 package org.apache.flume.sink.kite;
 
+<<<<<<< HEAD
+=======
+import org.apache.flume.sink.kite.parser.EntityParser;
+import org.apache.flume.sink.kite.policy.FailurePolicy;
+>>>>>>> refs/remotes/apache/trunk
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
@@ -28,18 +33,37 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+<<<<<<< HEAD
+=======
+import java.net.URI;
+import java.nio.ByteBuffer;
+>>>>>>> refs/remotes/apache/trunk
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+<<<<<<< HEAD
 import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
+=======
+import java.util.Set;
+import java.util.concurrent.Callable;
+import javax.annotation.Nullable;
+import org.apache.avro.Schema;
+import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericRecord;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.avro.generic.GenericRecordBuilder;
 import org.apache.avro.io.Encoder;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.reflect.ReflectDatumWriter;
+<<<<<<< HEAD
+=======
+import org.apache.avro.util.Utf8;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.commons.io.FileUtils;
 import org.apache.flume.Channel;
 import org.apache.flume.Context;
@@ -49,6 +73,10 @@ import org.apache.flume.Transaction;
 import org.apache.flume.channel.MemoryChannel;
 import org.apache.flume.conf.Configurables;
 import org.apache.flume.event.SimpleEvent;
+<<<<<<< HEAD
+=======
+import org.apache.flume.source.avro.AvroFlumeEvent;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -61,6 +89,7 @@ import org.junit.Test;
 import org.kitesdk.data.Dataset;
 import org.kitesdk.data.DatasetDescriptor;
 import org.kitesdk.data.DatasetReader;
+<<<<<<< HEAD
 import org.kitesdk.data.DatasetRepositories;
 import org.kitesdk.data.DatasetRepository;
 import org.kitesdk.data.PartitionStrategy;
@@ -71,6 +100,22 @@ public class TestDatasetSink {
   public static final String DATASET_NAME = "test";
   public static final DatasetRepository REPO = DatasetRepositories
       .open(FILE_REPO_URI);
+=======
+import org.kitesdk.data.DatasetWriter;
+import org.kitesdk.data.Datasets;
+import org.kitesdk.data.PartitionStrategy;
+import org.kitesdk.data.View;
+import static org.mockito.Mockito.*;
+
+public class TestDatasetSink {
+
+  public static final String FILE_REPO_URI = "repo:file:target/test_repo";
+  public static final String DATASET_NAME = "test";
+  public static final String FILE_DATASET_URI =
+      "dataset:file:target/test_repo/" + DATASET_NAME;
+  public static final String ERROR_DATASET_URI =
+      "dataset:file:target/test_repo/failed_events";
+>>>>>>> refs/remotes/apache/trunk
   public static final File SCHEMA_FILE = new File("target/record-schema.avsc");
   public static final Schema RECORD_SCHEMA = new Schema.Parser().parse(
       "{\"type\":\"record\",\"name\":\"rec\",\"fields\":[" +
@@ -83,6 +128,15 @@ public class TestDatasetSink {
   public static final Schema INCOMPATIBLE_SCHEMA = new Schema.Parser().parse(
       "{\"type\":\"record\",\"name\":\"user\",\"fields\":[" +
           "{\"name\":\"username\",\"type\":\"string\"}]}");
+<<<<<<< HEAD
+=======
+  public static final Schema UPDATED_SCHEMA = new Schema.Parser().parse(
+      "{\"type\":\"record\",\"name\":\"rec\",\"fields\":[" +
+          "{\"name\":\"id\",\"type\":\"string\"}," +
+          "{\"name\":\"priority\",\"type\":\"int\", \"default\": 0}," +
+          "{\"name\":\"msg\",\"type\":[\"string\",\"null\"]," +
+          "\"default\":\"default\"}]}");
+>>>>>>> refs/remotes/apache/trunk
   public static final DatasetDescriptor DESCRIPTOR = new DatasetDescriptor
       .Builder()
       .schema(RECORD_SCHEMA)
@@ -90,7 +144,11 @@ public class TestDatasetSink {
 
   Context config = null;
   Channel in = null;
+<<<<<<< HEAD
   List<GenericData.Record> expected = null;
+=======
+  List<GenericRecord> expected = null;
+>>>>>>> refs/remotes/apache/trunk
   private static final String DFS_DIR = "target/test/dfs";
   private static final String TEST_BUILD_DATA_KEY = "test.build.data";
   private static String oldTestBuildDataProp = null;
@@ -114,6 +172,7 @@ public class TestDatasetSink {
 
   @Before
   public void setup() throws EventDeliveryException {
+<<<<<<< HEAD
     REPO.create(DATASET_NAME, DESCRIPTOR);
 
     this.config = new Context();
@@ -125,16 +184,38 @@ public class TestDatasetSink {
 
     GenericRecordBuilder builder = new GenericRecordBuilder(RECORD_SCHEMA);
     expected = Lists.newArrayList(
+=======
+    Datasets.delete(FILE_DATASET_URI);
+    Datasets.create(FILE_DATASET_URI, DESCRIPTOR);
+
+    this.config = new Context();
+    config.put("keep-alive", "0");
+    this.in = new MemoryChannel();
+    Configurables.configure(in, config);
+
+    config.put(DatasetSinkConstants.CONFIG_KITE_DATASET_URI, FILE_DATASET_URI);
+
+    GenericRecordBuilder builder = new GenericRecordBuilder(RECORD_SCHEMA);
+    expected = Lists.<GenericRecord>newArrayList(
+>>>>>>> refs/remotes/apache/trunk
         builder.set("id", "1").set("msg", "msg1").build(),
         builder.set("id", "2").set("msg", "msg2").build(),
         builder.set("id", "3").set("msg", "msg3").build());
 
     putToChannel(in, Iterables.transform(expected,
+<<<<<<< HEAD
         new Function<GenericData.Record, Event>() {
           private int i = 0;
 
           @Override
           public Event apply(@Nullable GenericData.Record rec) {
+=======
+        new Function<GenericRecord, Event>() {
+          private int i = 0;
+
+          @Override
+          public Event apply(@Nullable GenericRecord rec) {
+>>>>>>> refs/remotes/apache/trunk
             this.i += 1;
             boolean useURI = (i % 2) == 0;
             return event(rec, RECORD_SCHEMA, SCHEMA_FILE, useURI);
@@ -144,11 +225,23 @@ public class TestDatasetSink {
 
   @After
   public void teardown() {
+<<<<<<< HEAD
     REPO.delete(DATASET_NAME);
   }
 
   @Test
   public void testFileStore() throws EventDeliveryException {
+=======
+    Datasets.delete(FILE_DATASET_URI);
+  }
+
+  @Test
+  public void testOldConfig() throws EventDeliveryException {
+    config.put(DatasetSinkConstants.CONFIG_KITE_DATASET_URI, null);
+    config.put(DatasetSinkConstants.CONFIG_KITE_REPO_URI, FILE_REPO_URI);
+    config.put(DatasetSinkConstants.CONFIG_KITE_DATASET_NAME, DATASET_NAME);
+
+>>>>>>> refs/remotes/apache/trunk
     DatasetSink sink = sink(in, config);
 
     // run the sink
@@ -158,11 +251,16 @@ public class TestDatasetSink {
 
     Assert.assertEquals(
         Sets.newHashSet(expected),
+<<<<<<< HEAD
         read(REPO.<GenericData.Record>load(DATASET_NAME)));
+=======
+        read(Datasets.load(FILE_DATASET_URI)));
+>>>>>>> refs/remotes/apache/trunk
     Assert.assertEquals("Should have committed", 0, remaining(in));
   }
 
   @Test
+<<<<<<< HEAD
   public void testPartitionedData() throws EventDeliveryException {
     REPO.create("partitioned", new DatasetDescriptor.Builder(DESCRIPTOR)
         .partitionStrategy(new PartitionStrategy.Builder()
@@ -172,6 +270,85 @@ public class TestDatasetSink {
 
     try {
       config.put(DatasetSinkConstants.CONFIG_KITE_DATASET_NAME, "partitioned");
+=======
+  public void testDatasetUriOverridesOldConfig() throws EventDeliveryException {
+    // CONFIG_KITE_DATASET_URI is still set, otherwise this will cause an error
+    config.put(DatasetSinkConstants.CONFIG_KITE_REPO_URI, "bad uri");
+    config.put(DatasetSinkConstants.CONFIG_KITE_DATASET_NAME, "");
+
+    DatasetSink sink = sink(in, config);
+
+    // run the sink
+    sink.start();
+    sink.process();
+    sink.stop();
+
+    Assert.assertEquals(
+        Sets.newHashSet(expected),
+        read(Datasets.load(FILE_DATASET_URI)));
+    Assert.assertEquals("Should have committed", 0, remaining(in));
+  }
+
+  @Test
+  public void testFileStore() throws EventDeliveryException, NonRecoverableEventException, NonRecoverableEventException {
+    DatasetSink sink = sink(in, config);
+
+    // run the sink
+    sink.start();
+    sink.process();
+    sink.stop();
+
+    Assert.assertEquals(
+        Sets.newHashSet(expected),
+        read(Datasets.load(FILE_DATASET_URI)));
+    Assert.assertEquals("Should have committed", 0, remaining(in));
+  }
+
+  @Test
+  public void testParquetDataset() throws EventDeliveryException {
+    Datasets.delete(FILE_DATASET_URI);
+    Dataset<GenericRecord> created = Datasets.create(FILE_DATASET_URI,
+        new DatasetDescriptor.Builder(DESCRIPTOR)
+            .format("parquet")
+            .build());
+
+    DatasetSink sink = sink(in, config);
+
+    // run the sink
+    sink.start();
+    sink.process();
+
+    // the transaction should not commit during the call to process
+    assertThrows("Transaction should still be open", IllegalStateException.class,
+        new Callable() {
+          @Override
+          public Object call() throws EventDeliveryException {
+            in.getTransaction().begin();
+            return null;
+          }
+        });
+    // The records won't commit until the call to stop()
+    Assert.assertEquals("Should not have committed", 0, read(created).size());
+
+    sink.stop();
+
+    Assert.assertEquals(Sets.newHashSet(expected), read(created));
+    Assert.assertEquals("Should have committed", 0, remaining(in));
+  }
+
+  @Test
+  public void testPartitionedData() throws EventDeliveryException {
+    URI partitionedUri = URI.create("dataset:file:target/test_repo/partitioned");
+    try {
+      Datasets.create(partitionedUri, new DatasetDescriptor.Builder(DESCRIPTOR)
+          .partitionStrategy(new PartitionStrategy.Builder()
+              .identity("id", 10) // partition by id
+              .build())
+          .build());
+
+      config.put(DatasetSinkConstants.CONFIG_KITE_DATASET_URI,
+          partitionedUri.toString());
+>>>>>>> refs/remotes/apache/trunk
       DatasetSink sink = sink(in, config);
 
       // run the sink
@@ -181,22 +358,116 @@ public class TestDatasetSink {
 
       Assert.assertEquals(
           Sets.newHashSet(expected),
+<<<<<<< HEAD
           read(REPO.<GenericData.Record>load("partitioned")));
       Assert.assertEquals("Should have committed", 0, remaining(in));
     } finally {
       if (REPO.exists("partitioned")) {
         REPO.delete("partitioned");
+=======
+          read(Datasets.load(partitionedUri)));
+      Assert.assertEquals("Should have committed", 0, remaining(in));
+    } finally {
+      if (Datasets.exists(partitionedUri)) {
+        Datasets.delete(partitionedUri);
+>>>>>>> refs/remotes/apache/trunk
       }
     }
   }
 
   @Test
+<<<<<<< HEAD
+=======
+  public void testStartBeforeDatasetCreated() throws EventDeliveryException {
+    // delete the dataset created by setup
+    Datasets.delete(FILE_DATASET_URI);
+
+    DatasetSink sink = sink(in, config);
+
+    // start the sink
+    sink.start();
+
+    // run the sink without a target dataset
+    try {
+      sink.process();
+      Assert.fail("Should have thrown an exception: no such dataset");
+    } catch (EventDeliveryException e) {
+      // expected
+    }
+
+    // create the target dataset
+    Datasets.create(FILE_DATASET_URI, DESCRIPTOR);
+
+    // run the sink
+    sink.process();
+    sink.stop();
+
+    Assert.assertEquals(
+      Sets.newHashSet(expected),
+      read(Datasets.load(FILE_DATASET_URI)));
+    Assert.assertEquals("Should have committed", 0, remaining(in));
+  }
+
+  @Test
+  public void testDatasetUpdate() throws EventDeliveryException {
+    // add an updated record that is missing the msg field
+    GenericRecordBuilder updatedBuilder = new GenericRecordBuilder(
+      UPDATED_SCHEMA);
+    GenericData.Record updatedRecord = updatedBuilder
+      .set("id", "0")
+      .set("priority", 1)
+      .set("msg", "Priority 1 message!")
+      .build();
+
+    // make a set of the expected records with the new schema
+    Set<GenericRecord> expectedAsUpdated = Sets.newHashSet();
+    for (GenericRecord record : expected) {
+      expectedAsUpdated.add(updatedBuilder
+        .clear("priority")
+        .set("id", record.get("id"))
+        .set("msg", record.get("msg"))
+        .build());
+    }
+    expectedAsUpdated.add(updatedRecord);
+
+    DatasetSink sink = sink(in, config);
+
+    // run the sink
+    sink.start();
+    sink.process();
+
+    // update the dataset's schema
+    DatasetDescriptor updated = new DatasetDescriptor
+      .Builder(Datasets.load(FILE_DATASET_URI).getDataset().getDescriptor())
+      .schema(UPDATED_SCHEMA)
+      .build();
+    Datasets.update(FILE_DATASET_URI, updated);
+
+    // trigger a roll on the next process call to refresh the writer
+    sink.roll();
+
+    // add the record to the incoming channel and the expected list
+    putToChannel(in, event(updatedRecord, UPDATED_SCHEMA, null, false));
+
+    // process events with the updated schema
+    sink.process();
+    sink.stop();
+
+    Assert.assertEquals(
+      expectedAsUpdated,
+      read(Datasets.load(FILE_DATASET_URI)));
+    Assert.assertEquals("Should have committed", 0, remaining(in));
+  }
+
+  @Test
+>>>>>>> refs/remotes/apache/trunk
   public void testMiniClusterStore()
       throws EventDeliveryException, IOException {
     // setup a minicluster
     MiniDFSCluster cluster = new MiniDFSCluster
         .Builder(new Configuration())
         .build();
+<<<<<<< HEAD
     DatasetRepository hdfsRepo = null;
     try {
       FileSystem dfs = cluster.getFileSystem();
@@ -209,6 +480,20 @@ public class TestDatasetSink {
 
       // update the config to use the HDFS repository
       config.put(DatasetSinkConstants.CONFIG_KITE_REPO_URI, repoURI);
+=======
+
+    FileSystem dfs = cluster.getFileSystem();
+    Configuration conf = dfs.getConf();
+
+    URI hdfsUri = URI.create(
+        "dataset:" + conf.get("fs.defaultFS") + "/tmp/repo" + DATASET_NAME);
+    try {
+      // create a repository and dataset in HDFS
+      Datasets.create(hdfsUri, DESCRIPTOR);
+
+      // update the config to use the HDFS repository
+      config.put(DatasetSinkConstants.CONFIG_KITE_DATASET_URI, hdfsUri.toString());
+>>>>>>> refs/remotes/apache/trunk
 
       DatasetSink sink = sink(in, config);
 
@@ -219,12 +504,21 @@ public class TestDatasetSink {
 
       Assert.assertEquals(
           Sets.newHashSet(expected),
+<<<<<<< HEAD
           read(hdfsRepo.<GenericData.Record>load(DATASET_NAME)));
       Assert.assertEquals("Should have committed", 0, remaining(in));
 
     } finally {
       if (hdfsRepo != null && hdfsRepo.exists(DATASET_NAME)) {
         hdfsRepo.delete(DATASET_NAME);
+=======
+          read(Datasets.load(hdfsUri)));
+      Assert.assertEquals("Should have committed", 0, remaining(in));
+
+    } finally {
+      if (Datasets.exists(hdfsUri)) {
+        Datasets.delete(hdfsUri);
+>>>>>>> refs/remotes/apache/trunk
       }
       cluster.shutdown();
     }
@@ -244,13 +538,21 @@ public class TestDatasetSink {
     sink.process(); // roll and process the third
     Assert.assertEquals(
         Sets.newHashSet(expected.subList(0, 2)),
+<<<<<<< HEAD
         read(REPO.<GenericData.Record>load(DATASET_NAME)));
+=======
+        read(Datasets.load(FILE_DATASET_URI)));
+>>>>>>> refs/remotes/apache/trunk
     Assert.assertEquals("Should have committed", 0, remaining(in));
     sink.roll(); // roll at the next process call
     sink.process(); // roll, the channel is empty
     Assert.assertEquals(
         Sets.newHashSet(expected),
+<<<<<<< HEAD
         read(REPO.<GenericData.Record>load(DATASET_NAME)));
+=======
+        read(Datasets.load(FILE_DATASET_URI)));
+>>>>>>> refs/remotes/apache/trunk
     sink.stop();
   }
 
@@ -262,7 +564,11 @@ public class TestDatasetSink {
 
     DatasetSink sink = sink(in, config);
 
+<<<<<<< HEAD
     Dataset<GenericData.Record> records = REPO.load(DATASET_NAME);
+=======
+    Dataset<GenericRecord> records = Datasets.load(FILE_DATASET_URI);
+>>>>>>> refs/remotes/apache/trunk
 
     // run the sink
     sink.start();
@@ -305,7 +611,11 @@ public class TestDatasetSink {
 
     Assert.assertEquals(
         Sets.newHashSet(expected),
+<<<<<<< HEAD
         read(REPO.<GenericData.Record>load(DATASET_NAME)));
+=======
+        read(Datasets.load(FILE_DATASET_URI)));
+>>>>>>> refs/remotes/apache/trunk
     Assert.assertEquals("Should have committed", 0, remaining(in));
   }
 
@@ -359,6 +669,379 @@ public class TestDatasetSink {
         expected.size() + 1, remaining(in));
   }
 
+<<<<<<< HEAD
+=======
+  @Test
+  public void testFileStoreWithSavePolicy() throws EventDeliveryException {
+    if (Datasets.exists(ERROR_DATASET_URI)) {
+      Datasets.delete(ERROR_DATASET_URI);
+    }
+    config.put(DatasetSinkConstants.CONFIG_FAILURE_POLICY,
+        DatasetSinkConstants.SAVE_FAILURE_POLICY);
+    config.put(DatasetSinkConstants.CONFIG_KITE_ERROR_DATASET_URI,
+        ERROR_DATASET_URI);
+    DatasetSink sink = sink(in, config);
+
+    // run the sink
+    sink.start();
+    sink.process();
+    sink.stop();
+
+    Assert.assertEquals(
+        Sets.newHashSet(expected),
+        read(Datasets.load(FILE_DATASET_URI)));
+    Assert.assertEquals("Should have committed", 0, remaining(in));
+  }
+
+  @Test
+  public void testMissingSchemaWithSavePolicy() throws EventDeliveryException {
+    if (Datasets.exists(ERROR_DATASET_URI)) {
+      Datasets.delete(ERROR_DATASET_URI);
+    }
+    config.put(DatasetSinkConstants.CONFIG_FAILURE_POLICY,
+        DatasetSinkConstants.SAVE_FAILURE_POLICY);
+    config.put(DatasetSinkConstants.CONFIG_KITE_ERROR_DATASET_URI,
+        ERROR_DATASET_URI);
+    final DatasetSink sink = sink(in, config);
+
+    Event badEvent = new SimpleEvent();
+    badEvent.setHeaders(Maps.<String, String>newHashMap());
+    badEvent.setBody(serialize(expected.get(0), RECORD_SCHEMA));
+    putToChannel(in, badEvent);
+
+    // run the sink
+    sink.start();
+    sink.process();
+    sink.stop();
+
+    Assert.assertEquals("Good records should have been written",
+        Sets.newHashSet(expected),
+        read(Datasets.load(FILE_DATASET_URI)));
+    Assert.assertEquals("Should not have rolled back", 0, remaining(in));
+    Assert.assertEquals("Should have saved the bad event",
+        Sets.newHashSet(AvroFlumeEvent.newBuilder()
+          .setBody(ByteBuffer.wrap(badEvent.getBody()))
+          .setHeaders(toUtf8Map(badEvent.getHeaders()))
+          .build()),
+        read(Datasets.load(ERROR_DATASET_URI, AvroFlumeEvent.class)));
+  }
+
+  @Test
+  public void testSerializedWithIncompatibleSchemasWithSavePolicy()
+      throws EventDeliveryException {
+    if (Datasets.exists(ERROR_DATASET_URI)) {
+      Datasets.delete(ERROR_DATASET_URI);
+    }
+    config.put(DatasetSinkConstants.CONFIG_FAILURE_POLICY,
+        DatasetSinkConstants.SAVE_FAILURE_POLICY);
+    config.put(DatasetSinkConstants.CONFIG_KITE_ERROR_DATASET_URI,
+        ERROR_DATASET_URI);
+    final DatasetSink sink = sink(in, config);
+
+    GenericRecordBuilder builder = new GenericRecordBuilder(
+        INCOMPATIBLE_SCHEMA);
+    GenericData.Record rec = builder.set("username", "koala").build();
+
+    // We pass in a valid schema in the header, but an incompatible schema
+    // was used to serialize the record
+    Event badEvent = event(rec, INCOMPATIBLE_SCHEMA, SCHEMA_FILE, true);
+    putToChannel(in, badEvent);
+
+    // run the sink
+    sink.start();
+    sink.process();
+    sink.stop();
+
+    Assert.assertEquals("Good records should have been written",
+        Sets.newHashSet(expected),
+        read(Datasets.load(FILE_DATASET_URI)));
+    Assert.assertEquals("Should not have rolled back", 0, remaining(in));
+    Assert.assertEquals("Should have saved the bad event",
+        Sets.newHashSet(AvroFlumeEvent.newBuilder()
+          .setBody(ByteBuffer.wrap(badEvent.getBody()))
+          .setHeaders(toUtf8Map(badEvent.getHeaders()))
+          .build()),
+        read(Datasets.load(ERROR_DATASET_URI, AvroFlumeEvent.class)));
+  }
+
+  @Test
+  public void testSerializedWithIncompatibleSchemas() throws EventDeliveryException {
+    final DatasetSink sink = sink(in, config);
+
+    GenericRecordBuilder builder = new GenericRecordBuilder(
+        INCOMPATIBLE_SCHEMA);
+    GenericData.Record rec = builder.set("username", "koala").build();
+
+    // We pass in a valid schema in the header, but an incompatible schema
+    // was used to serialize the record
+    putToChannel(in, event(rec, INCOMPATIBLE_SCHEMA, SCHEMA_FILE, true));
+
+    // run the sink
+    sink.start();
+    assertThrows("Should fail", EventDeliveryException.class,
+        new Callable() {
+          @Override
+          public Object call() throws EventDeliveryException {
+            sink.process();
+            return null;
+          }
+        });
+    sink.stop();
+
+    Assert.assertEquals("Should have rolled back",
+        expected.size() + 1, remaining(in));
+  }
+
+  @Test
+  public void testCommitOnBatch() throws EventDeliveryException {
+    DatasetSink sink = sink(in, config);
+
+    // run the sink
+    sink.start();
+    sink.process();
+
+    // the transaction should commit during the call to process
+    Assert.assertEquals("Should have committed", 0, remaining(in));
+    // but the data won't be visible yet
+    Assert.assertEquals(0,
+        read(Datasets.load(FILE_DATASET_URI)).size());
+
+    sink.stop();
+
+    Assert.assertEquals(
+        Sets.newHashSet(expected),
+        read(Datasets.load(FILE_DATASET_URI)));
+  }
+
+  @Test
+  public void testCommitOnBatchFalse() throws EventDeliveryException {
+    config.put(DatasetSinkConstants.CONFIG_FLUSHABLE_COMMIT_ON_BATCH,
+        Boolean.toString(false));
+    config.put(DatasetSinkConstants.CONFIG_SYNCABLE_SYNC_ON_BATCH,
+        Boolean.toString(false));
+    DatasetSink sink = sink(in, config);
+
+    // run the sink
+    sink.start();
+    sink.process();
+
+    // the transaction should not commit during the call to process
+    assertThrows("Transaction should still be open", IllegalStateException.class,
+        new Callable() {
+          @Override
+          public Object call() throws EventDeliveryException {
+            in.getTransaction().begin();
+            return null;
+          }
+        });
+
+    // the data won't be visible
+    Assert.assertEquals(0,
+        read(Datasets.load(FILE_DATASET_URI)).size());
+
+    sink.stop();
+
+    Assert.assertEquals(
+        Sets.newHashSet(expected),
+        read(Datasets.load(FILE_DATASET_URI)));
+    // the transaction should commit during the call to stop
+    Assert.assertEquals("Should have committed", 0, remaining(in));
+  }
+
+  @Test
+  public void testCommitOnBatchFalseSyncOnBatchTrue() throws EventDeliveryException {
+    config.put(DatasetSinkConstants.CONFIG_FLUSHABLE_COMMIT_ON_BATCH,
+        Boolean.toString(false));
+    config.put(DatasetSinkConstants.CONFIG_SYNCABLE_SYNC_ON_BATCH,
+        Boolean.toString(true));
+
+    try {
+      sink(in, config);
+      Assert.fail("Should have thrown IllegalArgumentException");
+    } catch (IllegalArgumentException ex) {
+      // expected
+    }
+  }
+
+  @Test
+  public void testCloseAndCreateWriter() throws EventDeliveryException {
+    config.put(DatasetSinkConstants.CONFIG_FLUSHABLE_COMMIT_ON_BATCH,
+        Boolean.toString(false));
+    config.put(DatasetSinkConstants.CONFIG_SYNCABLE_SYNC_ON_BATCH,
+        Boolean.toString(false));
+    DatasetSink sink = sink(in, config);
+
+    // run the sink
+    sink.start();
+    sink.process();
+
+    sink.closeWriter();
+    sink.commitTransaction();
+    sink.createWriter();
+
+    Assert.assertNotNull("Writer should not be null", sink.getWriter());
+    Assert.assertEquals("Should have committed", 0, remaining(in));
+
+    sink.stop();
+
+    Assert.assertEquals(
+        Sets.newHashSet(expected),
+        read(Datasets.load(FILE_DATASET_URI)));
+  }
+
+  @Test
+  public void testCloseWriter() throws EventDeliveryException {
+    config.put(DatasetSinkConstants.CONFIG_FLUSHABLE_COMMIT_ON_BATCH,
+        Boolean.toString(false));
+    config.put(DatasetSinkConstants.CONFIG_SYNCABLE_SYNC_ON_BATCH,
+        Boolean.toString(false));
+    DatasetSink sink = sink(in, config);
+
+    // run the sink
+    sink.start();
+    sink.process();
+
+    sink.closeWriter();
+    sink.commitTransaction();
+
+    Assert.assertNull("Writer should be null", sink.getWriter());
+    Assert.assertEquals("Should have committed", 0, remaining(in));
+
+    sink.stop();
+
+    Assert.assertEquals(
+        Sets.newHashSet(expected),
+        read(Datasets.load(FILE_DATASET_URI)));
+  }
+
+  @Test
+  public void testCreateWriter() throws EventDeliveryException {
+    config.put(DatasetSinkConstants.CONFIG_FLUSHABLE_COMMIT_ON_BATCH,
+        Boolean.toString(false));
+    config.put(DatasetSinkConstants.CONFIG_SYNCABLE_SYNC_ON_BATCH,
+        Boolean.toString(false));
+    DatasetSink sink = sink(in, config);
+
+    // run the sink
+    sink.start();
+    sink.process();
+
+    sink.commitTransaction();
+    sink.createWriter();
+    Assert.assertNotNull("Writer should not be null", sink.getWriter());
+    Assert.assertEquals("Should have committed", 0, remaining(in));
+
+    sink.stop();
+
+    Assert.assertEquals(0, read(Datasets.load(FILE_DATASET_URI)).size());
+  }
+
+  @Test
+  public void testAppendWriteExceptionInvokesPolicy()
+      throws EventDeliveryException, NonRecoverableEventException {
+    DatasetSink sink = sink(in, config);
+
+    // run the sink
+    sink.start();
+    sink.process();
+
+    // Mock an Event
+    Event mockEvent = mock(Event.class);
+    when(mockEvent.getBody()).thenReturn(new byte[] { 0x01 });
+
+    // Mock a GenericRecord
+    GenericRecord mockRecord = mock(GenericRecord.class);
+
+    // Mock an EntityParser
+    EntityParser<GenericRecord> mockParser = mock(EntityParser.class);
+    when(mockParser.parse(eq(mockEvent), any(GenericRecord.class)))
+        .thenReturn(mockRecord);
+    sink.setParser(mockParser);
+
+    // Mock a FailurePolicy
+    FailurePolicy mockFailurePolicy = mock(FailurePolicy.class);
+    sink.setFailurePolicy(mockFailurePolicy);
+
+    // Mock a DatasetWriter
+    DatasetWriter<GenericRecord> mockWriter = mock(DatasetWriter.class);
+    doThrow(new DataFileWriter.AppendWriteException(new IOException()))
+        .when(mockWriter).write(mockRecord);
+
+    sink.setWriter(mockWriter);
+    sink.write(mockEvent);
+
+    // Verify that the event was sent to the failure policy
+    verify(mockFailurePolicy).handle(eq(mockEvent), any(Throwable.class));
+
+    sink.stop();
+  }
+
+  @Test
+  public void testRuntimeExceptionThrowsEventDeliveryException()
+      throws EventDeliveryException, NonRecoverableEventException {
+    DatasetSink sink = sink(in, config);
+
+    // run the sink
+    sink.start();
+    sink.process();
+
+    // Mock an Event
+    Event mockEvent = mock(Event.class);
+    when(mockEvent.getBody()).thenReturn(new byte[] { 0x01 });
+
+    // Mock a GenericRecord
+    GenericRecord mockRecord = mock(GenericRecord.class);
+
+    // Mock an EntityParser
+    EntityParser<GenericRecord> mockParser = mock(EntityParser.class);
+    when(mockParser.parse(eq(mockEvent), any(GenericRecord.class)))
+        .thenReturn(mockRecord);
+    sink.setParser(mockParser);
+
+    // Mock a FailurePolicy
+    FailurePolicy mockFailurePolicy = mock(FailurePolicy.class);
+    sink.setFailurePolicy(mockFailurePolicy);
+
+    // Mock a DatasetWriter
+    DatasetWriter<GenericRecord> mockWriter = mock(DatasetWriter.class);
+    doThrow(new RuntimeException()).when(mockWriter).write(mockRecord);
+
+    sink.setWriter(mockWriter);
+
+    try {
+      sink.write(mockEvent);
+      Assert.fail("Should throw EventDeliveryException");
+    } catch (EventDeliveryException ex) {
+
+    }
+
+    // Verify that the event was not sent to the failure policy
+    verify(mockFailurePolicy, never()).handle(eq(mockEvent), any(Throwable.class));
+
+    sink.stop();
+  }
+
+  @Test
+  public void testProcessHandlesNullWriter() throws EventDeliveryException,
+      NonRecoverableEventException, NonRecoverableEventException {
+    DatasetSink sink = sink(in, config);
+
+    // run the sink
+    sink.start();
+    sink.process();
+
+    // explicitly set the writer to null
+    sink.setWriter(null);
+
+    // this should not throw an NPE
+    sink.process();
+
+    sink.stop();
+
+    Assert.assertEquals("Should have committed", 0, remaining(in));
+  }
+
+>>>>>>> refs/remotes/apache/trunk
   public static DatasetSink sink(Channel in, Context config) {
     DatasetSink sink = new DatasetSink();
     sink.setChannel(in);
@@ -366,6 +1049,7 @@ public class TestDatasetSink {
     return sink;
   }
 
+<<<<<<< HEAD
   public static <T> HashSet<T> read(Dataset<T> dataset) {
     DatasetReader<T> reader = dataset.newReader();
     try {
@@ -373,6 +1057,17 @@ public class TestDatasetSink {
       return Sets.newHashSet(reader.iterator());
     } finally {
       reader.close();
+=======
+  public static <T> HashSet<T> read(View<T> view) {
+    DatasetReader<T> reader = null;
+    try {
+      reader = view.newReader();
+      return Sets.newHashSet(reader.iterator());
+    } finally {
+      if (reader != null) {
+        reader.close();
+      }
+>>>>>>> refs/remotes/apache/trunk
     }
   }
 
@@ -469,4 +1164,22 @@ public class TestDatasetSink {
       Assert.assertEquals(message, expected, actual.getClass());
     }
   }
+<<<<<<< HEAD
+=======
+
+  /**
+   * Helper function to convert a map of String to a map of Utf8.
+   *
+   * @param map A Map of String to String
+   * @return The same mappings converting the {@code String}s to {@link Utf8}s
+   */
+  public static Map<CharSequence, CharSequence> toUtf8Map(
+      Map<String, String> map) {
+    Map<CharSequence, CharSequence> utf8Map = Maps.newHashMap();
+    for (Map.Entry<String, String> entry : map.entrySet()) {
+      utf8Map.put(new Utf8(entry.getKey()), new Utf8(entry.getValue()));
+    }
+    return utf8Map;
+  }
+>>>>>>> refs/remotes/apache/trunk
 }

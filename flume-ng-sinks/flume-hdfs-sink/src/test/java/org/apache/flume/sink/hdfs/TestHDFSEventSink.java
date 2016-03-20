@@ -276,7 +276,7 @@ public class TestHDFSEventSink {
       Assert.fail("no exception thrown");
     } catch (IllegalArgumentException expected) {
       Assert.assertTrue(expected.getMessage().contains(
-          "is nonexistent or can't read."));
+          "Keytab is not a readable file"));
     } finally {
       //turn security off
       conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION,
@@ -1375,10 +1375,23 @@ public class TestHDFSEventSink {
     Assert.assertEquals(Integer.MAX_VALUE, sink.getTryCount());
   }
   @Test
+<<<<<<< HEAD
   public void testRetryClose() throws InterruptedException,
     LifecycleException,
     EventDeliveryException, IOException {
 
+=======
+  public void testRetryRename() throws InterruptedException,
+    LifecycleException,
+    EventDeliveryException, IOException {
+    testRetryRename(true);
+    testRetryRename(false);
+  }
+
+  private void testRetryRename(boolean closeSucceed) throws InterruptedException,
+          LifecycleException,
+          EventDeliveryException, IOException {
+>>>>>>> refs/remotes/apache/trunk
     LOG.debug("Starting...");
     String newPath = testPath + "/retryBucket";
 
@@ -1388,7 +1401,11 @@ public class TestHDFSEventSink {
     Path dirPath = new Path(newPath);
     fs.delete(dirPath, true);
     fs.mkdirs(dirPath);
+<<<<<<< HEAD
     MockFileSystem mockFs = new MockFileSystem(fs, 3);
+=======
+    MockFileSystem mockFs = new MockFileSystem(fs, 6, closeSucceed);
+>>>>>>> refs/remotes/apache/trunk
 
     Context context = getContextForRetryTests();
     Configurables.configure(sink, context);
@@ -1434,15 +1451,26 @@ public class TestHDFSEventSink {
 
     Collection<BucketWriter> writers = sink.getSfWriters().values();
 
+<<<<<<< HEAD
     int totalCloseAttempts = 0;
     for(BucketWriter writer: writers) {
       LOG.info("Close tries = "+ writer.closeTries.get());
       totalCloseAttempts += writer.closeTries.get();
+=======
+    int totalRenameAttempts = 0;
+    for(BucketWriter writer: writers) {
+      LOG.info("Rename tries = "+ writer.renameTries.get());
+      totalRenameAttempts += writer.renameTries.get();
+>>>>>>> refs/remotes/apache/trunk
     }
     // stop clears the sfWriters map, so we need to compute the
     // close tries count before stopping the sink.
     sink.stop();
+<<<<<<< HEAD
     Assert.assertEquals(6, totalCloseAttempts);
+=======
+    Assert.assertEquals(6, totalRenameAttempts);
+>>>>>>> refs/remotes/apache/trunk
 
   }
 }

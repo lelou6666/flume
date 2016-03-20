@@ -23,7 +23,11 @@ limitations under the License.
   <parent>
     <artifactId>flume-parent</artifactId>
     <groupId>org.apache.flume</groupId>
+<<<<<<< HEAD
     <version>1.5.2</version>
+=======
+    <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
   </parent>
 
   <groupId>org.apache.flume</groupId>
@@ -46,6 +50,7 @@ limitations under the License.
     <module>flume-ng-hbase-sink</module>
     <module>flume-ng-elasticsearch-sink</module>
     <module>flume-ng-morphline-solr-sink</module>
+    <module>flume-ng-kafka-sink</module>
   </modules>
 
   <profiles>
@@ -54,7 +59,12 @@ limitations under the License.
       <id>hadoop-1.0</id>
       <activation>
         <property>
+<<<<<<< HEAD
           <name>!hadoop.profile</name>
+=======
+          <name>flume.hadoop.profile</name>
+          <value>1</value>
+>>>>>>> refs/remotes/apache/trunk
         </property>
       </activation>
     </profile>
@@ -63,7 +73,11 @@ limitations under the License.
       <id>hadoop-2</id>
       <activation>
         <property>
+<<<<<<< HEAD
           <name>hadoop.profile</name>
+=======
+          <name>flume.hadoop.profile</name>
+>>>>>>> refs/remotes/apache/trunk
           <value>2</value>
         </property>
       </activation>
@@ -71,21 +85,36 @@ limitations under the License.
            -->
       <modules>
         <module>flume-dataset-sink</module>
+<<<<<<< HEAD
+=======
+        <module>flume-hive-sink</module>
+>>>>>>> refs/remotes/apache/trunk
       </modules>
     </profile>
 
     <profile>
+<<<<<<< HEAD
       <id>hbase-98</id>
       <activation>
         <property>
           <name>hadoop.profile</name>
           <value>hbase-98</value>
+=======
+      <id>hbase-1</id>
+      <activation>
+        <property>
+          <name>!flume.hadoop.profile</name>
+>>>>>>> refs/remotes/apache/trunk
         </property>
       </activation>
       <!-- add the flume-dataset-sink, which is only compatible with hadoop-2
            -->
       <modules>
         <module>flume-dataset-sink</module>
+<<<<<<< HEAD
+=======
+        <module>flume-hive-sink</module>
+>>>>>>> refs/remotes/apache/trunk
       </modules>
     </profile>
 

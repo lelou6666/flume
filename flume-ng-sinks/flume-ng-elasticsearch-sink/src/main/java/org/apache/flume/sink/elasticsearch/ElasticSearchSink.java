@@ -38,6 +38,7 @@ import org.apache.flume.CounterGroup;
 import org.apache.flume.Event;
 import org.apache.flume.EventDeliveryException;
 import org.apache.flume.Transaction;
+import org.apache.flume.formatter.output.BucketPath;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.instrumentation.SinkCounter;
 import org.apache.flume.sink.AbstractSink;
@@ -61,8 +62,11 @@ import static org.apache.flume.sink.elasticsearch.ElasticSearchSinkConstants.DEF
 import static org.apache.flume.sink.elasticsearch.ElasticSearchSinkConstants.INDEX_NAME_BUILDER;
 import static org.apache.flume.sink.elasticsearch.ElasticSearchSinkConstants.INDEX_NAME_BUILDER_PREFIX;
 
+<<<<<<< HEAD
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
+=======
+>>>>>>> refs/remotes/apache/trunk
 /**
  * A sink which reads events from a channel and writes them to ElasticSearch
  * based on the work done by https://github.com/Aconex/elasticflume.git.</p>
@@ -186,7 +190,12 @@ public class ElasticSearchSink extends AbstractSink implements Configurable {
         if (event == null) {
           break;
         }
+<<<<<<< HEAD
         client.addEvent(event, indexNameBuilder, indexType, ttlMs);
+=======
+        String realIndexType = BucketPath.escapeString(indexType, event.getHeaders());
+        client.addEvent(event, indexNameBuilder, realIndexType, ttlMs);
+>>>>>>> refs/remotes/apache/trunk
       }
 
       if (count <= 0) {

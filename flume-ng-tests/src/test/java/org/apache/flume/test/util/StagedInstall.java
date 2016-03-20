@@ -70,7 +70,6 @@ public class StagedInstall {
   private Process process;
   private ProcessShutdownHook shutdownHook;
   private ProcessInputStreamConsumer consumer;
-  private String agentClasspath;
 
   private static StagedInstall INSTANCE;
 
@@ -92,11 +91,11 @@ public class StagedInstall {
 
     LOGGER.info("Shutting down agent process");
     process.destroy();
+    process.waitFor();
     process = null;
     consumer.interrupt();
     consumer = null;
     configFilePath = null;
-    agentClasspath = null;
     Runtime.getRuntime().removeShutdownHook(shutdownHook);
     shutdownHook = null;
 
@@ -141,9 +140,6 @@ public class StagedInstall {
     builder.add(launchScriptPath);
     builder.add("agent");
     builder.add("--conf", confDirPath);
-    if (agentClasspath != null) {
-        builder.add("--classpath", agentClasspath);
-    }
     builder.add("--conf-file", configFilePath);
     builder.add("--name", agentName);
     builder.add("-D" + ENV_FLUME_LOG_DIR + "=" + logDirPath);
@@ -160,6 +156,7 @@ public class StagedInstall {
     Map<String, String> env = pb.environment();
 
     LOGGER.debug("process environment: " + env);
+
     pb.directory(baseDir);
     pb.redirectErrorStream(true);
 
@@ -173,8 +170,15 @@ public class StagedInstall {
     Thread.sleep(3000); // sleep for 3s to let system initialize
   }
 
-  public synchronized void setAgentClasspath(String agentClasspath) {
-      this.agentClasspath = agentClasspath;
+  public synchronized void reconfigure(Properties properties) throws Exception {
+    File configFile = createConfigurationFile(agentName, properties);
+    Files.copy(configFile, new File(configFilePath));
+    configFile.delete();
+    LOGGER.info("Updated agent config file: " + configFilePath);
+  }
+
+  public synchronized File getStageDir() {
+    return stageDir;
   }
 
   public synchronized void reconfigure(Properties properties) throws Exception {

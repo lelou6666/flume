@@ -28,6 +28,7 @@ public class MockFsDataOutputStream extends FSDataOutputStream{
   private static final Logger logger =
       LoggerFactory.getLogger(MockFsDataOutputStream.class);
 
+<<<<<<< HEAD
   int currentCloseAttempts = 0;
   int numberOfClosesRequired;
 
@@ -38,24 +39,42 @@ public class MockFsDataOutputStream extends FSDataOutputStream{
 
     this.numberOfClosesRequired = numberOfClosesRequired;
 
+=======
+  boolean closeSucceed;
+
+  public MockFsDataOutputStream(FSDataOutputStream wrapMe,
+    boolean closeSucceed)
+      throws IOException {
+    super(wrapMe.getWrappedStream(), null);
+    this.closeSucceed = closeSucceed;
+>>>>>>> refs/remotes/apache/trunk
   }
 
   @Override
   public void close() throws IOException {
+<<<<<<< HEAD
     currentCloseAttempts++;
     logger.info(
       "Attempting to Close: '" + currentCloseAttempts + "' of '" +
         numberOfClosesRequired + "'");
     if (currentCloseAttempts >= numberOfClosesRequired ||
       numberOfClosesRequired == 0) {
+=======
+    logger.info(
+      "Close Succeeded - " + closeSucceed);
+    if (closeSucceed) {
+>>>>>>> refs/remotes/apache/trunk
       logger.info("closing file");
       super.close();
     } else {
       throw new IOException("MockIOException");
     }
   }
+<<<<<<< HEAD
 
   public int getCurrentCloseAttempts() {
     return currentCloseAttempts;
   }
+=======
+>>>>>>> refs/remotes/apache/trunk
 }

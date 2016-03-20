@@ -28,6 +28,8 @@ import org.junit.Test;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 
 public class TestSyslogUtils {
@@ -54,7 +56,6 @@ public class TestSyslogUtils {
 
   @Test
   public void TestHeader2() throws ParseException {
-
     String stamp1 = "2012-04-13T11:11:11";
     String format1 = "yyyy-MM-dd'T'HH:mm:ssZ";
     String host1 = "ubuntu-11.cloudera.com";
@@ -152,6 +153,21 @@ public class TestSyslogUtils {
   }
 
   @Test
+  public void TestHeader11() throws ParseException {
+    // SyslogUtils should truncate microsecond precision to only 3 digits.
+    // This is to maintain consistency between the two syslog implementations.
+    String inputStamp  = "2014-10-03T17:20:01.123456-07:00";
+    String outputStamp = "2014-10-03T17:20:01.123-07:00";
+
+    String format1 = "yyyy-MM-dd'T'HH:mm:ss.S";
+    String host1 = "ubuntu-11.cloudera.com";
+    String data1 = "some msg";
+
+    String msg1 = "<10>" + inputStamp + " " + host1 + " " + data1 + "\n";
+    checkHeader(msg1, outputStamp, format1, host1, data1);
+  }
+
+  @Test
   public void TestRfc3164HeaderApacheLogWithNulls() throws ParseException {
     String stamp1 = "Apr  1 13:14:04";
     String format1 = "yyyyMMM d HH:mm:ss";
@@ -162,9 +178,23 @@ public class TestSyslogUtils {
             format1, host1, data1);
   }
 
+<<<<<<< HEAD
   public void checkHeader(String msg1, String stamp1, String format1,
       String host1, String data1) throws ParseException {
     SyslogUtils util = new SyslogUtils(false);
+=======
+  public static void checkHeader(String keepFields, String msg1, String stamp1, String format1,
+                                 String host1, String data1) throws ParseException {
+    SyslogUtils util;
+    if (keepFields == null || keepFields.isEmpty()) {
+      util = new SyslogUtils(SyslogUtils.DEFAULT_SIZE, new HashSet<String>(), false);
+    } else {
+      util = new SyslogUtils(
+          SyslogUtils.DEFAULT_SIZE,
+          SyslogUtils.chooseFieldsToKeep(keepFields),
+          false);
+    }
+>>>>>>> refs/remotes/apache/trunk
     ChannelBuffer buff = ChannelBuffers.buffer(200);
 
     buff.writeBytes(msg1.getBytes());
@@ -176,7 +206,7 @@ public class TestSyslogUtils {
     if (stamp1 == null) {
       Assert.assertFalse(headers2.containsKey("timestamp"));
     } else {
-      SimpleDateFormat formater = new SimpleDateFormat(format1);
+      SimpleDateFormat formater = new SimpleDateFormat(format1, Locale.ENGLISH);
       Assert.assertEquals(String.valueOf(formater.parse(stamp1).getTime()), headers2.get("timestamp"));
     }
     if (host1 == null) {
@@ -186,6 +216,12 @@ public class TestSyslogUtils {
       Assert.assertEquals(host2,host1);
     }
     Assert.assertEquals(data1, new String(e.getBody()));
+  }
+
+  // Check headers for when keepFields is "none".
+  public static void checkHeader(String msg1, String stamp1, String format1,
+                                 String host1, String data1) throws ParseException {
+    checkHeader("none", msg1, stamp1, format1, host1, data1);
   }
 
   /**
@@ -217,6 +253,52 @@ public class TestSyslogUtils {
   @Test
   public void testExtractBadEvent2() {
     String badData1 = "hi guys! <10> bad bad data\n";
+    SyslogUtils util = new SyslogUtils(false);
+    ChannelBuffer buff = ChannelBuffers.buffer(100);
+    buff.writeBytes(badData1.getBytes());
+    Event e = util.extractEvent(buff);
+    if(e == null){
+      throw new NullPointerException("Event is null");
+    }
+    Map<String, String> headers = e.getHeaders();
+    Assert.assertEquals("0", headers.get(SyslogUtils.SYSLOG_FACILITY));
+    Assert.assertEquals("0", headers.get(SyslogUtils.SYSLOG_SEVERITY));
+    Assert.assertEquals(SyslogUtils.SyslogStatus.INVALID.getSyslogStatus(),
+        headers.get(SyslogUtils.EVENT_STATUS));
+    Assert.assertEquals(badData1.trim(), new String(e.getBody()).trim());
+
+  }
+
+  /**
+   * Test bad event format 3: Empty priority - <>
+   */
+
+  @Test
+  public void testExtractBadEvent3() {
+    String badData1 = "<> bad bad data\n";
+    SyslogUtils util = new SyslogUtils(false);
+    ChannelBuffer buff = ChannelBuffers.buffer(100);
+    buff.writeBytes(badData1.getBytes());
+    Event e = util.extractEvent(buff);
+    if(e == null){
+      throw new NullPointerException("Event is null");
+    }
+    Map<String, String> headers = e.getHeaders();
+    Assert.assertEquals("0", headers.get(SyslogUtils.SYSLOG_FACILITY));
+    Assert.assertEquals("0", headers.get(SyslogUtils.SYSLOG_SEVERITY));
+    Assert.assertEquals(SyslogUtils.SyslogStatus.INVALID.getSyslogStatus(),
+        headers.get(SyslogUtils.EVENT_STATUS));
+    Assert.assertEquals(badData1.trim(), new String(e.getBody()).trim());
+
+  }
+
+  /**
+   * Test bad event format 4: Priority too long
+   */
+
+  @Test
+  public void testExtractBadEvent4() {
+    String badData1 = "<123123123123123123123123123123> bad bad data\n";
     SyslogUtils util = new SyslogUtils(false);
     ChannelBuffer buff = ChannelBuffers.buffer(100);
     buff.writeBytes(badData1.getBytes());
@@ -405,7 +487,11 @@ public class TestSyslogUtils {
   public void testExtractBadEventLarge() {
     String badData1 = "<10> bad bad data bad bad\n";
     // The minimum size (which is 10) overrides the 5 specified here.
+<<<<<<< HEAD
     SyslogUtils util = new SyslogUtils(5, false, false);
+=======
+    SyslogUtils util = new SyslogUtils(5, null, false);
+>>>>>>> refs/remotes/apache/trunk
     ChannelBuffer buff = ChannelBuffers.buffer(100);
     buff.writeBytes(badData1.getBytes());
     Event e = util.extractEvent(buff);
@@ -430,7 +516,36 @@ public class TestSyslogUtils {
     Assert.assertEquals(SyslogUtils.SyslogStatus.INVALID.getSyslogStatus(),
         headers2.get(SyslogUtils.EVENT_STATUS));
     Assert.assertEquals("ad data ba".trim(), new String(e2.getBody()).trim());
+<<<<<<< HEAD
+=======
 
+  }
+
+  @Test
+  public void testKeepFields() throws Exception {
+    String stamp1 = "2012-04-13T11:11:11";
+    String format1 = "yyyy-MM-dd'T'HH:mm:ssZ";
+    String host1 = "ubuntu-11.cloudera.com";
+    String data1 = "some msg";
+    // timestamp with hh:mm format timezone
+    String msg1 = "<10>1 " + stamp1 + "+08:00" + " " + host1 + " " + data1 + "\n";
+    checkHeader("none", msg1, stamp1 + "+0800", format1, host1, data1);
+    checkHeader("false", msg1, stamp1 + "+0800", format1, host1, data1);
+
+    String data2 = "ubuntu-11.cloudera.com some msg";
+    checkHeader("hostname", msg1, stamp1 + "+0800", format1, host1, data2);
+
+    String data3 = "2012-04-13T11:11:11+08:00 ubuntu-11.cloudera.com some msg";
+    checkHeader("timestamp hostname", msg1, stamp1 + "+0800", format1, host1, data3);
+
+    String data4 = "<10>2012-04-13T11:11:11+08:00 ubuntu-11.cloudera.com some msg";
+    checkHeader("priority timestamp hostname", msg1, stamp1 + "+0800", format1, host1, data4);
+>>>>>>> refs/remotes/apache/trunk
+
+    String data5 = "<10>1 2012-04-13T11:11:11+08:00 ubuntu-11.cloudera.com some msg";
+    checkHeader("priority version timestamp hostname", msg1, stamp1 + "+0800", format1, host1, data5);
+    checkHeader("all", msg1, stamp1 + "+0800", format1, host1, data5);
+    checkHeader("true", msg1, stamp1 + "+0800", format1, host1, data5);
   }
 
 }

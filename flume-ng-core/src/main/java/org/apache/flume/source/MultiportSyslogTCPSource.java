@@ -28,6 +28,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.flume.Context;
@@ -67,7 +68,11 @@ public class MultiportSyslogTCPSource extends AbstractSource implements
   private SourceCounter sourceCounter = null;
   private Charset defaultCharset;
   private ThreadSafeDecoder defaultDecoder;
+<<<<<<< HEAD
   private boolean keepFields;
+=======
+  private Set<String> keepFields;
+>>>>>>> refs/remotes/apache/trunk
 
   public MultiportSyslogTCPSource() {
     portCharsets = new ConcurrentHashMap<Integer, ThreadSafeDecoder>();
@@ -139,9 +144,16 @@ public class MultiportSyslogTCPSource extends AbstractSource implements
         SyslogSourceConfigurationConstants.CONFIG_READBUF_SIZE,
         SyslogSourceConfigurationConstants.DEFAULT_READBUF_SIZE);
 
+<<<<<<< HEAD
     keepFields = context.getBoolean(
         SyslogSourceConfigurationConstants.CONFIG_KEEP_FIELDS,
         SyslogSourceConfigurationConstants.DEFAULT_KEEP_FIELDS);
+=======
+    keepFields = SyslogUtils.chooseFieldsToKeep(
+        context.getString(
+            SyslogSourceConfigurationConstants.CONFIG_KEEP_FIELDS,
+            SyslogSourceConfigurationConstants.DEFAULT_KEEP_FIELDS));
+>>>>>>> refs/remotes/apache/trunk
 
     if (sourceCounter == null) {
       sourceCounter = new SourceCounter(getName());
@@ -218,12 +230,21 @@ public class MultiportSyslogTCPSource extends AbstractSource implements
     private final LineSplitter lineSplitter;
     private final ThreadSafeDecoder defaultDecoder;
     private final ConcurrentMap<Integer, ThreadSafeDecoder> portCharsets;
+<<<<<<< HEAD
     private final boolean keepFields;
+=======
+    private Set<String> keepFields;
+>>>>>>> refs/remotes/apache/trunk
 
     public MultiportSyslogHandler(int maxEventSize, int batchSize,
         ChannelProcessor cp, SourceCounter ctr, String portHeader,
         ThreadSafeDecoder defaultDecoder,
+<<<<<<< HEAD
         ConcurrentMap<Integer, ThreadSafeDecoder> portCharsets, boolean keepFields) {
+=======
+        ConcurrentMap<Integer, ThreadSafeDecoder> portCharsets,
+        Set<String> keepFields) {
+>>>>>>> refs/remotes/apache/trunk
       channelProcessor = cp;
       sourceCounter = ctr;
       this.maxEventSize = maxEventSize;

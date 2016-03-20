@@ -28,19 +28,33 @@ import org.apache.flume.Context;
 import org.apache.flume.CounterGroup;
 import org.apache.flume.Event;
 import org.apache.flume.EventDeliveryException;
-import org.apache.flume.PollableSource;
+import org.apache.flume.FlumeException;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.event.EventBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Internal load-generating source implementation. Useful for tests.
+ * StressSource is an internal load-generating source implementation
+ * which is very useful for stress tests. It allows User to configure
+ * the size of Event payload, with empty headers. User can configure
+ * total number of events to be sent as well maximum number of Successful
+ * Events to be delivered. Useful for tests
+ *
+ * Example configuration for Agent a1
+ * <PRE>
+ *   a1.sources = stresssource-1
+ *   a1.channels = memoryChannel-1
+ *   a1.sources.stresssource-1.type = org.apache.flume.source.StressSource
+ *   a1.sources.stresssource-1.size = 10240
+ *   a1.sources.stresssource-1.maxTotalEvents = 1000000
+ *   a1.sources.stresssource-1.channels = memoryChannel-1
+ * </PRE>
  *
  * See {@link StressSource#configure(Context)} for configuration options.
  */
-public class StressSource extends AbstractSource implements
-  Configurable, PollableSource {
+public class StressSource extends AbstractPollableSource implements
+  Configurable {
 
   private static final Logger logger = LoggerFactory
       .getLogger(StressSource.class);
@@ -57,18 +71,17 @@ public class StressSource extends AbstractSource implements
 
   public StressSource() {
     counterGroup = new CounterGroup();
-
   }
 
   /**
    * Read parameters from context
-   * <li>-maxTotalEvents = type long that defines the total number of events to be sent
-   * <li>-maxSuccessfulEvents = type long that defines the total number of events to be sent
-   * <li>-size = type int that defines the number of bytes in each event
-   * <li>-batchSize = type int that defines the number of events being sent in one batch
+   * <li>-maxTotalEvents = type long that defines the total number of Events to be sent
+   * <li>-maxSuccessfulEvents = type long that defines the number of successful Events
+   * <li>-size = type int that defines the number of bytes in each Event
+   * <li>-batchSize = type int that defines the number of Events being sent in one batch
    */
   @Override
-  public void configure(Context context) {
+  protected void doConfigure(Context context) throws FlumeException {
     /* Limit on the total number of events. */
     maxTotalEvents = context.getLong("maxTotalEvents", -1L);
     /* Limit on the total number of successful events. */
@@ -100,13 +113,13 @@ public class StressSource extends AbstractSource implements
   }
 
   @Override
-  public Status process() throws EventDeliveryException {
+  protected Status doProcess() throws EventDeliveryException {
     long totalEventSent = counterGroup.addAndGet("events.total", lastSent);
 
     if ((maxTotalEvents >= 0 &&
-        totalEventSent >= maxTotalEvents) ||
-        (maxSuccessfulEvents >= 0 &&
-        counterGroup.get("events.successful") >= maxSuccessfulEvents)) {
+            totalEventSent >= maxTotalEvents) ||
+            (maxSuccessfulEvents >= 0 &&
+                    counterGroup.get("events.successful") >= maxSuccessfulEvents)) {
       return Status.BACKOFF;
     }
     try {
@@ -135,20 +148,12 @@ public class StressSource extends AbstractSource implements
   }
 
   @Override
-  public void start() {
-    logger.info("Stress source starting");
-
-    super.start();
-
-    logger.debug("Stress source started");
+  protected void doStart() throws FlumeException {
+    logger.info("Stress source doStart finished");
   }
 
   @Override
-  public void stop() {
-    logger.info("Stress source stopping");
-
-    super.stop();
-
-    logger.info("Stress source stopped. Metrics:{}", counterGroup);
+  protected void doStop() throws FlumeException {
+    logger.info("Stress source do stop. Metrics:{}", counterGroup);
   }
 }

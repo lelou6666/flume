@@ -21,7 +21,10 @@ package org.apache.flume.source;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import java.nio.charset.Charset;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
 import org.apache.flume.Event;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
@@ -34,7 +37,8 @@ public class TestSyslogParser {
     final String[] examples = {
       "1985-04-12T23:20:50.52Z", "1985-04-12T19:20:50.52-04:00",
       "2003-10-11T22:14:15.003Z", "2003-08-24T05:14:15.000003-07:00",
-      "2012-04-13T11:11:11-08:00", "2012-04-13T08:08:08.0001+00:00"
+      "2012-04-13T11:11:11-08:00", "2012-04-13T08:08:08.0001+00:00",
+      "2012-04-13T08:08:08.251+00:00"
     };
 
     SyslogParser parser = new SyslogParser();
@@ -77,17 +81,40 @@ public class TestSyslogParser {
 
     // test with default keepFields = false
     for (String msg : messages) {
+<<<<<<< HEAD
       boolean keepFields = false;
+=======
+      Set<String> keepFields = new HashSet<String>();
+>>>>>>> refs/remotes/apache/trunk
       Event event = parser.parseMessage(msg, charset, keepFields);
       Assert.assertNull("Failure to parse known-good syslog message",
         event.getHeaders().get(SyslogUtils.EVENT_STATUS));
     }
 
     // test that priority, timestamp and hostname are preserved in event body
+<<<<<<< HEAD
     for (String msg : messages) {
       boolean keepFields = true;
       Event event = parser.parseMessage(msg, charset, keepFields);
       Assert.assertArrayEquals(event.getBody(), msg.getBytes());
+=======
+    for (String msg : messages) {
+      Set<String> keepFields = new HashSet<String>();
+      keepFields.add(SyslogUtils.KEEP_FIELDS_ALL);
+      Event event = parser.parseMessage(msg, charset, keepFields);
+      Assert.assertArrayEquals(event.getBody(), msg.getBytes());
+      Assert.assertNull("Failure to parse known-good syslog message",
+          event.getHeaders().get(SyslogUtils.EVENT_STATUS));
+    }
+
+    // test that hostname is preserved in event body
+    for (String msg : messages) {
+      Set<String> keepFields = new HashSet<String>();
+      keepFields.add(SyslogSourceConfigurationConstants.CONFIG_KEEP_FIELDS_HOSTNAME);
+      Event event = parser.parseMessage(msg, charset, keepFields);
+      Assert.assertTrue("Failure to persist hostname",
+          new String(event.getBody()).contains(event.getHeaders().get("host")));
+>>>>>>> refs/remotes/apache/trunk
       Assert.assertNull("Failure to parse known-good syslog message",
           event.getHeaders().get(SyslogUtils.EVENT_STATUS));
     }

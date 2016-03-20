@@ -38,6 +38,7 @@ import org.apache.flume.Clock;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.SystemClock;
+import org.apache.flume.auth.PrivilegedExecutor;
 import org.apache.flume.instrumentation.SinkCounter;
 import org.apache.flume.sink.hdfs.HDFSEventSink.WriterCallback;
 import org.apache.hadoop.conf.Configuration;
@@ -45,7 +46,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,7 +75,7 @@ class BucketWriter {
   private final CompressionCodec codeC;
   private final CompressionType compType;
   private final ScheduledExecutorService timedRollerPool;
-  private final UserGroupInformation user;
+  private final PrivilegedExecutor proxyUser;
 
   private final AtomicLong fileExtensionCounter;
 
@@ -109,18 +109,30 @@ class BucketWriter {
 
   private Clock clock = new SystemClock();
   private final long retryInterval;
+<<<<<<< HEAD
   private final int maxCloseTries;
+=======
+  private final int maxRenameTries;
+>>>>>>> refs/remotes/apache/trunk
 
   // flag that the bucket writer was closed due to idling and thus shouldn't be
   // reopened. Not ideal, but avoids internals of owners
   protected boolean closed = false;
+<<<<<<< HEAD
   AtomicInteger closeTries = new AtomicInteger(0);
+=======
+  AtomicInteger renameTries = new AtomicInteger(0);
+>>>>>>> refs/remotes/apache/trunk
 
   BucketWriter(long rollInterval, long rollSize, long rollCount, long batchSize,
     Context context, String filePath, String fileName, String inUsePrefix,
     String inUseSuffix, String fileSuffix, CompressionCodec codeC,
     CompressionType compType, HDFSWriter writer,
+<<<<<<< HEAD
     ScheduledExecutorService timedRollerPool, UserGroupInformation user,
+=======
+    ScheduledExecutorService timedRollerPool, PrivilegedExecutor proxyUser,
+>>>>>>> refs/remotes/apache/trunk
     SinkCounter sinkCounter, int idleTimeout, WriterCallback onCloseCallback,
     String onCloseCallbackPath, long callTimeout,
     ExecutorService callTimeoutPool, long retryInterval,
@@ -138,7 +150,7 @@ class BucketWriter {
     this.compType = compType;
     this.writer = writer;
     this.timedRollerPool = timedRollerPool;
-    this.user = user;
+    this.proxyUser = proxyUser;
     this.sinkCounter = sinkCounter;
     this.idleTimeout = idleTimeout;
     this.onCloseCallback = onCloseCallback;
@@ -148,7 +160,11 @@ class BucketWriter {
     fileExtensionCounter = new AtomicLong(clock.currentTimeMillis());
 
     this.retryInterval = retryInterval;
+<<<<<<< HEAD
     this.maxCloseTries = maxCloseTries;
+=======
+    this.maxRenameTries = maxCloseTries;
+>>>>>>> refs/remotes/apache/trunk
     isOpen = false;
     isUnderReplicated = false;
     this.writer.configure(context);
@@ -159,6 +175,7 @@ class BucketWriter {
     this.fileSystem = fs;
     mockFsInjected = true;
   }
+<<<<<<< HEAD
 
   @VisibleForTesting
   void setMockStream(HDFSWriter dataWriter) {
@@ -175,23 +192,14 @@ class BucketWriter {
    */
   private <T> T runPrivileged(final PrivilegedExceptionAction<T> action)
       throws IOException, InterruptedException {
+=======
+>>>>>>> refs/remotes/apache/trunk
 
-    if (user != null) {
-      return user.doAs(action);
-    } else {
-      try {
-        return action.run();
-      } catch (IOException ex) {
-        throw ex;
-      } catch (InterruptedException ex) {
-        throw ex;
-      } catch (RuntimeException ex) {
-        throw ex;
-      } catch (Exception ex) {
-        throw new RuntimeException("Unexpected exception.", ex);
-      }
-    }
+  @VisibleForTesting
+  void setMockStream(HDFSWriter dataWriter) {
+    this.writer = dataWriter;
   }
+
 
   /**
    * Clear the class counters
@@ -336,21 +344,29 @@ class BucketWriter {
       private final HDFSWriter localWriter = writer;
       @Override
       public Void call() throws Exception {
+<<<<<<< HEAD
         LOG.info("Close tries incremented");
         closeTries.incrementAndGet();
+=======
+>>>>>>> refs/remotes/apache/trunk
         localWriter.close(); // could block
         return null;
       }
     };
   }
 
+<<<<<<< HEAD
   private Callable<Void> createScheduledCloseCallable(
     final CallRunner<Void> closeCallRunner) {
+=======
+  private Callable<Void> createScheduledRenameCallable() {
+>>>>>>> refs/remotes/apache/trunk
 
     return new Callable<Void>() {
       private final String path = bucketPath;
       private final String finalPath = targetPath;
       private FileSystem fs = fileSystem;
+<<<<<<< HEAD
       private boolean closeSuccess = false;
       private Path tmpFilePath = new Path(path);
       private int closeTries = 1; // one attempt is already done
@@ -385,6 +401,22 @@ class BucketWriter {
           renameBucket(path, finalPath, fs);
         } catch (Exception e) {
           LOG.warn("Closing file: " + path + " failed. Will " +
+=======
+      private int renameTries = 1; // one attempt is already done
+
+      @Override
+      public Void call() throws Exception {
+        if (renameTries >= maxRenameTries) {
+          LOG.warn("Unsuccessfully attempted to rename " + path + " " +
+            maxRenameTries + " times. File may still be open.");
+          return null;
+        }
+        renameTries++;
+        try {
+          renameBucket(path, finalPath, fs);
+        } catch (Exception e) {
+          LOG.warn("Renaming file: " + path + " failed. Will " +
+>>>>>>> refs/remotes/apache/trunk
             "retry again in " + retryInterval + " seconds.", e);
           timedRollerPool.schedule(this, retryInterval,
             TimeUnit.SECONDS);
@@ -404,7 +436,15 @@ class BucketWriter {
   public synchronized void close(boolean callCloseCallback)
     throws IOException, InterruptedException {
     checkAndThrowInterruptedException();
+<<<<<<< HEAD
     flush();
+=======
+    try {
+      flush();
+    } catch (IOException e) {
+      LOG.warn("pre-close flush failed", e);
+    }
+>>>>>>> refs/remotes/apache/trunk
     boolean failedToClose = false;
     LOG.info("Closing {}", bucketPath);
     CallRunner<Void> closeCallRunner = createCloseCallRunner();
@@ -418,10 +458,13 @@ class BucketWriter {
             "). Exception follows.", e);
         sinkCounter.incrementConnectionFailedCount();
         failedToClose = true;
+<<<<<<< HEAD
         final Callable<Void> scheduledClose =
           createScheduledCloseCallable(closeCallRunner);
         timedRollerPool.schedule(scheduledClose, retryInterval,
           TimeUnit.SECONDS);
+=======
+>>>>>>> refs/remotes/apache/trunk
       }
       isOpen = false;
     } else {
@@ -439,10 +482,27 @@ class BucketWriter {
       idleFuture = null;
     }
 
+<<<<<<< HEAD
     // Don't rename file if this failed to close
     if (bucketPath != null && fileSystem != null && !failedToClose) {
       // could block or throw IOException
       renameBucket(bucketPath, targetPath, fileSystem);
+=======
+    if (bucketPath != null && fileSystem != null) {
+      // could block or throw IOException
+      try {
+        renameBucket(bucketPath, targetPath, fileSystem);
+      } catch(Exception e) {
+        LOG.warn(
+          "failed to rename() file (" + bucketPath +
+          "). Exception follows.", e);
+        sinkCounter.incrementConnectionFailedCount();
+        final Callable<Void> scheduledRename =
+                createScheduledRenameCallable();
+        timedRollerPool.schedule(scheduledRename, retryInterval,
+                TimeUnit.SECONDS);
+      }
+>>>>>>> refs/remotes/apache/trunk
     }
     if (callCloseCallback) {
       runCloseAction();
@@ -667,6 +727,10 @@ class BucketWriter {
       public Void call() throws Exception {
         if (fs.exists(srcPath)) { // could block
           LOG.info("Renaming " + srcPath + " to " + dstPath);
+<<<<<<< HEAD
+=======
+          renameTries.incrementAndGet();
+>>>>>>> refs/remotes/apache/trunk
           fs.rename(srcPath, dstPath); // could block
         }
         return null;
@@ -712,7 +776,7 @@ class BucketWriter {
     Future<T> future = callTimeoutPool.submit(new Callable<T>() {
       @Override
       public T call() throws Exception {
-        return runPrivileged(new PrivilegedExceptionAction<T>() {
+        return proxyUser.execute(new PrivilegedExceptionAction<T>() {
           @Override
           public T run() throws Exception {
             return callRunner.call();

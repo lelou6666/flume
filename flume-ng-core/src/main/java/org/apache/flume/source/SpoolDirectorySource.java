@@ -32,6 +32,10 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+<<<<<<< HEAD
+=======
+import java.util.Locale;
+>>>>>>> refs/remotes/apache/trunk
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -43,9 +47,6 @@ Configurable, EventDrivenSource {
 
   private static final Logger logger = LoggerFactory
       .getLogger(SpoolDirectorySource.class);
-
-  // Delay used when polling for new files
-  private static final int POLL_DELAY_MS = 500;
 
   /* Config options */
   private String completedSuffix;
@@ -71,6 +72,10 @@ Configurable, EventDrivenSource {
   private boolean hitChannelException = false;
   private int maxBackoff;
   private ConsumeOrder consumeOrder;
+<<<<<<< HEAD
+=======
+  private int pollDelay;
+>>>>>>> refs/remotes/apache/trunk
 
   @Override
   public synchronized void start() {
@@ -104,7 +109,7 @@ Configurable, EventDrivenSource {
 
     Runnable runner = new SpoolDirectoryRunnable(reader, sourceCounter);
     executor.scheduleWithFixedDelay(
-        runner, 0, POLL_DELAY_MS, TimeUnit.MILLISECONDS);
+        runner, 0, pollDelay, TimeUnit.MILLISECONDS);
 
     super.start();
     logger.debug("SpoolDirectorySource source started");
@@ -155,7 +160,11 @@ Configurable, EventDrivenSource {
     inputCharset = context.getString(INPUT_CHARSET, DEFAULT_INPUT_CHARSET);
     decodeErrorPolicy = DecodeErrorPolicy.valueOf(
         context.getString(DECODE_ERROR_POLICY, DEFAULT_DECODE_ERROR_POLICY)
+<<<<<<< HEAD
         .toUpperCase());
+=======
+        .toUpperCase(Locale.ENGLISH));
+>>>>>>> refs/remotes/apache/trunk
 
     ignorePattern = context.getString(IGNORE_PAT, DEFAULT_IGNORE_PAT);
     trackerDirPath = context.getString(TRACKER_DIR, DEFAULT_TRACKER_DIR);
@@ -165,7 +174,13 @@ Configurable, EventDrivenSource {
         "."));
     
     consumeOrder = ConsumeOrder.valueOf(context.getString(CONSUME_ORDER, 
+<<<<<<< HEAD
         DEFAULT_CONSUME_ORDER.toString()).toUpperCase());
+=======
+        DEFAULT_CONSUME_ORDER.toString()).toUpperCase(Locale.ENGLISH));
+
+    pollDelay = context.getInteger(POLL_DELAY, DEFAULT_POLL_DELAY);
+>>>>>>> refs/remotes/apache/trunk
 
     // "Hack" to support backwards compatibility with previous generation of
     // spooling directory source, which did not support deserializers

@@ -37,6 +37,7 @@ public class MockFileSystem extends FileSystem {
       LoggerFactory.getLogger(MockFileSystem.class);
 
   FileSystem fs;
+<<<<<<< HEAD
   int numberOfClosesRequired;
   MockFsDataOutputStream latestOutputStream;
 
@@ -44,6 +45,24 @@ public class MockFileSystem extends FileSystem {
     int numberOfClosesRequired) {
     this.fs = fs;
     this.numberOfClosesRequired = numberOfClosesRequired;
+=======
+  int numberOfRetriesRequired;
+  MockFsDataOutputStream latestOutputStream;
+  int currentRenameAttempts;
+  boolean closeSucceed = true;
+
+  public MockFileSystem(FileSystem fs,
+    int numberOfRetriesRequired) {
+    this.fs = fs;
+    this.numberOfRetriesRequired = numberOfRetriesRequired;
+  }
+
+  public MockFileSystem(FileSystem fs,
+                        int numberOfRetriesRequired, boolean closeSucceed) {
+    this.fs = fs;
+    this.numberOfRetriesRequired = numberOfRetriesRequired;
+    this.closeSucceed = closeSucceed;
+>>>>>>> refs/remotes/apache/trunk
   }
 
   @Override
@@ -51,7 +70,11 @@ public class MockFileSystem extends FileSystem {
       throws IOException {
 
     latestOutputStream = new MockFsDataOutputStream(
+<<<<<<< HEAD
       fs.append(arg0, arg1, arg2), numberOfClosesRequired);
+=======
+      fs.append(arg0, arg1, arg2), closeSucceed);
+>>>>>>> refs/remotes/apache/trunk
 
     return latestOutputStream;
   }
@@ -60,7 +83,11 @@ public class MockFileSystem extends FileSystem {
   public FSDataOutputStream create(Path arg0) throws IOException {
     //throw new IOException ("HI there2");
     latestOutputStream = new MockFsDataOutputStream(
+<<<<<<< HEAD
       fs.create(arg0), numberOfClosesRequired);
+=======
+      fs.create(arg0), closeSucceed);
+>>>>>>> refs/remotes/apache/trunk
 
     return latestOutputStream;
   }
@@ -116,8 +143,22 @@ public class MockFileSystem extends FileSystem {
 
   @Override
   public boolean rename(Path arg0, Path arg1) throws IOException {
+<<<<<<< HEAD
 
     return fs.rename(arg0, arg1);
+=======
+    currentRenameAttempts++;
+    logger.info(
+      "Attempting to Rename: '" + currentRenameAttempts + "' of '" +
+      numberOfRetriesRequired + "'");
+    if (currentRenameAttempts >= numberOfRetriesRequired ||
+      numberOfRetriesRequired == 0) {
+      logger.info("Renaming file");
+      return fs.rename(arg0, arg1);
+    } else {
+      throw new IOException("MockIOException");
+    }
+>>>>>>> refs/remotes/apache/trunk
   }
 
   @Override
@@ -125,6 +166,7 @@ public class MockFileSystem extends FileSystem {
     fs.setWorkingDirectory(arg0);
 
   }
+<<<<<<< HEAD
 
   public boolean isFileClosed(Path path) {
 
@@ -137,4 +179,6 @@ public class MockFileSystem extends FileSystem {
 
 
 
+=======
+>>>>>>> refs/remotes/apache/trunk
 }

@@ -51,6 +51,10 @@ import org.elasticsearch.client.Requests;
 import org.elasticsearch.common.UUID;
 import org.elasticsearch.common.io.BytesStream;
 import org.elasticsearch.common.io.FastByteArrayOutputStream;
+<<<<<<< HEAD
+=======
+import org.elasticsearch.index.query.QueryBuilders;
+>>>>>>> refs/remotes/apache/trunk
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -91,6 +95,69 @@ public class TestElasticSearchSink extends AbstractElasticSearchSinkTest {
 
     assertMatchAllQuery(1, event);
     assertBodyQuery(1, event);
+  }
+
+  @Test
+  public void shouldIndexInvalidComplexJsonBody() throws Exception {
+    parameters.put(BATCH_SIZE, "3");
+    Configurables.configure(fixture, new Context(parameters));
+    Channel channel = bindAndStartChannel(fixture);
+
+    Transaction tx = channel.getTransaction();
+    tx.begin();
+    Event event1 = EventBuilder.withBody("TEST1 {test}".getBytes());
+    channel.put(event1);
+    Event event2 = EventBuilder.withBody("{test: TEST2 }".getBytes());
+    channel.put(event2);
+    Event event3 = EventBuilder.withBody("{\"test\":{ TEST3 {test} }}".getBytes());
+    channel.put(event3);
+    tx.commit();
+    tx.close();
+
+    fixture.process();
+    fixture.stop();
+    client.admin().indices()
+        .refresh(Requests.refreshRequest(timestampedIndexName)).actionGet();
+
+    assertMatchAllQuery(3);
+    assertSearch(1,
+        performSearch(QueryBuilders.fieldQuery("@message", "TEST1")),
+        null, event1);
+    assertSearch(1,
+        performSearch(QueryBuilders.fieldQuery("@message", "TEST2")),
+        null, event2);
+    assertSearch(1,
+        performSearch(QueryBuilders.fieldQuery("@message", "TEST3")),
+        null, event3);
+  }
+
+  @Test
+  public void shouldIndexComplexJsonEvent() throws Exception {
+    Configurables.configure(fixture, new Context(parameters));
+    Channel channel = bindAndStartChannel(fixture);
+
+    Transaction tx = channel.getTransaction();
+    tx.begin();
+    Event event = EventBuilder.withBody(
+        "{\"event\":\"json content\",\"num\":1}".getBytes());
+    channel.put(event);
+    tx.commit();
+    tx.close();
+
+    fixture.process();
+    fixture.stop();
+    client.admin().indices()
+            .refresh(Requests.refreshRequest(timestampedIndexName)).actionGet();
+
+    Map<String, Object> expectedBody = new HashMap<String, Object>();
+    expectedBody.put("event", "json content");
+    expectedBody.put("num", 1);
+
+    assertSearch(1,
+        performSearch(QueryBuilders.matchAllQuery()), expectedBody, event);
+    assertSearch(1,
+        performSearch(QueryBuilders.fieldQuery("@message.event", "json")),
+        expectedBody, event);
   }
 
   @Test

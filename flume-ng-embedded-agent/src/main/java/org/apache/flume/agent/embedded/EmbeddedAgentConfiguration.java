@@ -21,6 +21,7 @@ package org.apache.flume.agent.embedded;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -172,7 +173,7 @@ public class EmbeddedAgentConfiguration {
     checkRequired(properties, SINKS);
     String sinkNames = properties.get(SINKS);
     for(String sink : sinkNames.split("\\s+")) {
-      if(DISALLOWED_SINK_NAMES.contains(sink.toLowerCase())) {
+      if(DISALLOWED_SINK_NAMES.contains(sink.toLowerCase(Locale.ENGLISH))) {
         throw new FlumeException("Sink name " + sink + " is one of the" +
             " disallowed sink names: " + DISALLOWED_SINK_NAMES);
       }
@@ -206,9 +207,10 @@ public class EmbeddedAgentConfiguration {
     }
     String sinkNames = properties.remove(SINKS);
 
-    String sourceName = "source-" + name;
-    String channelName = "channel-" + name;
-    String sinkGroupName = "sink-group-" + name;
+    String strippedName = name.replaceAll("\\s+","");
+    String sourceName = "source-" + strippedName;
+    String channelName = "channel-" + strippedName;
+    String sinkGroupName = "sink-group-" + strippedName;
 
     /*
      * Now we are going to process the user supplied configuration
