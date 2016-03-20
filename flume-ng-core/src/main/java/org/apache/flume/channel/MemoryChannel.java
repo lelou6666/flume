@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,377 +7,369 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package org.apache.flume.channel;
 
-import java.util.LinkedList;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.flume.Channel;
+import javax.annotation.concurrent.GuardedBy;
+
 import org.apache.flume.ChannelException;
+import org.apache.flume.ChannelFullException;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
-import org.apache.flume.Transaction;
-import org.apache.flume.conf.Configurable;
+import org.apache.flume.annotations.InterfaceAudience;
+import org.apache.flume.annotations.InterfaceStability;
+import org.apache.flume.annotations.Recyclable;
+import org.apache.flume.instrumentation.ChannelCounter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 
 /**
- * Memory channel that with full transaction support Uses transaction object for
- * each thread (source and sink) attached to channel. The events are stored in
- * the thread safe Dequeue. * The put and take are directly executed in the
- * common queue. Channel has a marker for the last committed event in order to
- * avoid sink reading uncommitted data. The transactions keep track of the
- * actions to perform undo when rolled back.
- * 
+ * <p>
+ * MemoryChannel is the recommended channel to use when speeds which
+ * writing to disk is impractical is required or durability of data is not
+ * required.
+ * </p>
+ * <p>
+ * Additionally, MemoryChannel should be used when a channel is required for
+ * unit testing purposes.
+ * </p>
  */
-public class MemoryChannel implements Channel, Configurable {
+@InterfaceAudience.Public
+@InterfaceStability.Stable
+@Recyclable
+public class MemoryChannel extends BasicChannelSemantics {
+  private static Logger LOGGER = LoggerFactory.getLogger(MemoryChannel.class);
+  private static final Integer defaultCapacity = 100;
+  private static final Integer defaultTransCapacity = 100;
+  private static final double byteCapacitySlotSize = 100;
+  private static final Long defaultByteCapacity = (long)(Runtime.getRuntime().maxMemory() * .80);
+  private static final Integer defaultByteCapacityBufferPercentage = 20;
 
-  private static final Integer defaultCapacity = 50;
   private static final Integer defaultKeepAlive = 3;
 
-  // wrap the event with a counter
-  private class StampedEvent {
-    private int timeStamp;
-    private Event event;
+  private class MemoryTransaction extends BasicTransactionSemantics {
+    private LinkedBlockingDeque<Event> takeList;
+    private LinkedBlockingDeque<Event> putList;
+    private final ChannelCounter channelCounter;
+    private int putByteCounter = 0;
+    private int takeByteCounter = 0;
 
-    public StampedEvent(int stamp, Event E) {
-      timeStamp = stamp;
-      event = E;
+    public MemoryTransaction(int transCapacity, ChannelCounter counter) {
+      putList = new LinkedBlockingDeque<Event>(transCapacity);
+      takeList = new LinkedBlockingDeque<Event>(transCapacity);
+
+      channelCounter = counter;
     }
 
-    public int getStamp() {
-      return timeStamp;
+    @Override
+    protected void doPut(Event event) throws InterruptedException {
+      channelCounter.incrementEventPutAttemptCount();
+      int eventByteSize = (int)Math.ceil(estimateEventSize(event)/byteCapacitySlotSize);
+
+      if (!putList.offer(event)) {
+        throw new ChannelException(
+          "Put queue for MemoryTransaction of capacity " +
+            putList.size() + " full, consider committing more frequently, " +
+            "increasing capacity or increasing thread count");
+      }
+      putByteCounter += eventByteSize;
     }
 
-    public Event getEvent() {
+    @Override
+    protected Event doTake() throws InterruptedException {
+      channelCounter.incrementEventTakeAttemptCount();
+      if(takeList.remainingCapacity() == 0) {
+        throw new ChannelException("Take list for MemoryTransaction, capacity " +
+            takeList.size() + " full, consider committing more frequently, " +
+            "increasing capacity, or increasing thread count");
+      }
+      if(!queueStored.tryAcquire(keepAlive, TimeUnit.SECONDS)) {
+        return null;
+      }
+      Event event;
+      synchronized(queueLock) {
+        event = queue.poll();
+      }
+      Preconditions.checkNotNull(event, "Queue.poll returned NULL despite semaphore " +
+          "signalling existence of entry");
+      takeList.put(event);
+
+      int eventByteSize = (int)Math.ceil(estimateEventSize(event)/byteCapacitySlotSize);
+      takeByteCounter += eventByteSize;
+
       return event;
     }
 
-  }
+    @Override
+    protected void doCommit() throws InterruptedException {
+      int remainingChange = takeList.size() - putList.size();
+      if(remainingChange < 0) {
+        if(!bytesRemaining.tryAcquire(putByteCounter, keepAlive,
+          TimeUnit.SECONDS)) {
+          throw new ChannelException("Cannot commit transaction. Byte capacity " +
+            "allocated to store event body " + byteCapacity * byteCapacitySlotSize +
+            "reached. Please increase heap space/byte capacity allocated to " +
+            "the channel as the sinks may not be keeping up with the sources");
+        }
+        if(!queueRemaining.tryAcquire(-remainingChange, keepAlive, TimeUnit.SECONDS)) {
+          bytesRemaining.release(putByteCounter);
+          throw new ChannelFullException("Space for commit to queue couldn't be acquired." +
+              " Sinks are likely not keeping up with sources, or the buffer size is too tight");
+        }
+      }
+      int puts = putList.size();
+      int takes = takeList.size();
+      synchronized(queueLock) {
+        if(puts > 0 ) {
+          while(!putList.isEmpty()) {
+            if(!queue.offer(putList.removeFirst())) {
+              throw new RuntimeException("Queue add failed, this shouldn't be able to happen");
+            }
+          }
+        }
+        putList.clear();
+        takeList.clear();
+      }
+      bytesRemaining.release(takeByteCounter);
+      takeByteCounter = 0;
+      putByteCounter = 0;
 
-  /*
-   * transaction class maintain a 'undo' list for put/take from the queue. The
-   * rollback performs undo of the operations using these lists. Also maintain a
-   * stamp/counter for commit and last take. This is used to ensure that a
-   * transaction doesn't read uncommitted events.
-   */
-  public class MemTransaction implements Transaction {
-    private int putStamp;
-    private int takeStamp;
-    private LinkedList<StampedEvent> undoTakeList;
-    private LinkedList<StampedEvent> undoPutList;
-    private TransactionState txnState;
-    private int refCount;
+      queueStored.release(puts);
+      if(remainingChange > 0) {
+        queueRemaining.release(remainingChange);
+      }
+      if (puts > 0) {
+        channelCounter.addToEventPutSuccessCount(puts);
+      }
+      if (takes > 0) {
+        channelCounter.addToEventTakeSuccessCount(takes);
+      }
 
-    public MemTransaction() {
-      txnState = TransactionState.Closed;
+      channelCounter.setChannelSize(queue.size());
     }
 
     @Override
-    /** 
-     * Start the transaction 
-     *  initialize the undo lists, stamps
-     *  set transaction state to Started
-     */
-    public void begin() {
-      if (++refCount > 1) {
-        return;
+    protected void doRollback() {
+      int takes = takeList.size();
+      synchronized(queueLock) {
+        Preconditions.checkState(queue.remainingCapacity() >= takeList.size(), "Not enough space in memory channel " +
+            "queue to rollback takes. This should never happen, please report");
+        while(!takeList.isEmpty()) {
+          queue.addFirst(takeList.removeLast());
+        }
+        putList.clear();
       }
-      undoTakeList = new LinkedList<StampedEvent>();
-      undoPutList = new LinkedList<StampedEvent>();
-      putStamp = 0;
-      takeStamp = 0;
-      txnState = TransactionState.Started;
-    }
+      bytesRemaining.release(putByteCounter);
+      putByteCounter = 0;
+      takeByteCounter = 0;
 
-    @Override
-    /**
-     * Commit the transaction
-     *  If there was an event added by this transaction, then set the 
-     *  commit stamp set transaction state to Committed
-     */
-    public void commit() {
-      Preconditions.checkArgument(txnState == TransactionState.Started,
-          "transaction not started");
-      if (--refCount > 0) {
-        return;
-      }
-
-      // if the txn put any events, then update the channel's stamp and
-      // signal for availability of committed data in the queue
-      if (putStamp != 0) {
-        lastCommitStamp.set(putStamp);
-        lock.lock();
-        hasData.signal();
-        lock.unlock();
-      }
-      txnState = TransactionState.Committed;
-      undoPutList.clear();
-      undoTakeList.clear();
-    }
-
-    @Override
-    /**
-     * Rollback the transaction
-     *  execute the channel's undoXXX to undo the actions done by this txn
-     *  set transaction state to rolled back
-     */
-    public void rollback() {
-      Preconditions.checkArgument(txnState == TransactionState.Started,
-          "transaction not started");
-      undoPut(this);
-      undoTake(this);
-      txnState = TransactionState.RolledBack;
-      refCount = 0;
-    }
-
-    @Override
-    /** 
-     * Close the transaction
-     *  if the transaction is still open, then roll it back
-     *  set transaction state to Closed
-     */
-    public void close() {
-      if (txnState == TransactionState.Started) {
-        rollback();
-      }
-      txnState = TransactionState.Closed;
-      forgetTransaction(this);
-    }
-
-    public TransactionState getState() {
-      return txnState;
-    }
-
-    protected int lastTakeStamp() {
-      return takeStamp;
-    }
-
-    protected void logPut(StampedEvent e, int stamp) {
-      undoPutList.addLast(e);
-      putStamp = stamp;
-    }
-
-    protected void logTake(StampedEvent e, int stamp) {
-      undoTakeList.addLast(e);
-      takeStamp = stamp;
-    }
-
-    protected StampedEvent removePut() {
-      if (undoPutList.isEmpty()) {
-        return null;
-      } else {
-        return undoPutList.removeLast();
-      }
-    }
-
-    protected StampedEvent removeTake() {
-      if (undoTakeList.isEmpty()) {
-        return null;
-      } else {
-        return undoTakeList.removeLast();
-      }
+      queueStored.release(takes);
+      channelCounter.setChannelSize(queue.size());
     }
 
   }
 
-  // The main event queue
-  private LinkedBlockingDeque<StampedEvent> queue;
+  // lock to guard queue, mainly needed to keep it locked down during resizes
+  // it should never be held through a blocking operation
+  private Object queueLock = new Object();
 
-  private AtomicInteger currentStamp; // operation counter
-  private AtomicInteger lastCommitStamp; // counter for the last commit
-  private ConcurrentHashMap<Long, MemTransaction> txnMap; // open transactions
-  private Integer keepAlive;
-  final Lock lock = new ReentrantLock();
-  final Condition hasData = lock.newCondition();
+  @GuardedBy(value = "queueLock")
+  private LinkedBlockingDeque<Event> queue;
 
-  /**
-   * Channel constructor
-   */
+  // invariant that tracks the amount of space remaining in the queue(with all uncommitted takeLists deducted)
+  // we maintain the remaining permits = queue.remaining - takeList.size()
+  // this allows local threads waiting for space in the queue to commit without denying access to the
+  // shared lock to threads that would make more space on the queue
+  private Semaphore queueRemaining;
+  // used to make "reservations" to grab data from the queue.
+  // by using this we can block for a while to get data without locking all other threads out
+  // like we would if we tried to use a blocking call on queue
+  private Semaphore queueStored;
+  // maximum items in a transaction queue
+  private volatile Integer transCapacity;
+  private volatile int keepAlive;
+  private volatile int byteCapacity;
+  private volatile int lastByteCapacity;
+  private volatile int byteCapacityBufferPercentage;
+  private Semaphore bytesRemaining;
+  private ChannelCounter channelCounter;
+
+
   public MemoryChannel() {
-    currentStamp = new AtomicInteger(1);
-    lastCommitStamp = new AtomicInteger(0);
-    txnMap = new ConcurrentHashMap<Long, MemTransaction>();
+    super();
   }
 
   /**
-   * set the event queue capacity
+   * Read parameters from context
+   * <li>capacity = type long that defines the total number of events allowed at one time in the queue.
+   * <li>transactionCapacity = type long that defines the total number of events allowed in one transaction.
+   * <li>byteCapacity = type long that defines the max number of bytes used for events in the queue.
+   * <li>byteCapacityBufferPercentage = type int that defines the percent of buffer between byteCapacity and the estimated event size.
+   * <li>keep-alive = type int that defines the number of second to wait for a queue permit
    */
   @Override
   public void configure(Context context) {
-    String strCapacity = context.get("capacity", String.class);
     Integer capacity = null;
-
-    if (strCapacity == null) {
+    try {
+      capacity = context.getInteger("capacity", defaultCapacity);
+    } catch(NumberFormatException e) {
       capacity = defaultCapacity;
-    } else {
-      capacity = Integer.parseInt(strCapacity);
+      LOGGER.warn("Invalid capacity specified, initializing channel to "
+          + "default capacity of {}", defaultCapacity);
     }
 
-    String strKeepAlive = context.get("keep-alive", String.class);
-
-    if (strKeepAlive == null) {
-      keepAlive = defaultKeepAlive;
-    } else {
-      keepAlive = Integer.parseInt(strKeepAlive);
+    if (capacity <= 0) {
+      capacity = defaultCapacity;
+      LOGGER.warn("Invalid capacity specified, initializing channel to "
+          + "default capacity of {}", defaultCapacity);
+    }
+    try {
+      transCapacity = context.getInteger("transactionCapacity", defaultTransCapacity);
+    } catch(NumberFormatException e) {
+      transCapacity = defaultTransCapacity;
+      LOGGER.warn("Invalid transation capacity specified, initializing channel"
+          + " to default capacity of {}", defaultTransCapacity);
     }
 
-    queue = new LinkedBlockingDeque<StampedEvent>(capacity);
-  }
-
-  @Override
-  /** 
-   * Add the given event to the end of the queue
-   * save the event in the undoPut queue for possible rollback
-   * save the stamp of this put for commit
-   */
-  public void put(Event event) {
-    Preconditions.checkState(queue != null,
-        "No queue defined (Did you forget to configure me?");
+    if (transCapacity <= 0) {
+      transCapacity = defaultTransCapacity;
+      LOGGER.warn("Invalid transation capacity specified, initializing channel"
+          + " to default capacity of {}", defaultTransCapacity);
+    }
+    Preconditions.checkState(transCapacity <= capacity,
+        "Transaction Capacity of Memory Channel cannot be higher than " +
+            "the capacity.");
 
     try {
-      MemTransaction myTxn = findTransaction();
-      Preconditions.checkState(myTxn != null, "Transaction not started");
-
-      int myStamp = currentStamp.getAndIncrement();
-      StampedEvent stampedEvent = new StampedEvent(myStamp, event);
-      if (queue.offer(stampedEvent,keepAlive, TimeUnit.SECONDS) == false)
-        throw new ChannelException("put(" + event + ") timed out");
-      myTxn.logPut(stampedEvent, myStamp);
-
-    } catch (InterruptedException ex) {
-      throw new ChannelException("Failed to put(" + event + ")", ex);
+      byteCapacityBufferPercentage = context.getInteger("byteCapacityBufferPercentage", defaultByteCapacityBufferPercentage);
+    } catch(NumberFormatException e) {
+      byteCapacityBufferPercentage = defaultByteCapacityBufferPercentage;
     }
-  }
-
-  /**
-   * undo of put for all the events in the undoPut queue, remove those from the
-   * event queue
-   * 
-   * @param myTxn
-   */
-  protected void undoPut(MemTransaction myTxn) {
-    StampedEvent undoEvent;
-    StampedEvent currentEvent;
-
-    while ((undoEvent = myTxn.removePut()) != null) {
-      currentEvent = queue.removeLast();
-      Preconditions.checkNotNull(currentEvent, "Rollback error");
-      Preconditions.checkArgument(currentEvent == undoEvent, "Rollback error");
-    }
-  }
-
-  @Override
-  /**
-   * remove the event from the top of the queue and return it
-   * also add that event to undoTake queue for possible rollback
-   */
-  public Event take() {
-    Preconditions.checkState(queue != null, "Queue not configured");
 
     try {
-      MemTransaction myTxn = findTransaction();
-      Preconditions.checkState(myTxn != null, "Transaction not started");
-      Event event = null;
-      int timeout = keepAlive;
-
-      // wait for some committed data be there in the queue
-      if ((timeout > 0) && (myTxn.lastTakeStamp() == lastCommitStamp.get())) {
-        lock.lock();
-        hasData.await(timeout, TimeUnit.SECONDS);
-        lock.unlock();
-        timeout = 0; // don't wait any further
+      byteCapacity = (int)((context.getLong("byteCapacity", defaultByteCapacity).longValue() * (1 - byteCapacityBufferPercentage * .01 )) /byteCapacitySlotSize);
+      if (byteCapacity < 1) {
+        byteCapacity = Integer.MAX_VALUE;
       }
+    } catch(NumberFormatException e) {
+      byteCapacity = (int)((defaultByteCapacity * (1 - byteCapacityBufferPercentage * .01 )) /byteCapacitySlotSize);
+    }
 
-      // don't go past the last committed element
-      if (myTxn.lastTakeStamp() != lastCommitStamp.get()) {
-        StampedEvent e = queue.poll(timeout, TimeUnit.SECONDS);
-        if (e != null) {
-          myTxn.logTake(e, e.getStamp());
-          event = e.getEvent();
+    try {
+      keepAlive = context.getInteger("keep-alive", defaultKeepAlive);
+    } catch(NumberFormatException e) {
+      keepAlive = defaultKeepAlive;
+    }
+
+    if(queue != null) {
+      try {
+        resizeQueue(capacity);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    } else {
+      synchronized(queueLock) {
+        queue = new LinkedBlockingDeque<Event>(capacity);
+        queueRemaining = new Semaphore(capacity);
+        queueStored = new Semaphore(0);
+      }
+    }
+
+    if (bytesRemaining == null) {
+      bytesRemaining = new Semaphore(byteCapacity);
+      lastByteCapacity = byteCapacity;
+    } else {
+      if (byteCapacity > lastByteCapacity) {
+        bytesRemaining.release(byteCapacity - lastByteCapacity);
+        lastByteCapacity = byteCapacity;
+      } else {
+        try {
+          if(!bytesRemaining.tryAcquire(lastByteCapacity - byteCapacity, keepAlive, TimeUnit.SECONDS)) {
+            LOGGER.warn("Couldn't acquire permits to downsize the byte capacity, resizing has been aborted");
+          } else {
+            lastByteCapacity = byteCapacity;
+          }
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
         }
       }
-      return event;
-    } catch (InterruptedException ex) {
-      throw new ChannelException("Failed to take()", ex);
+    }
+
+    if (channelCounter == null) {
+      channelCounter = new ChannelCounter(getName());
     }
   }
 
-  /**
-   * undo of take operation for each event in the undoTake list, add it back to
-   * the event queue
-   * 
-   * @param myTxn
-   */
-  protected void undoTake(MemTransaction myTxn) {
-    StampedEvent e;
-
-    while ((e = myTxn.removeTake()) != null) {
-      queue.addFirst(e);
+  private void resizeQueue(int capacity) throws InterruptedException {
+    int oldCapacity;
+    synchronized(queueLock) {
+      oldCapacity = queue.size() + queue.remainingCapacity();
     }
-  }
 
-  @Override
-  /**
-   * Return the channel's transaction
-   */
-  public Transaction getTransaction() {
-    MemTransaction txn;
-
-    // check if there's already a transaction created for this thread
-    txn = findTransaction();
-
-    // Create a new transaction
-    if (txn == null) {
-      txn = new MemTransaction();
-      txnMap.put(Thread.currentThread().getId(), txn);
-    }
-    return txn;
-  }
-
-  /**
-   * Remove the given transaction from the list of open transactions
-   * 
-   * @param myTxn
-   */
-  protected void forgetTransaction(MemTransaction myTxn) {
-    MemTransaction currTxn = findTransaction();
-    Preconditions.checkArgument(myTxn == currTxn, "Wrong transaction to close");
-    txnMap.remove(Thread.currentThread().getId());
-  }
-
-  // lookup the transaction for the current thread
-  protected MemTransaction findTransaction() {
-    try {
-      return txnMap.get(Thread.currentThread().getId());
-    } catch (NullPointerException eN) {
-      return null;
+    if(oldCapacity == capacity) {
+      return;
+    } else if (oldCapacity > capacity) {
+      if(!queueRemaining.tryAcquire(oldCapacity - capacity, keepAlive, TimeUnit.SECONDS)) {
+        LOGGER.warn("Couldn't acquire permits to downsize the queue, resizing has been aborted");
+      } else {
+        synchronized(queueLock) {
+          LinkedBlockingDeque<Event> newQueue = new LinkedBlockingDeque<Event>(capacity);
+          newQueue.addAll(queue);
+          queue = newQueue;
+        }
+      }
+    } else {
+      synchronized(queueLock) {
+        LinkedBlockingDeque<Event> newQueue = new LinkedBlockingDeque<Event>(capacity);
+        newQueue.addAll(queue);
+        queue = newQueue;
+      }
+      queueRemaining.release(capacity - oldCapacity);
     }
   }
 
   @Override
-  public void shutdown() {
-    // TODO Auto-generated method stub
-
+  public synchronized void start() {
+    channelCounter.start();
+    channelCounter.setChannelSize(queue.size());
+    channelCounter.setChannelCapacity(Long.valueOf(
+            queue.size() + queue.remainingCapacity()));
+    super.start();
   }
 
   @Override
-  public String getName() {
-    // TODO Auto-generated method stub
-    return null;
+  public synchronized void stop() {
+    channelCounter.setChannelSize(queue.size());
+    channelCounter.stop();
+    super.stop();
+  }
+
+  @Override
+  protected BasicTransactionSemantics createTransaction() {
+    return new MemoryTransaction(transCapacity, channelCounter);
+  }
+
+  private long estimateEventSize(Event event)
+  {
+    byte[] body = event.getBody();
+    if(body != null && body.length != 0) {
+      return body.length;
+    }
+    //Each event occupies at least 1 slot, so return 1.
+    return 1;
   }
 }

@@ -19,12 +19,12 @@
 
 package org.apache.flume.sink;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.Locale;
 
+import org.apache.flume.FlumeException;
 import org.apache.flume.Sink;
 import org.apache.flume.SinkFactory;
+import org.apache.flume.conf.sink.SinkType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,70 +35,41 @@ public class DefaultSinkFactory implements SinkFactory {
   private static final Logger logger = LoggerFactory
       .getLogger(DefaultSinkFactory.class);
 
-  public Map<String, Class<? extends Sink>> sinkRegistry;
-
-  public DefaultSinkFactory() {
-    sinkRegistry = new HashMap<String, Class<? extends Sink>>();
-  }
-
   @Override
-  public boolean register(String name, Class<? extends Sink> sinkClass) {
-    logger.info("Register sink name:{} class:{}", name, sinkClass);
-
-    if (sinkRegistry.containsKey(name)) {
-      return false;
-    }
-
-    sinkRegistry.put(name, sinkClass);
-    return true;
-  }
-
-  @Override
-  public boolean unregister(String name) {
-    logger.info("Unregister source class:{}", name);
-
-    return sinkRegistry.remove(name) != null;
-  }
-
-  @Override
-  public Set<String> getSinkNames() {
-    return sinkRegistry.keySet();
-  }
-
-  @Override
-  public Sink create(String name) throws InstantiationException {
-    Preconditions.checkNotNull(name);
-
-    logger.debug("Creating instance of sink {}", name);
-
-    if (!sinkRegistry.containsKey(name)) {
-      return null;
-    }
-
-    Sink sink = null;
-
+  public Sink create(String name, String type) throws FlumeException {
+    Preconditions.checkNotNull(name, "name");
+    Preconditions.checkNotNull(type, "type");
+    logger.info("Creating instance of sink: {}, type: {}", name, type);
+    Class<? extends Sink> sinkClass = getClass(type);
     try {
-      sink = sinkRegistry.get(name).newInstance();
-    } catch (IllegalAccessException e) {
-      throw new InstantiationException("Unable to create sink " + name
-          + " due to " + e.getMessage());
+      Sink sink = sinkClass.newInstance();
+      sink.setName(name);
+      return sink;
+    } catch (Exception ex) {
+      throw new FlumeException("Unable to create sink: " + name
+          + ", type: " + type + ", class: " + sinkClass.getName(), ex);
     }
-
-    return sink;
   }
 
+  @SuppressWarnings("unchecked")
   @Override
-  public String toString() {
-    return "{ sinkRegistry:" + sinkRegistry + " }";
+  public Class<? extends Sink> getClass(String type)
+  throws FlumeException {
+    String sinkClassName = type;
+    SinkType sinkType = SinkType.OTHER;
+    try {
+      sinkType = SinkType.valueOf(type.toUpperCase(Locale.ENGLISH));
+    } catch (IllegalArgumentException ex) {
+      logger.debug("Sink type {} is a custom type", type);
+    }
+    if (!sinkType.equals(SinkType.OTHER)) {
+      sinkClassName = sinkType.getSinkClassName();
+    }
+    try {
+      return (Class<? extends Sink>) Class.forName(sinkClassName);
+    } catch (Exception ex) {
+      throw new FlumeException("Unable to load sink type: " + type
+          + ", class: " + sinkClassName, ex);
+    }
   }
-
-  public Map<String, Class<? extends Sink>> getSinkRegistry() {
-    return sinkRegistry;
-  }
-
-  public void setSinkRegistry(
-      Map<String, Class<? extends Sink>> sinkRegistry) {
-    this.sinkRegistry = sinkRegistry;
-  }
-
 }

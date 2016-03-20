@@ -85,6 +85,10 @@ public class PersistableEvent implements Event {
     this.eventId = eventId;
   }
 
+  protected long getEventId() {
+    return this.eventId;
+  }
+
   public List<HeaderEntry> getHeaderEntries() {
     return headers;
   }
@@ -320,6 +324,7 @@ public class PersistableEvent implements Event {
     }
   }
 
+  @SuppressWarnings("unused")
   private static class HeaderPart {
     private final String hBaseName;
     private final String hBaseValue;

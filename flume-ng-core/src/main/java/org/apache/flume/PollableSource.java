@@ -19,9 +19,37 @@
 
 package org.apache.flume;
 
-public interface PollableSource extends Source {
+import org.apache.flume.source.EventDrivenSourceRunner;
 
+/**
+ * A {@link Source} that requires an external driver to poll to determine
+ * whether there are {@linkplain Event events} that are available to ingest
+ * from the source.
+ *
+ * @see org.apache.flume.source.EventDrivenSourceRunner
+ */
+public interface PollableSource extends Source {
+  /**
+   * <p>
+   * Attempt to pull an item from the source, sending it to the channel.
+   * </p>
+   * <p>
+   * When driven by an {@link EventDrivenSourceRunner} process is guaranteed
+   * to be called only by a single thread at a time, with no concurrency.
+   * Any other mechanism driving a pollable source must follow the same
+   * semantics.
+   * </p>
+   * @return {@code READY} if one or more events were created from the source.
+   * {@code BACKOFF} if no events could be created from the source.
+   * @throws EventDeliveryException If there was a failure in delivering to
+   * the attached channel, or if a failure occurred in acquiring data from
+   * the source.
+   */
   public Status process() throws EventDeliveryException;
+
+  public long getBackOffSleepIncrement();
+
+  public long getMaxBackOffSleepInterval();
 
   public static enum Status {
     READY, BACKOFF

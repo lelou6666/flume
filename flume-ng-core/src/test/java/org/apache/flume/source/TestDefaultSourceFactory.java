@@ -21,6 +21,7 @@ package org.apache.flume.source;
 
 import org.apache.flume.Source;
 import org.apache.flume.SourceFactory;
+import org.apache.flume.source.http.HTTPSource;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -35,57 +36,48 @@ public class TestDefaultSourceFactory {
   }
 
   @Test
-  public void testRegister() {
-    Assert.assertEquals(0, sourceFactory.getSourceNames().size());
+  public void testDuplicateCreate()  {
 
-    sourceFactory.register("seq", SequenceGeneratorSource.class);
+    Source avroSource1 = sourceFactory.create("avroSource1", "avro");
+    Source avroSource2 = sourceFactory.create("avroSource2", "avro");
 
-    Assert.assertEquals(1, sourceFactory.getSourceNames().size());
+    Assert.assertNotNull(avroSource1);
+    Assert.assertNotNull(avroSource2);
+    Assert.assertNotSame(avroSource1, avroSource2);
+    Assert.assertTrue(avroSource1 instanceof AvroSource);
+    Assert.assertTrue(avroSource2 instanceof AvroSource);
 
-    Assert
-        .assertEquals("seq", sourceFactory.getSourceNames().iterator().next());
+    Source s1 = sourceFactory.create("avroSource1", "avro");
+    Source s2 = sourceFactory.create("avroSource2", "avro");
+
+    Assert.assertNotSame(avroSource1, s1);
+    Assert.assertNotSame(avroSource2, s2);
+
+  }
+
+  private void verifySourceCreation(String name, String type,
+      Class<?> typeClass) throws Exception {
+    Source src = sourceFactory.create(name, type);
+    Assert.assertNotNull(src);
+    Assert.assertTrue(typeClass.isInstance(src));
   }
 
   @Test
-  public void testCreate() throws InstantiationException {
-    Assert.assertEquals(0, sourceFactory.getSourceNames().size());
-
-    sourceFactory.register("seq", SequenceGeneratorSource.class);
-
-    Assert.assertEquals(1, sourceFactory.getSourceNames().size());
-
-    Assert
-        .assertEquals("seq", sourceFactory.getSourceNames().iterator().next());
-
-    Source source = sourceFactory.create("seq");
-
-    Assert.assertNotNull("Factory returned a null source", source);
-    Assert.assertTrue("Source isn't an instance of SequenceGeneratorSource",
-        source instanceof SequenceGeneratorSource);
-
-    source = sourceFactory.create("i do not exist");
-
-    Assert.assertNull("Factory returned a source it shouldn't have", source);
-  }
-
-  @Test
-  public void testUnregister() {
-    Assert.assertEquals(0, sourceFactory.getSourceNames().size());
-
-    Assert.assertTrue("Registering a source returned false",
-        sourceFactory.register("seq", SequenceGeneratorSource.class));
-
-    Assert.assertEquals(1, sourceFactory.getSourceNames().size());
-
-    Assert
-        .assertEquals("seq", sourceFactory.getSourceNames().iterator().next());
-
-    Assert.assertFalse("Unregistering an unknown source returned true",
-        sourceFactory.unregister("i do not exist"));
-    Assert.assertTrue("Unregistering a source returned false",
-        sourceFactory.unregister("seq"));
-
-    Assert.assertEquals(0, sourceFactory.getSourceNames().size());
+  public void testSourceCreation() throws Exception {
+    verifySourceCreation("seq-src", "seq", SequenceGeneratorSource.class);
+    verifySourceCreation("netcat-src", "netcat", NetcatSource.class);
+    verifySourceCreation("exec-src", "exec", ExecSource.class);
+    verifySourceCreation("avro-src", "avro", AvroSource.class);
+    verifySourceCreation("syslogtcp-src", "syslogtcp", SyslogTcpSource.class);
+    verifySourceCreation("multiport_syslogtcp-src", "multiport_syslogtcp",
+        MultiportSyslogTCPSource.class);
+    verifySourceCreation("syslogudp-src", "syslogudp", SyslogUDPSource.class);
+    verifySourceCreation("spooldir-src", "spooldir",
+        SpoolDirectorySource.class);
+    verifySourceCreation("http-src", "http", HTTPSource.class);
+    verifySourceCreation("thrift-src", "thrift", ThriftSource.class);
+    verifySourceCreation("custom-src", MockSource.class.getCanonicalName(),
+        MockSource.class);
   }
 
 }

@@ -17,18 +17,12 @@
  */
 package org.apache.flume;
 
-import java.util.Map;
-import java.util.Set;
 
 public interface ChannelFactory {
 
-  public boolean register(String name, Class<? extends Channel> channelClass);
+  public Channel create(String name, String type) throws FlumeException;
 
-  public boolean unregister(String name);
+  public Class<? extends Channel> getClass(String type)
+  throws FlumeException;
 
-  public Channel create(String name) throws InstantiationException;
-
-  public Channel createFanout(String chList, Map<String, Channel> chMap) throws InstantiationException;
-
-  public Set<String> getChannelNames();
 }

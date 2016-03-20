@@ -19,12 +19,44 @@
 
 package org.apache.flume;
 
+import org.apache.flume.annotations.InterfaceAudience;
+import org.apache.flume.annotations.InterfaceStability;
+import org.apache.flume.channel.ChannelProcessor;
 import org.apache.flume.lifecycle.LifecycleAware;
 
-public interface Source extends LifecycleAware {
+/**
+ * <p>
+ * A source generates {@plainlink Event events} and calls methods on the
+ * configured {@link ChannelProcessor} to persist those events into the
+ * configured {@linkplain Channel channels}.
+ * </p>
+ *
+ * <p>
+ * Sources are associated with unique {@linkplain NamedComponent names} that can
+ * be used for separating configuration and working namespaces.
+ * </p>
+ *
+ * <p>
+ * No guarantees are given regarding thread safe access.
+ * </p>
+ *
+ * @see org.apache.flume.Channel
+ * @see org.apache.flume.Sink
+ */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
+public interface Source extends LifecycleAware, NamedComponent {
 
-  public void setChannel(Channel channel);
+  /**
+   * Specifies which channel processor will handle this source's events.
+   *
+   * @param channelProcessor
+   */
+  public void setChannelProcessor(ChannelProcessor channelProcessor);
 
-  public Channel getChannel();
+  /**
+   * Returns the channel processor that will handle this source's events.
+   */
+  public ChannelProcessor getChannelProcessor();
 
 }

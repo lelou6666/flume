@@ -19,9 +19,15 @@
 
 package org.apache.flume.source;
 
+import org.apache.flume.Source;
 import org.apache.flume.SourceRunner;
+import org.apache.flume.channel.ChannelProcessor;
 import org.apache.flume.lifecycle.LifecycleState;
 
+/**
+ * Starts, stops, and manages
+ * {@linkplain EventDrivenSource event-driven sources}.
+ */
 public class EventDrivenSourceRunner extends SourceRunner {
 
   private LifecycleState lifecycleState;
@@ -32,13 +38,19 @@ public class EventDrivenSourceRunner extends SourceRunner {
 
   @Override
   public void start() {
-    getSource().start();
+    Source source = getSource();
+    ChannelProcessor cp = source.getChannelProcessor();
+    cp.initialize();
+    source.start();
     lifecycleState = LifecycleState.START;
   }
 
   @Override
   public void stop() {
-    getSource().stop();
+    Source source = getSource();
+    source.stop();
+    ChannelProcessor cp = source.getChannelProcessor();
+    cp.close();
     lifecycleState = LifecycleState.STOP;
   }
 

@@ -17,23 +17,38 @@
  */
 package org.apache.flume.channel.jdbc;
 
-import org.apache.flume.Channel;
 import org.apache.flume.ChannelException;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.Transaction;
-import org.apache.flume.conf.Configurable;
+import org.apache.flume.annotations.InterfaceAudience;
+import org.apache.flume.annotations.InterfaceStability;
+import org.apache.flume.annotations.Disposable;
+import org.apache.flume.channel.AbstractChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 /**
- * <p>A JDBC based channel implementation.</p>
+ * <p>
+ * A JDBC based channel implementation.
+ * </p>
+ * <p>
+ * JdbcChannel is marked
+ * {@link org.apache.flume.annotations.InterfaceAudience.Private} because it
+ * should only be instantiated via a configuration. For example, users should
+ * certainly use JdbcChannel but not by instantiating JdbcChannel objects.
+ * Meaning the label Private applies to user-developers not user-operators.
+ * In cases where a Channel is required by instantiated by user-developers
+ * {@link org.apache.flume.channel.MemoryChannel} should be used.
+ * <p>
  */
-public class JdbcChannel implements Channel, Configurable {
+@InterfaceAudience.Private
+@InterfaceStability.Stable
+@Disposable
+public class JdbcChannel extends AbstractChannel {
 
   private static final Logger LOG = LoggerFactory.getLogger(JdbcChannel.class);
 
   private JdbcChannelProvider provider;
-  private String name;
 
   /**
    * Instantiates a new JDBC Channel.
@@ -57,15 +72,11 @@ public class JdbcChannel implements Channel, Configurable {
   }
 
   @Override
-  public void shutdown() {
-    JdbcChannelProviderFactory.releaseProvider(name);
+  public void stop() {
+    JdbcChannelProviderFactory.releaseProvider(getName());
     provider = null;
-    name = null;
-  }
 
-  @Override
-  public String getName() {
-    return name;
+    super.stop();
   }
 
   private JdbcChannelProvider getProvider() {
@@ -74,11 +85,8 @@ public class JdbcChannel implements Channel, Configurable {
 
   @Override
   public void configure(Context context) {
-    // FIXME - allow name to be specified via the context
-    this.name = "jdbc";
+    provider = JdbcChannelProviderFactory.getProvider(context, getName());
 
-    provider = JdbcChannelProviderFactory.getProvider(context, name);
-
-    LOG.info("JDBC Channel initialized: " + name);
+    LOG.info("JDBC Channel initialized: " + getName());
   }
 }

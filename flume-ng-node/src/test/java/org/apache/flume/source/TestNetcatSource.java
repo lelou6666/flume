@@ -19,44 +19,77 @@
 
 package org.apache.flume.source;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Writer;
 import java.net.InetSocketAddress;
 import java.nio.channels.Channels;
 import java.nio.channels.SocketChannel;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.Collection;
+import java.util.Arrays;
 
+import com.google.common.collect.Lists;
 import org.apache.flume.Channel;
+import org.apache.flume.ChannelSelector;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.EventDeliveryException;
 import org.apache.flume.EventDrivenSource;
+import org.apache.flume.FlumeException;
 import org.apache.flume.Transaction;
+import org.apache.flume.channel.ChannelProcessor;
 import org.apache.flume.channel.MemoryChannel;
+import org.apache.flume.channel.ReplicatingChannelSelector;
 import org.apache.flume.conf.Configurables;
 import org.apache.flume.lifecycle.LifecycleException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
+import org.junit.runner.RunWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+@RunWith(value = Parameterized.class)
 public class TestNetcatSource {
 
   private Channel channel;
   private EventDrivenSource source;
+  private boolean ackEveryEvent;
+
+  private static final Logger logger =
+      LoggerFactory.getLogger(TestNetcatSource.class);
+
+  public TestNetcatSource(boolean ackForEveryEvent) {
+    ackEveryEvent = ackForEveryEvent;
+  }
+
+  @Parameters
+  public static Collection data() {
+    Object[][] data = new Object[][] { { true }, { false } };
+   return Arrays.asList(data);
+  }
 
   @Before
   public void setUp() {
+    logger.info("Running setup");
+
     channel = new MemoryChannel();
     source = new NetcatSource();
 
     Context context = new Context();
-    context.put("capacity", "50");
 
     Configurables.configure(channel, context);
+    List<Channel> channels = Lists.newArrayList(channel);
+    ChannelSelector rcs = new ReplicatingChannelSelector();
+    rcs.setChannels(channels);
 
-    source.setChannel(channel);
+    source.setChannelProcessor(new ChannelProcessor(rcs));
   }
 
   @Test
@@ -64,17 +97,23 @@ public class TestNetcatSource {
       EventDeliveryException {
 
     ExecutorService executor = Executors.newFixedThreadPool(3);
-    Context context = new Context();
+    boolean bound = false;
 
-    /* FIXME: Use a random port for testing. */
-    context.put("bind", "0.0.0.0");
-    context.put("port", "41414");
+    for(int i = 0; i < 100 && !bound; i++) {
+      try {
+        Context context = new Context();
+        context.put("bind", "0.0.0.0");
+        context.put("port", "41414");
+        context.put("ack-every-event", String.valueOf(ackEveryEvent));
 
-    Configurables.configure(source, context);
+        Configurables.configure(source, context);
 
-    source.start();
-
-    /* FIXME: Ensure proper send / received semantics. */
+        source.start();
+        bound = true;
+      } catch (FlumeException e) {
+        // assume port in use, try another one
+      }
+    }
 
     Runnable clientRequestRunnable = new Runnable() {
 
@@ -85,23 +124,33 @@ public class TestNetcatSource {
               .open(new InetSocketAddress(41414));
 
           Writer writer = Channels.newWriter(clientChannel, "utf-8");
+          BufferedReader reader = new BufferedReader(
+              Channels.newReader(clientChannel, "utf-8"));
 
-          writer.write("Test message");
-
+          writer.write("Test message\n");
           writer.flush();
+
+          if (ackEveryEvent) {
+                String response = reader.readLine();
+          	Assert.assertEquals("Server should return OK", "OK", response);
+          } else {
+                Assert.assertFalse("Server should not return anything", reader.ready());
+          }
           clientChannel.close();
         } catch (IOException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
+          logger.error("Caught exception: ", e);
         }
       }
 
     };
 
-    Transaction tx = source.getChannel().getTransaction();
+    ChannelSelector selector = source.getChannelProcessor().getSelector();
+    Transaction tx = selector.getAllChannels().get(0).getTransaction();
     tx.begin();
 
     for (int i = 0; i < 100; i++) {
+      logger.info("Sending request");
+
       executor.submit(clientRequestRunnable);
 
       Event event = channel.take();
