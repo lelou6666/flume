@@ -19,15 +19,20 @@
 
 package org.apache.flume.source;
 
-import org.apache.flume.Channel;
 import org.apache.flume.Source;
+import org.apache.flume.annotations.InterfaceAudience;
+import org.apache.flume.annotations.InterfaceStability;
+import org.apache.flume.channel.ChannelProcessor;
 import org.apache.flume.lifecycle.LifecycleState;
 
 import com.google.common.base.Preconditions;
 
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 abstract public class AbstractSource implements Source {
 
-  private Channel channel;
+  private ChannelProcessor channelProcessor;
+  private String name;
 
   private LifecycleState lifecycleState;
 
@@ -36,28 +41,44 @@ abstract public class AbstractSource implements Source {
   }
 
   @Override
-  public void start() {
-    Preconditions.checkState(channel != null, "No channel configured");
+  public synchronized void start() {
+    Preconditions.checkState(channelProcessor != null,
+        "No channel processor configured");
 
     lifecycleState = LifecycleState.START;
   }
 
   @Override
-  public void stop() {
+  public synchronized void stop() {
     lifecycleState = LifecycleState.STOP;
   }
 
-  public Channel getChannel() {
-    return channel;
-  }
-
-  public void setChannel(Channel channel) {
-    this.channel = channel;
+  @Override
+  public synchronized void setChannelProcessor(ChannelProcessor cp) {
+    channelProcessor = cp;
   }
 
   @Override
-  public LifecycleState getLifecycleState() {
+  public synchronized ChannelProcessor getChannelProcessor() {
+    return channelProcessor;
+  }
+
+  @Override
+  public synchronized LifecycleState getLifecycleState() {
     return lifecycleState;
   }
 
+  @Override
+  public synchronized void setName(String name) {
+    this.name = name;
+  }
+
+  @Override
+  public synchronized String getName() {
+    return name;
+  }
+
+  public String toString() {
+	  return this.getClass().getName() + "{name:" + name + ",state:" + lifecycleState +"}";
+  }  
 }

@@ -16,15 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.apache.flume.source;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.Locale;
 
+import org.apache.flume.FlumeException;
 import org.apache.flume.Source;
 import org.apache.flume.SourceFactory;
+import org.apache.flume.conf.source.SourceType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,71 +34,40 @@ public class DefaultSourceFactory implements SourceFactory {
   private static final Logger logger = LoggerFactory
       .getLogger(DefaultSourceFactory.class);
 
-  public Map<String, Class<? extends Source>> sourceRegistry;
-
-  public DefaultSourceFactory() {
-    sourceRegistry = new HashMap<String, Class<? extends Source>>();
-  }
-
   @Override
-  public boolean register(String name, Class<? extends Source> sourceClass) {
-    logger.info("Register source name:{} class:{}", name, sourceClass);
-
-    if (sourceRegistry.containsKey(name)) {
-      return false;
-    }
-
-    sourceRegistry.put(name, sourceClass);
-    return true;
-  }
-
-  @Override
-  public boolean unregister(String name) {
-    logger.info("Unregister source class:{}", name);
-
-    return sourceRegistry.remove(name) != null;
-  }
-
-  @Override
-  public Set<String> getSourceNames() {
-    return sourceRegistry.keySet();
-  }
-
-  @Override
-  public Source create(String name) throws InstantiationException {
-    Preconditions.checkNotNull(name);
-
-    logger.debug("Creating instance of source {}", name);
-
-    /* FIXME: Is returning null really a good idea? Should we just panic? */
-    if (!sourceRegistry.containsKey(name)) {
-      return null;
-    }
-
-    Source source = null;
-
+  public Source create(String name, String type) throws FlumeException {
+    Preconditions.checkNotNull(name, "name");
+    Preconditions.checkNotNull(type, "type");
+    logger.info("Creating instance of source {}, type {}", name, type);
+    Class<? extends Source> sourceClass = getClass(type);
     try {
-      source = sourceRegistry.get(name).newInstance();
-    } catch (IllegalAccessException e) {
-      throw new InstantiationException("Unable to create source " + name
-          + " due to " + e.getMessage());
+      Source source = sourceClass.newInstance();
+      source.setName(name);
+      return source;
+    } catch (Exception ex) {
+      throw new FlumeException("Unable to create source: " + name
+          +", type: " + type + ", class: " + sourceClass.getName(), ex);
     }
-
-    return source;
   }
-
+  @SuppressWarnings("unchecked")
   @Override
-  public String toString() {
-    return "{ sinkRegistry:" + sourceRegistry + " }";
+  public Class<? extends Source> getClass(String type)
+  throws FlumeException {
+    String sourceClassName = type;
+    SourceType srcType = SourceType.OTHER;
+    try {
+      srcType = SourceType.valueOf(type.toUpperCase(Locale.ENGLISH));
+    } catch (IllegalArgumentException ex) {
+      logger.debug("Source type {} is a custom type", type);
+    }
+    if (!srcType.equals(SourceType.OTHER)) {
+      sourceClassName = srcType.getSourceClassName();
+    }
+    try {
+      return (Class<? extends Source>) Class.forName(sourceClassName);
+    } catch (Exception ex) {
+      throw new FlumeException("Unable to load source type: " + type
+          + ", class: " + sourceClassName, ex);
+    }
   }
-
-  public Map<String, Class<? extends Source>> getSourceRegistry() {
-    return sourceRegistry;
-  }
-
-  public void setSourceRegistry(
-      Map<String, Class<? extends Source>> sourceRegistry) {
-    this.sourceRegistry = sourceRegistry;
-  }
-
 }

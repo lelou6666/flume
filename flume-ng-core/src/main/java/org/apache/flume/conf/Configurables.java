@@ -29,7 +29,7 @@ public class Configurables {
   /**
    * Check that {@code target} implements {@link Configurable} and, if so, ask
    * it to configure itself using the supplied {@code context}.
-   * 
+   *
    * @param target
    *          An object that potentially implements Configurable.
    * @param context
@@ -42,6 +42,14 @@ public class Configurables {
       return true;
     }
 
+    return false;
+  }
+
+  public static boolean configure(Object target, ComponentConfiguration conf) {
+    if (target instanceof ConfigurableComponent) {
+      ((ConfigurableComponent) target).configure(conf);
+      return true;
+    }
     return false;
   }
 

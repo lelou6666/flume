@@ -21,6 +21,7 @@ package org.apache.flume.formatter.output;
 
 import org.apache.flume.Event;
 
+@Deprecated
 public class TextDelimitedOutputFormatter implements EventFormatter {
 
   @Override

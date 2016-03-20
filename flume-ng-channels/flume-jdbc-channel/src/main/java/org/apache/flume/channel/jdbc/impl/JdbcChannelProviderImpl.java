@@ -25,8 +25,10 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.sql.DataSource;
 
@@ -89,6 +91,9 @@ public class JdbcChannelProviderImpl implements JdbcChannelProvider {
   /** Capacity Counter if one is needed */
   private long maxCapacity = 0L;
 
+  /** The current size of the channel. */
+  private AtomicLong currentSize = new AtomicLong(0L);
+
   @Override
   public void initialize(Context context) {
     if (LOGGER.isDebugEnabled()) {
@@ -103,22 +108,42 @@ public class JdbcChannelProviderImpl implements JdbcChannelProvider {
   }
 
   private void initializeSystemProperties(Context context) {
-    Map<String, Object> sysProps = context.getSubProperties(
-        ConfigurationConstants.CONFIG_JDBC_SYSPRO_PREFIX);
+    Map<String, String> sysProps = new HashMap<String, String>();
+
+    Map<String, String> sysPropsOld = context.getSubProperties(
+        ConfigurationConstants.OLD_CONFIG_JDBC_SYSPROP_PREFIX);
+
+    if (sysPropsOld.size() > 0) {
+      LOGGER.warn("Long form configuration prefix \""
+          + ConfigurationConstants.OLD_CONFIG_JDBC_SYSPROP_PREFIX
+          + "\" is deprecated. Please use the short form prefix \""
+          + ConfigurationConstants.CONFIG_JDBC_SYSPROP_PREFIX
+          + "\" instead.");
+
+      sysProps.putAll(sysPropsOld);
+    }
+
+    Map<String, String> sysPropsNew = context.getSubProperties(
+        ConfigurationConstants.CONFIG_JDBC_SYSPROP_PREFIX);
+
+    // Override the deprecated values with the non-deprecated
+    if (sysPropsNew.size() > 0) {
+      sysProps.putAll(sysPropsNew);
+    }
 
     for (String key: sysProps.keySet()) {
-      Object object = sysProps.get(key);
-      String value = "";
-      if (object != null) {
-        value = object.toString();
+      String value = sysProps.get(key);
+      if(key != null && value != null) {
+        System.setProperty(key, value);
       }
-      System.setProperty(key, value);
     }
   }
 
   private void initializeChannelState(Context context) {
-    String maxCapacityStr = context.getString(
-        ConfigurationConstants.CONFIG_MAX_CAPACITY, "0");
+
+    String maxCapacityStr = getConfigurationString(context,
+        ConfigurationConstants.CONFIG_MAX_CAPACITY,
+        ConfigurationConstants.OLD_CONFIG_MAX_CAPACITY, "0");
 
     long maxCapacitySpecified = 0;
     try {
@@ -130,15 +155,46 @@ public class JdbcChannelProviderImpl implements JdbcChannelProvider {
 
     if (maxCapacitySpecified > 0) {
       this.maxCapacity = maxCapacitySpecified;
-      LOGGER.debug("Maximum channel capacity: " + maxCapacity);
+      LOGGER.info("Maximum channel capacity: {}", maxCapacity);
     } else {
       LOGGER.warn("JDBC channel will operate without a capacity limit.");
+    }
+
+    if (maxCapacity > 0) {
+      // Initialize current size
+      JdbcTransactionImpl tx = null;
+      try {
+        tx = getTransaction();
+        tx.begin();
+        Connection conn = tx.getConnection();
+
+        currentSize.set(schemaHandler.getChannelSize(conn));
+        tx.commit();
+      } catch (Exception ex) {
+        tx.rollback();
+        throw new JdbcChannelException("Failed to initialize current size", ex);
+      } finally {
+        if (tx != null) {
+          tx.close();
+        }
+      }
+
+      long currentSizeLong = currentSize.get();
+
+      if (currentSizeLong > maxCapacity) {
+        LOGGER.warn("The current size of channel (" + currentSizeLong
+            + ") is more than the specified maximum capacity (" + maxCapacity
+            + "). If this situation persists, it may require resizing and "
+            + "replanning of your deployment.");
+      }
+      LOGGER.info("Current channel size: {}", currentSizeLong);
     }
   }
 
   private void initializeSchema(Context context) {
-    String createSchemaFlag = context.getString(
-        ConfigurationConstants.CONFIG_CREATE_SCHEMA, "true");
+    String createSchemaFlag = getConfigurationString(context,
+        ConfigurationConstants.CONFIG_CREATE_SCHEMA,
+        ConfigurationConstants.OLD_CONFIG_CREATE_SCHEMA, "true");
 
     boolean createSchema = Boolean.valueOf(createSchemaFlag);
     LOGGER.debug("Create schema flag set to: " + createSchema);
@@ -153,16 +209,29 @@ public class JdbcChannelProviderImpl implements JdbcChannelProvider {
             + "schema and try again.");
       }
 
-      String createIndexFlag = context.getString(
-          ConfigurationConstants.CONFIG_CREATE_INDEX, "true");
+      String createIndexFlag = getConfigurationString(context,
+          ConfigurationConstants.CONFIG_CREATE_INDEX,
+          ConfigurationConstants.OLD_CONFIG_CREATE_INDEX, "true");
+
+      String createForeignKeysFlag = getConfigurationString(context,
+          ConfigurationConstants.CONFIG_CREATE_FK,
+          ConfigurationConstants.OLD_CONFIG_CREATE_FK, "true");
+
 
       boolean createIndex = Boolean.valueOf(createIndexFlag);
       if (!createIndex) {
-        LOGGER.info("Index creation is disabled, indexes will not be created.");
+        LOGGER.warn("Index creation is disabled, indexes will not be created.");
+      }
+
+      boolean createForeignKeys = Boolean.valueOf(createForeignKeysFlag);
+      if (createForeignKeys) {
+        LOGGER.info("Foreign Key Constraints will be enabled.");
+      } else {
+        LOGGER.info("Foreign Key Constratins will be disabled.");
       }
 
       // Now create schema
-      schemaHandler.createSchemaObjects(createIndex);
+      schemaHandler.createSchemaObjects(createForeignKeys, createIndex);
     }
 
     // Validate all schema objects are as expected
@@ -225,19 +294,20 @@ public class JdbcChannelProviderImpl implements JdbcChannelProvider {
     try {
       tx = getTransaction();
       tx.begin();
-      Connection conn = tx.getConnection();
 
       if (maxCapacity > 0) {
-        long currentSize = schemaHandler.getChannelSize(conn);
-        if (currentSize >= maxCapacity) {
+        long currentSizeLong = currentSize.get();
+        if (currentSizeLong >= maxCapacity) {
           throw new JdbcChannelException("Channel capacity reached: "
               + "maxCapacity: " + maxCapacity + ", currentSize: "
-              + currentSize);
+              + currentSizeLong);
         }
       }
 
       // Persist the persistableEvent
       schemaHandler.storeEvent(persistableEvent, tx.getConnection());
+
+      tx.incrementPersistedEventCount();
 
       tx.commit();
     } catch (Exception ex) {
@@ -248,6 +318,8 @@ public class JdbcChannelProviderImpl implements JdbcChannelProvider {
         tx.close();
       }
     }
+
+    LOGGER.debug("Persisted event: {}", persistableEvent.getEventId());
   }
 
   @Override
@@ -262,6 +334,10 @@ public class JdbcChannelProviderImpl implements JdbcChannelProvider {
       result = schemaHandler.fetchAndDeleteEvent(
           channelName, tx.getConnection());
 
+      if (result != null) {
+        tx.incrementRemovedEventCount();
+      }
+
       tx.commit();
     } catch (Exception ex) {
       tx.rollback();
@@ -271,6 +347,13 @@ public class JdbcChannelProviderImpl implements JdbcChannelProvider {
         tx.close();
       }
     }
+
+    if (result != null) {
+      LOGGER.debug("Removed event: {}", ((PersistableEvent) result).getEventId());
+    } else {
+      LOGGER.debug("No event found for removal");
+    }
+
     return result;
   }
 
@@ -285,21 +368,30 @@ public class JdbcChannelProviderImpl implements JdbcChannelProvider {
    * @param properties
    */
   private void initializeDataSource(Context context) {
-    driverClassName = context.getString(
-        ConfigurationConstants.CONFIG_JDBC_DRIVER_CLASS);
+    driverClassName = getConfigurationString(context,
+        ConfigurationConstants.CONFIG_JDBC_DRIVER_CLASS,
+        ConfigurationConstants.OLD_CONFIG_JDBC_DRIVER_CLASS, null);
 
-    connectUrl = context.getString(ConfigurationConstants.CONFIG_URL);
+    connectUrl = getConfigurationString(context,
+        ConfigurationConstants.CONFIG_URL,
+        ConfigurationConstants.OLD_CONFIG_URL, null);
 
 
-    String userName = context.getString(ConfigurationConstants.CONFIG_USERNAME);
+    String userName = getConfigurationString(context,
+        ConfigurationConstants.CONFIG_USERNAME,
+        ConfigurationConstants.OLD_CONFIG_USERNAME, null);
 
-    String password = context.getString(ConfigurationConstants.CONFIG_PASSWORD);
+    String password = getConfigurationString(context,
+        ConfigurationConstants.CONFIG_PASSWORD,
+        ConfigurationConstants.OLD_CONFIG_PASSWORD, null);
 
-    String jdbcPropertiesFile = context.getString(
-        ConfigurationConstants.CONFIG_JDBC_PROPERTIES_FILE);
+    String jdbcPropertiesFile = getConfigurationString(context,
+        ConfigurationConstants.CONFIG_JDBC_PROPS_FILE,
+        ConfigurationConstants.OLD_CONFIG_JDBC_PROPS_FILE, null);
 
-    String dbTypeName = context.getString(
-        ConfigurationConstants.CONFIG_DATABASE_TYPE);
+    String dbTypeName = getConfigurationString(context,
+        ConfigurationConstants.CONFIG_DATABASE_TYPE,
+        ConfigurationConstants.OLD_CONFIG_DATABASE_TYPE, null);
 
     // If connect URL is not specified, use embedded Derby
     if (connectUrl == null || connectUrl.trim().length() == 0) {
@@ -436,8 +528,9 @@ public class JdbcChannelProviderImpl implements JdbcChannelProvider {
     }
 
     // Transaction Isolation
-    String txIsolation = context.getString(
+    String txIsolation = getConfigurationString(context,
         ConfigurationConstants.CONFIG_TX_ISOLATION_LEVEL,
+        ConfigurationConstants.OLD_CONFIG_TX_ISOLATION_LEVEL,
         TransactionIsolation.READ_COMMITTED.getName());
 
     TransactionIsolation txIsolationLevel =
@@ -451,8 +544,9 @@ public class JdbcChannelProviderImpl implements JdbcChannelProvider {
 
     connectionPool = new GenericObjectPool();
 
-    String maxActiveConnections = context.getString(
-        ConfigurationConstants.CONFIG_MAX_CONNECTION, "10");
+    String maxActiveConnections = getConfigurationString(context,
+        ConfigurationConstants.CONFIG_MAX_CONNECTIONS,
+        ConfigurationConstants.OLD_CONFIG_MAX_CONNECTIONS, "10");
 
     int maxActive = 10;
     if (maxActiveConnections != null && maxActiveConnections.length() > 0) {
@@ -476,6 +570,54 @@ public class JdbcChannelProviderImpl implements JdbcChannelProvider {
 
     dataSource = new PoolingDataSource(connectionPool);
 
-    txFactory = new JdbcTransactionFactory(dataSource);
+    txFactory = new JdbcTransactionFactory(dataSource, this);
+  }
+
+  /**
+   * A callback method invoked from individual transaction instances after
+   * a successful commit. The argument passed is the net number of events to
+   * be added to the current size as tracked by the provider.
+   * @param delta the net number of events to be added to reflect the current
+   *              size of the channel
+   */
+  protected void updateCurrentChannelSize(long delta) {
+    long currentSizeLong = currentSize.addAndGet(delta);
+    LOGGER.debug("channel size updated to: " + currentSizeLong);
+  }
+
+  /**
+   * Helper method to transition the configuration from the old long form
+   * style configuration to the new short form. If the value is specified for
+   * both the old and the new forms, the one associated with the new form
+   * takes precedence.
+   *
+   * @param context
+   * @param key the expected configuration key
+   * @param oldKey the deprecated configuration key
+   * @param  default value, null if no default
+   * @return the value associated with the key
+   */
+  private String getConfigurationString(Context context, String key,
+      String oldKey, String defaultValue) {
+
+    String oldValue = context.getString(oldKey);
+
+    if (oldValue != null && oldValue.length() > 0) {
+      LOGGER.warn("Long form configuration key \"" + oldKey
+          + "\" is deprecated. Please use the short form key \""
+          + key + "\" instead.");
+    }
+
+    String value = context.getString(key);
+
+    if (value == null) {
+      if (oldValue != null) {
+        value = oldValue;
+      } else {
+        value = defaultValue;
+      }
+    }
+
+    return value;
   }
 }
