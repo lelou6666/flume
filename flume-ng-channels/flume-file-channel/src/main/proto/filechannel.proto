@@ -38,6 +38,11 @@ message LogFileMetaData {
   required sfixed64 checkpointPosition = 3;
   required sfixed64 checkpointWriteOrderID = 4;
   optional LogFileEncryption encryption = 5;
+<<<<<<< HEAD
+=======
+  optional sfixed64 backupCheckpointPosition = 6;
+  optional sfixed64 backupCheckpointWriteOrderID = 7;
+>>>>>>> refs/remotes/apache/trunk
 }
 
 message LogFileEncryption {
@@ -54,6 +59,10 @@ message TransactionEventHeader {
 
 message Put {
   required FlumeEvent event = 1;
+<<<<<<< HEAD
+=======
+  optional sfixed64 checksum = 2;
+>>>>>>> refs/remotes/apache/trunk
 }
 
 message Take {

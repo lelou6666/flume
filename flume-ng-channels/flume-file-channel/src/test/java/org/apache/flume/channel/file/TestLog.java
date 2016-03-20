@@ -22,6 +22,11 @@ import static org.mockito.Mockito.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+<<<<<<< HEAD
+=======
+import java.nio.channels.*;
+import java.util.Collection;
+>>>>>>> refs/remotes/apache/trunk
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
@@ -47,6 +52,7 @@ public class TestLog {
   public void setup() throws IOException {
     transactionID = 0;
     checkpointDir = Files.createTempDir();
+    FileUtils.forceDeleteOnExit(checkpointDir);
     Assert.assertTrue(checkpointDir.isDirectory());
     dataDirs = new File[3];
     for (int i = 0; i < dataDirs.length; i++) {
@@ -55,12 +61,12 @@ public class TestLog {
     }
     log = new Log.Builder().setCheckpointInterval(1L).setMaxFileSize(
         MAX_FILE_SIZE).setQueueSize(CAPACITY).setCheckpointDir(
-            checkpointDir).setLogDirs(dataDirs)
+            checkpointDir).setLogDirs(dataDirs).setCheckpointOnClose(false)
             .setChannelName("testlog").build();
     log.replay();
   }
   @After
-  public void cleanup() {
+  public void cleanup() throws Exception{
     if(log != null) {
       log.close();
     }
@@ -74,7 +80,8 @@ public class TestLog {
    * not transactional so the commit is not required.
    */
   @Test
-  public void testPutGet() throws IOException, InterruptedException {
+  public void testPutGet()
+    throws IOException, InterruptedException, NoopRecordException, CorruptEventException {
     FlumeEvent eventIn = TestUtils.newPersistableEvent();
     long transactionID = ++this.transactionID;
     FlumeEventPointer eventPointer = log.put(transactionID, eventIn);
@@ -86,7 +93,8 @@ public class TestLog {
     Assert.assertArrayEquals(eventIn.getBody(), eventOut.getBody());
   }
   @Test
-  public void testRoll() throws IOException, InterruptedException {
+  public void testRoll()
+    throws IOException, InterruptedException, NoopRecordException, CorruptEventException  {
     log.shutdownWorker();
     Thread.sleep(1000);
     for (int i = 0; i < 1000; i++) {
@@ -107,15 +115,21 @@ public class TestLog {
         }
       }
     }
+<<<<<<< HEAD
     // 78 (*2 for meta) files with TestLog.MAX_FILE_SIZE=1000
     Assert.assertEquals(156, logCount);
+=======
+    // 93 (*2 for meta) files with TestLog.MAX_FILE_SIZE=1000
+    Assert.assertEquals(186, logCount);
+>>>>>>> refs/remotes/apache/trunk
   }
   /**
    * After replay of the log, we should find the event because the put
    * was committed
    */
   @Test
-  public void testPutCommit() throws IOException, InterruptedException {
+  public void testPutCommit()
+    throws IOException, InterruptedException, NoopRecordException, CorruptEventException  {
     FlumeEvent eventIn = TestUtils.newPersistableEvent();
     long transactionID = ++this.transactionID;
     FlumeEventPointer eventPointerIn = log.put(transactionID, eventIn);
@@ -164,7 +178,11 @@ public class TestLog {
       Assert.fail();
     } catch (IOException e) {
       Assert.assertTrue(e.getMessage(), e.getMessage()
+<<<<<<< HEAD
           .startsWith("Usable space exhaused"));
+=======
+          .startsWith("Usable space exhausted"));
+>>>>>>> refs/remotes/apache/trunk
     }
   }
   /**
@@ -210,7 +228,11 @@ public class TestLog {
       Assert.fail();
     } catch (IOException e) {
       Assert.assertTrue(e.getMessage(), e.getMessage()
+<<<<<<< HEAD
           .startsWith("Usable space exhaused"));
+=======
+          .startsWith("Usable space exhausted"));
+>>>>>>> refs/remotes/apache/trunk
     }
   }
   /**
@@ -243,16 +265,16 @@ public class TestLog {
    */
   @Test
   public void testPutTakeRollbackLogReplayV1()
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException, NoopRecordException, CorruptEventException  {
     doPutTakeRollback(true);
   }
   @Test
   public void testPutTakeRollbackLogReplayV2()
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException, NoopRecordException, CorruptEventException  {
     doPutTakeRollback(false);
   }
   public void doPutTakeRollback(boolean useLogReplayV1)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException, NoopRecordException, CorruptEventException  {
     FlumeEvent eventIn = TestUtils.newPersistableEvent();
     long putTransactionID = ++transactionID;
     FlumeEventPointer eventPointerIn = log.put(putTransactionID, eventIn);
@@ -392,7 +414,11 @@ public class TestLog {
   }
   @Test
   public void testReplaySucceedsWithUnusedEmptyLogMetaDataNormalReplay()
+<<<<<<< HEAD
       throws IOException, InterruptedException {
+=======
+    throws IOException, InterruptedException, NoopRecordException, CorruptEventException  {
+>>>>>>> refs/remotes/apache/trunk
     FlumeEvent eventIn = TestUtils.newPersistableEvent();
     long transactionID = ++this.transactionID;
     FlumeEventPointer eventPointer = log.put(transactionID, eventIn);
@@ -406,14 +432,24 @@ public class TestLog {
   }
   @Test
   public void testReplaySucceedsWithUnusedEmptyLogMetaDataFastReplay()
+<<<<<<< HEAD
       throws IOException, InterruptedException {
+=======
+    throws IOException, InterruptedException, NoopRecordException, CorruptEventException  {
+>>>>>>> refs/remotes/apache/trunk
     FlumeEvent eventIn = TestUtils.newPersistableEvent();
     long transactionID = ++this.transactionID;
     FlumeEventPointer eventPointer = log.put(transactionID, eventIn);
     log.commitPut(transactionID); // this is not required since
     log.close();
+<<<<<<< HEAD
     FileUtils.deleteDirectory(checkpointDir);
     Assert.assertTrue(checkpointDir.mkdir());
+=======
+    checkpointDir = Files.createTempDir();
+    FileUtils.forceDeleteOnExit(checkpointDir);
+    Assert.assertTrue(checkpointDir.isDirectory());
+>>>>>>> refs/remotes/apache/trunk
     log = new Log.Builder().setCheckpointInterval(1L).setMaxFileSize(
         MAX_FILE_SIZE).setQueueSize(CAPACITY).setCheckpointDir(
             checkpointDir).setLogDirs(dataDirs)
@@ -422,7 +458,11 @@ public class TestLog {
   }
   public void doTestReplaySucceedsWithUnusedEmptyLogMetaData(FlumeEvent eventIn,
       FlumeEventPointer eventPointer) throws IOException,
+<<<<<<< HEAD
       InterruptedException {
+=======
+    InterruptedException, NoopRecordException, CorruptEventException  {
+>>>>>>> refs/remotes/apache/trunk
     for (int i = 0; i < dataDirs.length; i++) {
       for(File logFile : LogUtils.getLogs(dataDirs[i])) {
         if(logFile.length() == 0L) {
@@ -460,8 +500,40 @@ public class TestLog {
         Long.MAX_VALUE - 1L);
   }
 
+<<<<<<< HEAD
+=======
+  @Test
+  public void testCheckpointOnClose() throws Exception {
+    log.close();
+    log = new Log.Builder().setCheckpointInterval(1L).setMaxFileSize(
+            MAX_FILE_SIZE).setQueueSize(CAPACITY).setCheckpointDir(
+            checkpointDir).setLogDirs(dataDirs).setCheckpointOnClose(true)
+            .setChannelName("testLog").build();
+    log.replay();
+
+
+    // 1 Write One Event
+    FlumeEvent eventIn = TestUtils.newPersistableEvent();
+    log.put(transactionID, eventIn);
+    log.commitPut(transactionID);
+
+    // 2 Check state of checkpoint before close
+    File checkPointMetaFile =
+            FileUtils.listFiles(checkpointDir,new String[]{"meta"},false).iterator().next();
+    long before = FileUtils.checksumCRC32( checkPointMetaFile );
+
+    // 3 Close Log
+    log.close();
+
+    // 4 Verify that checkpoint was modified on close
+    long after = FileUtils.checksumCRC32( checkPointMetaFile );
+    Assert.assertFalse( before == after );
+  }
+
+>>>>>>> refs/remotes/apache/trunk
   private void takeAndVerify(FlumeEventPointer eventPointerIn,
-      FlumeEvent eventIn) throws IOException, InterruptedException {
+      FlumeEvent eventIn)
+    throws IOException, InterruptedException, NoopRecordException, CorruptEventException  {
     FlumeEventQueue queue = log.getFlumeEventQueue();
     FlumeEventPointer eventPointerOut = queue.removeHead(0);
     Assert.assertNotNull(eventPointerOut);
@@ -473,4 +545,5 @@ public class TestLog {
     Assert.assertEquals(eventIn.getHeaders(), eventOut.getHeaders());
     Assert.assertArrayEquals(eventIn.getBody(), eventOut.getBody());
   }
+
 }

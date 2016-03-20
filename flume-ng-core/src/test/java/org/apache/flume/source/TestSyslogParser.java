@@ -21,7 +21,14 @@ package org.apache.flume.source;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import java.nio.charset.Charset;
+<<<<<<< HEAD
 import java.util.List;
+=======
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.Event;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
@@ -29,13 +36,21 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class TestSyslogParser {
+<<<<<<< HEAD
 
+=======
+>>>>>>> refs/remotes/apache/trunk
   @Test
   public void testRfc5424DateParsing() {
     final String[] examples = {
       "1985-04-12T23:20:50.52Z", "1985-04-12T19:20:50.52-04:00",
       "2003-10-11T22:14:15.003Z", "2003-08-24T05:14:15.000003-07:00",
+<<<<<<< HEAD
       "2012-04-13T11:11:11-08:00", "2012-04-13T08:08:08.0001+00:00"
+=======
+      "2012-04-13T11:11:11-08:00", "2012-04-13T08:08:08.0001+00:00",
+      "2012-04-13T08:08:08.251+00:00"
+>>>>>>> refs/remotes/apache/trunk
     };
 
     SyslogParser parser = new SyslogParser();
@@ -55,7 +70,11 @@ public class TestSyslogParser {
     Charset charset = Charsets.UTF_8;
     List<String> messages = Lists.newArrayList();
 
+<<<<<<< HEAD
     // supported examples from RFC 3161
+=======
+    // supported examples from RFC 3164
+>>>>>>> refs/remotes/apache/trunk
     messages.add("<34>Oct 11 22:14:15 mymachine su: 'su root' failed for " +
         "lonvick on /dev/pts/8");
     messages.add("<13>Feb  5 17:32:18 10.0.0.99 Use the BFG!");
@@ -76,8 +95,36 @@ public class TestSyslogParser {
     messages.add("<13>2003-08-24T05:14:15Z localhost snarf?");
     messages.add("<13>2012-08-16T14:34:03-08:00 127.0.0.1 test shnap!");
 
+<<<<<<< HEAD
     for (String msg : messages) {
       Event event = parser.parseMessage(msg, charset);
+=======
+    // test with default keepFields = false
+    for (String msg : messages) {
+      Set<String> keepFields = new HashSet<String>();
+      Event event = parser.parseMessage(msg, charset, keepFields);
+      Assert.assertNull("Failure to parse known-good syslog message",
+        event.getHeaders().get(SyslogUtils.EVENT_STATUS));
+    }
+
+    // test that priority, timestamp and hostname are preserved in event body
+    for (String msg : messages) {
+      Set<String> keepFields = new HashSet<String>();
+      keepFields.add(SyslogUtils.KEEP_FIELDS_ALL);
+      Event event = parser.parseMessage(msg, charset, keepFields);
+      Assert.assertArrayEquals(event.getBody(), msg.getBytes());
+      Assert.assertNull("Failure to parse known-good syslog message",
+          event.getHeaders().get(SyslogUtils.EVENT_STATUS));
+    }
+
+    // test that hostname is preserved in event body
+    for (String msg : messages) {
+      Set<String> keepFields = new HashSet<String>();
+      keepFields.add(SyslogSourceConfigurationConstants.CONFIG_KEEP_FIELDS_HOSTNAME);
+      Event event = parser.parseMessage(msg, charset, keepFields);
+      Assert.assertTrue("Failure to persist hostname",
+          new String(event.getBody()).contains(event.getHeaders().get("host")));
+>>>>>>> refs/remotes/apache/trunk
       Assert.assertNull("Failure to parse known-good syslog message",
           event.getHeaders().get(SyslogUtils.EVENT_STATUS));
     }

@@ -65,6 +65,17 @@ public final class SyslogSourceConfigurationConstants {
 
   public static final String CONFIG_READBUF_SIZE = "readBufferBytes";
   public static final int DEFAULT_READBUF_SIZE = 1024;
+<<<<<<< HEAD
+=======
+
+  public static final String CONFIG_KEEP_FIELDS = "keepFields";
+  public static final String DEFAULT_KEEP_FIELDS = "none";
+
+  public static final String CONFIG_KEEP_FIELDS_PRIORITY = "priority";
+  public static final String CONFIG_KEEP_FIELDS_VERSION = "version";
+  public static final String CONFIG_KEEP_FIELDS_TIMESTAMP = "timestamp";
+  public static final String CONFIG_KEEP_FIELDS_HOSTNAME = "hostname";
+>>>>>>> refs/remotes/apache/trunk
 
   private SyslogSourceConfigurationConstants() {
     // Disable explicit creation of objects.

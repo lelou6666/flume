@@ -27,7 +27,10 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
 import java.util.Comparator;
+<<<<<<< HEAD
 import java.util.Date;
+=======
+>>>>>>> refs/remotes/apache/trunk
 import java.util.Map;
 
 import org.apache.flume.Channel;
@@ -38,6 +41,11 @@ import org.apache.flume.conf.Configurables;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.collect.Maps;
+<<<<<<< HEAD
+=======
+import org.elasticsearch.common.settings.ImmutableSettings;
+import org.elasticsearch.common.settings.Settings;
+>>>>>>> refs/remotes/apache/trunk
 import org.elasticsearch.gateway.Gateway;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -46,12 +54,22 @@ import org.elasticsearch.node.NodeBuilder;
 import org.elasticsearch.node.internal.InternalNode;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+<<<<<<< HEAD
+=======
+import org.joda.time.DateTimeUtils;
+import org.junit.After;
+import org.junit.Before;
+>>>>>>> refs/remotes/apache/trunk
 
 public abstract class AbstractElasticSearchSinkTest {
 
   static final String DEFAULT_INDEX_NAME = "flume";
   static final String DEFAULT_INDEX_TYPE = "log";
   static final String DEFAULT_CLUSTER_NAME = "elasticsearch";
+<<<<<<< HEAD
+=======
+  static final long FIXED_TIME_MILLIS = 123456789L;
+>>>>>>> refs/remotes/apache/trunk
 
   Node node;
   Client client;
@@ -66,12 +84,30 @@ public abstract class AbstractElasticSearchSinkTest {
     parameters.put(BATCH_SIZE, "1");
     parameters.put(TTL, "5");
 
+<<<<<<< HEAD
     timestampedIndexName = DEFAULT_INDEX_NAME + "-"
         + ElasticSearchSink.df.format(new Date());
   }
 
   void createNodes() throws Exception {
     node = NodeBuilder.nodeBuilder().local(true).node();
+=======
+    timestampedIndexName = DEFAULT_INDEX_NAME + '-'
+        + ElasticSearchIndexRequestBuilderFactory.df.format(FIXED_TIME_MILLIS);
+  }
+
+  void createNodes() throws Exception {
+    Settings settings = ImmutableSettings
+        .settingsBuilder()
+        .put("number_of_shards", 1)
+        .put("number_of_replicas", 0)
+        .put("routing.hash.type", "simple")
+        .put("gateway.type", "none")
+        .put("path.data", "target/es-test")
+        .build();
+
+    node = NodeBuilder.nodeBuilder().settings(settings).local(true).node();
+>>>>>>> refs/remotes/apache/trunk
     client = node.client();
 
     client.admin().cluster().prepareHealth().setWaitForGreenStatus().execute()
@@ -84,6 +120,19 @@ public abstract class AbstractElasticSearchSinkTest {
     node.close();
   }
 
+<<<<<<< HEAD
+=======
+  @Before
+  public void setFixedJodaTime() {
+    DateTimeUtils.setCurrentMillisFixed(FIXED_TIME_MILLIS);
+  }
+
+  @After
+  public void resetJodaTime() {
+    DateTimeUtils.setCurrentMillisSystem();
+  }
+
+>>>>>>> refs/remotes/apache/trunk
   Channel bindAndStartChannel(ElasticSearchSink fixture) {
     // Configure the channel
     Channel channel = new MemoryChannel();
@@ -97,13 +146,22 @@ public abstract class AbstractElasticSearchSinkTest {
 
   void assertMatchAllQuery(int expectedHits, Event... events) {
     assertSearch(expectedHits, performSearch(QueryBuilders.matchAllQuery()),
+<<<<<<< HEAD
         events);
+=======
+        null, events);
+>>>>>>> refs/remotes/apache/trunk
   }
 
   void assertBodyQuery(int expectedHits, Event... events) {
     // Perform Multi Field Match
     assertSearch(expectedHits,
+<<<<<<< HEAD
         performSearch(QueryBuilders.fieldQuery("@message", "event")));
+=======
+        performSearch(QueryBuilders.fieldQuery("@message", "event")),
+        null, events);
+>>>>>>> refs/remotes/apache/trunk
   }
 
   SearchResponse performSearch(QueryBuilder query) {
@@ -111,7 +169,11 @@ public abstract class AbstractElasticSearchSinkTest {
         .setTypes(DEFAULT_INDEX_TYPE).setQuery(query).execute().actionGet();
   }
 
+<<<<<<< HEAD
   void assertSearch(int expectedHits, SearchResponse response, Event... events) {
+=======
+  void assertSearch(int expectedHits, SearchResponse response, Map<String, Object> expectedBody, Event... events) {
+>>>>>>> refs/remotes/apache/trunk
     SearchHits hitResponse = response.getHits();
     assertEquals(expectedHits, hitResponse.getTotalHits());
 
@@ -127,7 +189,18 @@ public abstract class AbstractElasticSearchSinkTest {
       Event event = events[i];
       SearchHit hit = hits[i];
       Map<String, Object> source = hit.getSource();
+<<<<<<< HEAD
       assertEquals(new String(event.getBody()), source.get("@message"));
     }
   }
+=======
+      if (expectedBody == null) {
+        assertEquals(new String(event.getBody()), source.get("@message"));
+      } else {
+        assertEquals(expectedBody, source.get("@message"));
+      }
+    }
+  }
+
+>>>>>>> refs/remotes/apache/trunk
 }

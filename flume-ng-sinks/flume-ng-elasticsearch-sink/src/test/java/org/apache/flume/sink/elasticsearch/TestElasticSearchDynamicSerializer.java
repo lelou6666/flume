@@ -18,12 +18,15 @@
  */
 package org.apache.flume.sink.elasticsearch;
 
+<<<<<<< HEAD
 import static org.apache.flume.sink.elasticsearch.ElasticSearchEventSerializer.charset;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.junit.Assert.assertEquals;
 
 import java.util.Map;
 
+=======
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.event.EventBuilder;
@@ -31,6 +34,15 @@ import org.elasticsearch.common.collect.Maps;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.junit.Test;
 
+<<<<<<< HEAD
+=======
+import java.util.Map;
+
+import static org.apache.flume.sink.elasticsearch.ElasticSearchEventSerializer.charset;
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
+import static org.junit.Assert.assertEquals;
+
+>>>>>>> refs/remotes/apache/trunk
 public class TestElasticSearchDynamicSerializer {
 
   @Test

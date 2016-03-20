@@ -18,10 +18,20 @@
  */
 package org.apache.flume.sink.hbase;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Maps;
+import com.google.common.primitives.UnsignedBytes;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.flume.Channel;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
@@ -33,9 +43,12 @@ import org.apache.flume.sink.AbstractSink;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.hbase.async.AtomicIncrementRequest;
 import org.hbase.async.HBaseClient;
 import org.hbase.async.PutRequest;
+import org.jboss.netty.channel.socket.nio
+  .NioClientSocketChannelFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -105,14 +118,45 @@ public class AsyncHBaseSink extends AbstractSink implements Configurable {
   private volatile boolean open = false;
   private SinkCounter sinkCounter;
   private long timeout;
+  private String zkQuorum;
+  private String zkBaseDir;
+  private ExecutorService sinkCallbackPool;
+  private boolean isTimeoutTest;
+  private boolean isCoalesceTest;
+  private boolean enableWal = true;
+  private boolean batchIncrements = false;
+  private volatile int totalCallbacksReceived = 0;
+  private int maxConsecutiveFails;
+  private Map<CellIdentifier, AtomicIncrementRequest> incrementBuffer;
+  // The HBaseClient buffers the requests until a callback is received. In the event of a
+  // timeout, there is no way to clear these buffers. If there is a major cluster issue, this
+  // buffer can become too big and cause crashes. So if we hit a fixed number of HBase write
+  // failures/timeouts, then close the HBase Client (gracefully or not) and force a GC to get rid
+  // of the buffered data.
+  private int consecutiveHBaseFailures = 0;
+  private boolean lastTxnFailed = false;
+
+  // Does not need to be thread-safe. Always called only from the sink's
+  // process method.
+  private final Comparator<byte[]> COMPARATOR = UnsignedBytes
+    .lexicographicalComparator();
 
   public AsyncHBaseSink(){
-    conf = HBaseConfiguration.create();
+    this(null);
   }
 
   public AsyncHBaseSink(Configuration conf) {
-    this.conf = conf;
+    this(conf, false, false);
   }
+
+  @VisibleForTesting
+  AsyncHBaseSink(Configuration conf, boolean isTimeoutTest,
+    boolean isCoalesceTest) {
+    this.conf = conf;
+    this.isTimeoutTest = isTimeoutTest;
+    this.isCoalesceTest = isCoalesceTest;
+  }
+
   @Override
   public Status process() throws EventDeliveryException {
     /*
@@ -122,15 +166,24 @@ public class AsyncHBaseSink extends AbstractSink implements Configurable {
      * the next one is being processed.
      *
      */
-    if(!open){
+    if (!open) {
       throw new EventDeliveryException("Sink was never opened. " +
           "Please fix the configuration.");
+    }
+    if (client == null) {
+      client = initHBaseClient();
+      if (client == null) {
+        throw new EventDeliveryException("Could not establish connection to HBase!");
+      }
     }
     AtomicBoolean txnFail = new AtomicBoolean(false);
     AtomicInteger callbacksReceived = new AtomicInteger(0);
     AtomicInteger callbacksExpected = new AtomicInteger(0);
     final Lock lock = new ReentrantLock();
     final Condition condition = lock.newCondition();
+    if (incrementBuffer != null) {
+      incrementBuffer.clear();
+    }
     /*
      * Callbacks can be reused per transaction, since they share the same
      * locks and conditions.
@@ -169,17 +222,42 @@ public class AsyncHBaseSink extends AbstractSink implements Configurable {
           serializer.setEvent(event);
           List<PutRequest> actions = serializer.getActions();
           List<AtomicIncrementRequest> increments = serializer.getIncrements();
-          callbacksExpected.addAndGet(actions.size() + increments.size());
+          callbacksExpected.addAndGet(actions.size());
+          if (!batchIncrements) {
+            callbacksExpected.addAndGet(increments.size());
+          }
 
           for (PutRequest action : actions) {
+            action.setDurable(enableWal);
             client.put(action).addCallbacks(putSuccessCallback, putFailureCallback);
           }
           for (AtomicIncrementRequest increment : increments) {
-            client.atomicIncrement(increment).addCallbacks(
-                    incrementSuccessCallback, incrementFailureCallback);
+            if (batchIncrements) {
+              CellIdentifier identifier = new CellIdentifier(increment.key(),
+                increment.qualifier());
+              AtomicIncrementRequest request
+                = incrementBuffer.get(identifier);
+              if (request == null) {
+                incrementBuffer.put(identifier, increment);
+              } else {
+                request.setAmount(request.getAmount() + increment.getAmount());
+              }
+            } else {
+              client.atomicIncrement(increment).addCallbacks(
+                incrementSuccessCallback, incrementFailureCallback);
+            }
           }
         }
       }
+      if (batchIncrements) {
+        Collection<AtomicIncrementRequest> increments = incrementBuffer.values();
+        for (AtomicIncrementRequest increment : increments) {
+          client.atomicIncrement(increment).addCallbacks(
+            incrementSuccessCallback, incrementFailureCallback);
+        }
+        callbacksExpected.addAndGet(increments.size());
+      }
+      client.flush();
     } catch (Throwable e) {
       this.handleTransactionFailure(txn);
       this.checkIfChannelExceptionAndThrow(e);
@@ -190,11 +268,15 @@ public class AsyncHBaseSink extends AbstractSink implements Configurable {
     sinkCounter.addToEventDrainAttemptCount(i);
 
     lock.lock();
+    long startTime = System.nanoTime();
+    long timeRemaining;
     try {
       while ((callbacksReceived.get() < callbacksExpected.get())
               && !txnFail.get()) {
+        timeRemaining = timeout - (System.nanoTime() - startTime);
+        timeRemaining = (timeRemaining >= 0) ? timeRemaining : 0;
         try {
-          if(!condition.await(timeout, TimeUnit.MILLISECONDS)){
+          if (!condition.await(timeRemaining, TimeUnit.NANOSECONDS)) {
             txnFail.set(true);
             logger.warn("HBase callbacks timed out. "
                     + "Transaction will be rolled back.");
@@ -209,6 +291,10 @@ public class AsyncHBaseSink extends AbstractSink implements Configurable {
       lock.unlock();
     }
 
+    if (isCoalesceTest) {
+      totalCallbacksReceived += callbacksReceived.get();
+    }
+
     /*
      * At this point, either the txn has failed
      * or all callbacks received and txn is successful.
@@ -220,11 +306,19 @@ public class AsyncHBaseSink extends AbstractSink implements Configurable {
      *
      */
     if (txnFail.get()) {
+      // We enter this if condition only if the failure was due to HBase failure, so we make sure
+      // we track the consecutive failures.
+      if (lastTxnFailed) {
+        consecutiveHBaseFailures++;
+      }
+      lastTxnFailed = true;
       this.handleTransactionFailure(txn);
       throw new EventDeliveryException("Could not write events to Hbase. " +
           "Transaction failed, and rolled back.");
     } else {
-      try{
+      try {
+        lastTxnFailed = false;
+        consecutiveHBaseFailures = 0;
         txn.commit();
         txn.close();
         sinkCounter.addToEventDrainSuccessCount(i);
@@ -284,6 +378,58 @@ public class AsyncHBaseSink extends AbstractSink implements Configurable {
               + "Sink will not timeout.");
       timeout = HBaseSinkConfigurationConstants.DEFAULT_TIMEOUT;
     }
+    //Convert to nanos.
+    timeout = TimeUnit.MILLISECONDS.toNanos(timeout);
+
+    zkQuorum = context.getString(
+        HBaseSinkConfigurationConstants.ZK_QUORUM, "").trim();
+    if(!zkQuorum.isEmpty()) {
+      zkBaseDir = context.getString(
+          HBaseSinkConfigurationConstants.ZK_ZNODE_PARENT,
+          HBaseSinkConfigurationConstants.DEFAULT_ZK_ZNODE_PARENT);
+    } else {
+      if (conf == null) { //In tests, we pass the conf in.
+        conf = HBaseConfiguration.create();
+      }
+      zkQuorum = ZKConfig.getZKQuorumServersString(conf);
+      zkBaseDir = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
+        HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
+    }
+    Preconditions.checkState(zkQuorum != null && !zkQuorum.isEmpty(),
+        "The Zookeeper quorum cannot be null and should be specified.");
+
+    enableWal = context.getBoolean(HBaseSinkConfigurationConstants
+      .CONFIG_ENABLE_WAL, HBaseSinkConfigurationConstants.DEFAULT_ENABLE_WAL);
+    logger.info("The write to WAL option is set to: " + String.valueOf(enableWal));
+    if(!enableWal) {
+      logger.warn("AsyncHBaseSink's enableWal configuration is set to false. " +
+        "All writes to HBase will have WAL disabled, and any data in the " +
+        "memstore of this region in the Region Server could be lost!");
+    }
+
+    batchIncrements = context.getBoolean(
+      HBaseSinkConfigurationConstants.CONFIG_COALESCE_INCREMENTS,
+      HBaseSinkConfigurationConstants.DEFAULT_COALESCE_INCREMENTS);
+
+    if(batchIncrements) {
+      incrementBuffer = Maps.newHashMap();
+      logger.info("Increment coalescing is enabled. Increments will be " +
+        "buffered.");
+    }
+
+    maxConsecutiveFails = context.getInteger(HBaseSinkConfigurationConstants.CONFIG_MAX_CONSECUTIVE_FAILS,
+            HBaseSinkConfigurationConstants.DEFAULT_MAX_CONSECUTIVE_FAILS);
+
+  }
+
+  @VisibleForTesting
+  int getTotalCallbacksReceived() {
+    return totalCallbacksReceived;
+  }
+
+  @VisibleForTesting
+  boolean isConfNull() {
+    return conf == null;
   }
   @Override
   public void start(){
@@ -291,13 +437,19 @@ public class AsyncHBaseSink extends AbstractSink implements Configurable {
             + "before calling start on an old instance.");
     sinkCounter.start();
     sinkCounter.incrementConnectionCreatedCount();
-    String zkQuorum = conf.get(HConstants.ZOOKEEPER_QUORUM);
-    String zkBaseDir = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT);
-    if(zkBaseDir != null){
-      client = new HBaseClient(zkQuorum, zkBaseDir);
-    } else {
-      client = new HBaseClient(zkQuorum);
-    }
+    client = initHBaseClient();
+    super.start();
+  }
+
+  private HBaseClient initHBaseClient() {
+    logger.info("Initializing HBase Client");
+
+    sinkCallbackPool = Executors.newCachedThreadPool(new ThreadFactoryBuilder()
+            .setNameFormat(this.getName() + " HBase Call Pool").build());
+    logger.info("Callback pool created");
+    client = new HBaseClient(zkQuorum, zkBaseDir,
+            new NioClientSocketChannelFactory(sinkCallbackPool, sinkCallbackPool));
+
     final CountDownLatch latch = new CountDownLatch(1);
     final AtomicBoolean fail = new AtomicBoolean(false);
     client.ensureTableFamilyExists(
@@ -306,6 +458,7 @@ public class AsyncHBaseSink extends AbstractSink implements Configurable {
               @Override
               public Object call(Object arg) throws Exception {
                 latch.countDown();
+                logger.info("table found");
                 return null;
               }
             },
@@ -319,7 +472,9 @@ public class AsyncHBaseSink extends AbstractSink implements Configurable {
             });
 
     try {
+      logger.info("waiting on callback");
       latch.await();
+      logger.info("callback received");
     } catch (InterruptedException e) {
       sinkCounter.incrementConnectionFailedCount();
       throw new FlumeException(
@@ -327,6 +482,9 @@ public class AsyncHBaseSink extends AbstractSink implements Configurable {
     }
     if(fail.get()){
       sinkCounter.incrementConnectionFailedCount();
+      if (client != null) {
+        shutdownHBaseClient();
+      }
       throw new FlumeException(
           "Could not start sink. " +
           "Table or column family does not exist in Hbase.");
@@ -334,22 +492,77 @@ public class AsyncHBaseSink extends AbstractSink implements Configurable {
       open = true;
     }
     client.setFlushInterval((short) 0);
-    super.start();
+    return client;
   }
 
   @Override
   public void stop(){
     serializer.cleanUp();
-    client.shutdown();
+    if (client != null) {
+      shutdownHBaseClient();
+    }
     sinkCounter.incrementConnectionClosedCount();
     sinkCounter.stop();
+
+    try {
+      if (sinkCallbackPool != null) {
+        sinkCallbackPool.shutdown();
+        if (!sinkCallbackPool.awaitTermination(5, TimeUnit.SECONDS)) {
+          sinkCallbackPool.shutdownNow();
+        }
+      }
+    } catch (InterruptedException e) {
+      logger.error("Interrupted while waiting for asynchbase sink pool to " +
+        "die", e);
+      if (sinkCallbackPool != null) {
+        sinkCallbackPool.shutdownNow();
+      }
+    }
+    sinkCallbackPool = null;
     client = null;
+    conf = null;
     open = false;
     super.stop();
   }
 
+  private void shutdownHBaseClient() {
+    logger.info("Shutting down HBase Client");
+    final CountDownLatch waiter = new CountDownLatch(1);
+    try {
+      client.shutdown().addCallback(new Callback<Object, Object>() {
+        @Override
+        public Object call(Object arg) throws Exception {
+          waiter.countDown();
+          return null;
+        }
+      }).addErrback(new Callback<Object, Object>() {
+        @Override
+        public Object call(Object arg) throws Exception {
+          logger.error("Failed to shutdown HBase client cleanly! HBase cluster might be down");
+          waiter.countDown();
+          return null;
+        }
+      });
+      if (!waiter.await(timeout, TimeUnit.NANOSECONDS)) {
+        logger.error("HBase connection could not be closed within timeout! HBase cluster might " +
+          "be down!");
+      }
+    } catch (Exception ex) {
+      logger.warn("Error while attempting to close connections to HBase");
+    } finally {
+      // Dereference the client to force GC to clear up any buffered requests.
+      client = null;
+    }
+  }
+
   private void handleTransactionFailure(Transaction txn)
       throws EventDeliveryException {
+    if (maxConsecutiveFails > 0 && consecutiveHBaseFailures >= maxConsecutiveFails) {
+      if (client != null) {
+        shutdownHBaseClient();
+      }
+      consecutiveHBaseFailures = 0;
+    }
     try {
       txn.rollback();
     } catch (Throwable e) {
@@ -373,15 +586,31 @@ public class AsyncHBaseSink extends AbstractSink implements Configurable {
     private Lock lock;
     private AtomicInteger callbacksReceived;
     private Condition condition;
+    private final boolean isTimeoutTesting;
 
     public SuccessCallback(Lock lck, AtomicInteger callbacksReceived,
             Condition condition) {
       lock = lck;
       this.callbacksReceived = callbacksReceived;
       this.condition = condition;
+      isTimeoutTesting = isTimeoutTest;
     }
+
     @Override
     public R call(T arg) throws Exception {
+      if (isTimeoutTesting) {
+        try {
+          //tests set timeout to 10 seconds, so sleep for 4 seconds
+          TimeUnit.NANOSECONDS.sleep(TimeUnit.SECONDS.toNanos(4));
+        } catch (InterruptedException e) {
+          //ignore
+        }
+      }
+      doCall();
+      return null;
+    }
+
+    private void doCall() throws Exception {
       callbacksReceived.incrementAndGet();
       lock.lock();
       try{
@@ -389,7 +618,6 @@ public class AsyncHBaseSink extends AbstractSink implements Configurable {
       } finally {
         lock.unlock();
       }
-      return null;
     }
   }
 
@@ -398,17 +626,31 @@ public class AsyncHBaseSink extends AbstractSink implements Configurable {
     private AtomicInteger callbacksReceived;
     private AtomicBoolean txnFail;
     private Condition condition;
-
+    private final boolean isTimeoutTesting;
     public FailureCallback(Lock lck, AtomicInteger callbacksReceived,
             AtomicBoolean txnFail, Condition condition){
       this.lock = lck;
       this.callbacksReceived = callbacksReceived;
       this.txnFail = txnFail;
       this.condition = condition;
+      isTimeoutTesting = isTimeoutTest;
     }
 
     @Override
     public R call(T arg) throws Exception {
+      if (isTimeoutTesting) {
+        //tests set timeout to 10 seconds, so sleep for 4 seconds
+        try {
+          TimeUnit.NANOSECONDS.sleep(TimeUnit.SECONDS.toNanos(4));
+        } catch (InterruptedException e) {
+          //ignore
+        }
+      }
+      doCall();
+      return null;
+    }
+
+    private void doCall() throws Exception {
       callbacksReceived.incrementAndGet();
       this.txnFail.set(true);
       lock.lock();
@@ -417,7 +659,6 @@ public class AsyncHBaseSink extends AbstractSink implements Configurable {
       } finally {
         lock.unlock();
       }
-      return null;
     }
   }
 
@@ -429,5 +670,37 @@ public class AsyncHBaseSink extends AbstractSink implements Configurable {
       Throwables.propagate(e);
     }
     throw new EventDeliveryException("Error in processing transaction.", e);
+  }
+
+  private class CellIdentifier {
+    private final byte[] row;
+    private final byte[] column;
+    private final int hashCode;
+    // Since the sink operates only on one table and one cf,
+    // we use the data from the owning sink
+    public CellIdentifier(byte[] row, byte[] column) {
+      this.row = row;
+      this.column = column;
+      this.hashCode =
+        (Arrays.hashCode(row) * 31) * (Arrays.hashCode(column) * 31);
+    }
+
+    @Override
+    public int hashCode() {
+      return hashCode;
+    }
+
+    // Since we know that this class is used from only this class,
+    // skip the class comparison to save time
+    @Override
+    public boolean equals(Object other) {
+      CellIdentifier o = (CellIdentifier) other;
+      if (other == null) {
+        return false;
+      } else {
+        return (COMPARATOR.compare(row, o.row) == 0
+          && COMPARATOR.compare(column, o.column) == 0);
+      }
+    }
   }
 }

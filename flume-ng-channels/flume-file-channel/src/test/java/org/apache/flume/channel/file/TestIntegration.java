@@ -94,6 +94,12 @@ public class TestIntegration {
     SequenceGeneratorSource source = new SequenceGeneratorSource();
     CountingSourceRunner sourceRunner = new CountingSourceRunner(source, channel);
 
+<<<<<<< HEAD
+=======
+    source.configure(context);
+    source.start();
+
+>>>>>>> refs/remotes/apache/trunk
     NullSink sink = new NullSink();
     sink.setChannel(channel);
     CountingSinkRunner sinkRunner = new CountingSinkRunner(sink);

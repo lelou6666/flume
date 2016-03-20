@@ -97,6 +97,93 @@ public class TestLoadBalancingRpcClient {
     }
   }
 
+  // This will fail without FLUME-1823
+  @Test(expected = EventDeliveryException.class)
+  public void testTwoHostFailoverThrowAfterClose() throws Exception {
+    Server s1 = null, s2 = null;
+    RpcClient c = null;
+    try{
+      LoadBalancedAvroHandler h1 = new LoadBalancedAvroHandler();
+      LoadBalancedAvroHandler h2 = new LoadBalancedAvroHandler();
+
+      s1 = RpcTestUtils.startServer(h1);
+      s2 = RpcTestUtils.startServer(h2);
+
+      Properties p = new Properties();
+      p.put("hosts", "h1 h2");
+      p.put("client.type", "default_loadbalance");
+      p.put("hosts.h1", "127.0.0.1:" + s1.getPort());
+      p.put("hosts.h2", "127.0.0.1:" + s2.getPort());
+
+      c = RpcClientFactory.getInstance(p);
+      Assert.assertTrue(c instanceof LoadBalancingRpcClient);
+
+      for (int i = 0; i < 100; i++) {
+        if (i == 20) {
+          h2.setFailed();
+        } else if (i == 40) {
+          h2.setOK();
+        }
+        c.append(getEvent(i));
+      }
+
+      Assert.assertEquals(60, h1.getAppendCount());
+      Assert.assertEquals(40, h2.getAppendCount());
+      if (c != null) c.close();
+      c.append(getEvent(3));
+      Assert.fail();
+    } finally {
+      if (s1 != null) s1.close();
+      if (s2 != null) s2.close();
+    }
+  }
+
+  /**
+   * Ensure that we can tolerate a host that is completely down.
+   * @throws Exception
+   */
+  @Test
+  public void testTwoHostsOneDead() throws Exception {
+    LOGGER.info("Running testTwoHostsOneDead...");
+    Server s1 = null;
+    RpcClient c1 = null, c2 = null;
+    try {
+      LoadBalancedAvroHandler h1 = new LoadBalancedAvroHandler();
+      s1 = RpcTestUtils.startServer(h1);
+      // do not create a 2nd server (assume it's "down")
+
+      Properties p = new Properties();
+      p.put("hosts", "h1 h2");
+      p.put("client.type", "default_loadbalance");
+      p.put("hosts.h1", "127.0.0.1:" + 0); // port 0 should always be closed
+      p.put("hosts.h2", "127.0.0.1:" + s1.getPort());
+
+      // test batch API
+      c1 = RpcClientFactory.getInstance(p);
+      Assert.assertTrue(c1 instanceof LoadBalancingRpcClient);
+
+      for (int i = 0; i < 10; i++) {
+        c1.appendBatch(getBatchedEvent(i));
+      }
+      Assert.assertEquals(10, h1.getAppendBatchCount());
+
+      // test non-batch API
+      c2 = RpcClientFactory.getInstance(p);
+      Assert.assertTrue(c2 instanceof LoadBalancingRpcClient);
+
+      for (int i = 0; i < 10; i++) {
+        c2.append(getEvent(i));
+      }
+      Assert.assertEquals(10, h1.getAppendCount());
+
+
+    } finally {
+      if (s1 != null) s1.close();
+      if (c1 != null) c1.close();
+      if (c2 != null) c2.close();
+    }
+  }
+
   @Test
   public void testTwoHostFailoverBatch() throws Exception {
     Server s1 = null, s2 = null;
@@ -584,7 +671,7 @@ public class TestLoadBalancingRpcClient {
 
   private List<Event> getBatchedEvent(int index) {
     List<Event> result = new ArrayList<Event>();
-    result.add(EventBuilder.withBody(("event: " + index).getBytes()));
+    result.add(getEvent(index));
     return result;
   }
 

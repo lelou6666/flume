@@ -23,6 +23,10 @@ import org.apache.flume.Event;
 import org.apache.flume.Transaction;
 import org.apache.flume.annotations.InterfaceAudience;
 import org.apache.flume.annotations.InterfaceStability;
+<<<<<<< HEAD
+=======
+import org.apache.flume.annotations.Disposable;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.channel.AbstractChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +46,10 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
+<<<<<<< HEAD
+=======
+@Disposable
+>>>>>>> refs/remotes/apache/trunk
 public class JdbcChannel extends AbstractChannel {
 
   private static final Logger LOG = LoggerFactory.getLogger(JdbcChannel.class);

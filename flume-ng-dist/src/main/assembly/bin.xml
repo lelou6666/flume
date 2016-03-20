@@ -25,17 +25,35 @@
   <id>bin</id>
 
   <formats>
+    <format>dir</format>
     <format>tar.gz</format>
   </formats>
 
   <baseDirectory>apache-flume-${project.version}-bin</baseDirectory>
+<<<<<<< HEAD:flume-ng-dist/src/main/assembly/bin.xml
 
   <moduleSets>
 
     <moduleSet>
       <useAllReactorProjects>true</useAllReactorProjects>
+=======
+>>>>>>> refs/remotes/apache/trunk:flume-ng-dist/src/main/assembly/bin.xml
 
+  <dependencySets>
+    <dependencySet>
+      <outputDirectory>lib</outputDirectory>
+      <unpack>false</unpack>
+      <useProjectArtifact>false</useProjectArtifact>
+      <excludes>
+        <exclude>org.apache.flume.flume-ng-clients:flume-ng-log4jappender:jar:jar-with-dependencies</exclude>
+      </excludes>
+    </dependencySet>
+    <dependencySet>
+      <outputDirectory>tools</outputDirectory>
+      <unpack>false</unpack>
+      <useProjectArtifact>false</useProjectArtifact>
       <includes>
+<<<<<<< HEAD:flume-ng-dist/src/main/assembly/bin.xml
         <include>org.apache.flume:flume-ng-configuration</include>
         <include>org.apache.flume:flume-ng-sdk</include>
         <include>org.apache.flume:flume-ng-core</include>
@@ -46,43 +64,13 @@
         <include>org.apache.flume:flume-ng-legacy-sources</include>
         <include>org.apache.flume:flume-ng-clients</include>
         <include>org.apache.flume:flume-ng-sources</include>
+=======
+        <include>org.apache.flume.flume-ng-clients:flume-ng-log4jappender:jar:jar-with-dependencies</include>
+>>>>>>> refs/remotes/apache/trunk:flume-ng-dist/src/main/assembly/bin.xml
       </includes>
+    </dependencySet>
+  </dependencySets>
 
-      <binaries>
-        <unpack>false</unpack>
-        <outputDirectory>lib</outputDirectory>
-
-        <dependencySets>
-          <dependencySet>
-            <useProjectArtifact>false</useProjectArtifact>
-            <outputDirectory>lib</outputDirectory>
-          </dependencySet>
-        </dependencySets>
-      </binaries>
-
-      <sources>
-        <includeModuleDirectory>true</includeModuleDirectory>
-        <excludeSubModuleDirectories>false</excludeSubModuleDirectories>
-
-        <fileSets>
-          <fileSet>
-            <excludes>
-              <exclude>target/**</exclude>
-              <exclude>*/target/**</exclude>
-              <exclude>.classpath</exclude>
-              <exclude>*/.classpath</exclude>
-              <exclude>.project</exclude>
-              <exclude>*/.project</exclude>
-              <exclude>.settings/**</exclude>
-              <exclude>*/.settings/**</exclude>
-            </excludes>
-          </fileSet>
-        </fileSets>
-      </sources>
-
-    </moduleSet>
-
-  </moduleSets>
 
    <fileSets>
     <fileSet>
@@ -93,11 +81,15 @@
         <exclude>flume-ng-sdk/**</exclude>
         <exclude>flume-ng-core/**</exclude>
         <exclude>flume-ng-node/**</exclude>
+        <exclude>flume-ng-dist/**</exclude>
         <exclude>flume-ng-channels/**</exclude>
         <exclude>flume-ng-sinks/**</exclude>
+        <exclude>flume-ng-sources/**</exclude>
         <exclude>flume-ng-legacy-sources/**</exclude>
         <exclude>flume-ng-clients/**</exclude>
-        <exclude>flume-ng-dist/**</exclude>
+        <exclude>flume-ng-embedded-agent/**</exclude>
+        <exclude>flume-tools/**</exclude>
+        <exclude>flume-ng-auth/**</exclude>
         <exclude>**/target/**</exclude>
         <exclude>**/.classpath</exclude>
         <exclude>**/.project</exclude>
@@ -115,26 +107,15 @@
         <include>RELEASE-NOTES</include>
         <include>bin/**</include>
         <include>conf/**</include>
-        <include>pom.xml</include>
-        <include>flume-ng-doc/**</include>
-        <include>flume-ng-tests/**</include>
       </includes>
     </fileSet>
 
     <fileSet>
-      <directory>../target/docs</directory>
+      <directory>../target/site</directory>
       <includes>
         <include>/**</include>
       </includes>
       <outputDirectory>docs</outputDirectory>
-    </fileSet>
-
-    <fileSet>
-      <directory>../target/apidocs</directory>
-      <includes>
-        <include>/**</include>
-      </includes>
-      <outputDirectory>docs/apidocs</outputDirectory>
     </fileSet>
 
   </fileSets>

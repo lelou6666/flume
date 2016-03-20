@@ -76,6 +76,7 @@ public enum SourceType {
    * @see org.apache.flume.source.SyslogUDPSource
    */
   SYSLOGUDP("org.apache.flume.source.SyslogUDPSource"),
+<<<<<<< HEAD
 
   /**
    * Spool directory source
@@ -83,6 +84,44 @@ public enum SourceType {
    * @see org.apache.flume.source.SpoolDirectorySource
    */
   SPOOLDIR("org.apache.flume.source.SpoolDirectorySource");
+=======
+
+  /**
+   * Spool directory source
+   *
+   * @see org.apache.flume.source.SpoolDirectorySource
+   */
+  SPOOLDIR("org.apache.flume.source.SpoolDirectorySource"),
+
+  /**
+   * HTTP Source
+   *
+   * @see org.apache.flume.source.http.HTTPSource
+   */
+  HTTP("org.apache.flume.source.http.HTTPSource"),
+
+  /**
+   * Thrift Source
+   *
+   * @see org.apache.flume.source.ThriftSource
+   */
+  THRIFT("org.apache.flume.source.ThriftSource"),
+
+  /**
+   * JMS Source
+   *
+   * @see org.apache.flume.source.jms.JMSSource
+   */
+  JMS("org.apache.flume.source.jms.JMSSource"),
+
+  /**
+   * Taildir Source
+   *
+   * @see org.apache.flume.source.taildir.TaildirSource
+   */
+  TAILDIR("org.apache.flume.source.taildir.TaildirSource")
+  ;
+>>>>>>> refs/remotes/apache/trunk
 
   private final String sourceClassName;
 

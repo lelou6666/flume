@@ -24,9 +24,17 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
+<<<<<<< HEAD
+=======
+import java.util.concurrent.ConcurrentHashMap;
+>>>>>>> refs/remotes/apache/trunk
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.annotations.VisibleForTesting;
+
+import org.apache.flume.Clock;
+import org.apache.flume.SystemClock;
 import org.apache.flume.tools.TimestampRoundDownUtil;
 
 import com.google.common.base.Preconditions;
@@ -40,14 +48,20 @@ public class BucketPath {
   final public static String TAG_REGEX = "\\%(\\w|\\%)|\\%\\{([\\w\\.-]+)\\}";
   final public static Pattern tagPattern = Pattern.compile(TAG_REGEX);
 
+  private static Clock clock = new SystemClock();
+
   /**
    * Returns true if in contains a substring matching TAG_REGEX (i.e. of the
    * form %{...} or %x.
    */
+  @VisibleForTesting
+  @Deprecated
   public static boolean containsTag(String in) {
     return tagPattern.matcher(in).find();
   }
 
+  @VisibleForTesting
+  @Deprecated
   public static String expandShorthand(char c) {
     // It's a date
     switch (c) {
@@ -63,6 +77,8 @@ public class BucketPath {
       return "datetime";
     case 'd':
       return "day_of_month_xx"; // two digit
+    case 'e':
+      return "day_of_month_x"; // 1 or 2 digit
     case 'D':
       return "date_short"; // "MM/dd/yy";
     case 'H':
@@ -77,6 +93,8 @@ public class BucketPath {
       return "hour_12"; // 1 or 2 digits
     case 'm':
       return "month_xx";
+    case 'n':
+      return "month_x"; // 1 or 2 digits
     case 'M':
       return "minute_xx";
     case 'p':
@@ -111,19 +129,38 @@ public class BucketPath {
    *
    * Dates follow the same format as unix date, with a few exceptions.
    *
+   * <p>This static method will be REMOVED in a future version of Flume</p>
+   *
    */
+  @VisibleForTesting
+  @Deprecated
   public static String replaceShorthand(char c, Map<String, String> headers) {
     return replaceShorthand(c, headers, false, 0, 0);
   }
 
   /**
    * A wrapper around
+<<<<<<< HEAD
    * {@link BucketPath#replaceShorthand(char, Map, TimeZone, boolean, int, int)}
    * with the timezone set to the default.
    */
   public static String replaceShorthand(char c, Map<String, String> headers,
       boolean needRounding, int unit, int roundDown) {
     return replaceShorthand(c, headers, null, needRounding, unit, roundDown);
+=======
+   * {@link BucketPath#replaceShorthand(char, Map, TimeZone, boolean, int,
+   * int, boolean)}
+   * with the timezone set to the default.
+   *
+   * <p>This static method will be REMOVED in a future version of Flume</p>
+   */
+  @VisibleForTesting
+  @Deprecated
+  public static String replaceShorthand(char c, Map<String, String> headers,
+      boolean needRounding, int unit, int roundDown) {
+    return replaceShorthand(c, headers, null, needRounding, unit, roundDown,
+      false);
+>>>>>>> refs/remotes/apache/trunk
   }
 
   /**
@@ -134,6 +171,9 @@ public class BucketPath {
    * Returns the empty string if an escape is not recognized.
    *
    * Dates follow the same format as unix date, with a few exceptions.
+   *
+   * <p>This static method will be REMOVED in a future version of Flume</p>
+   *
    * @param c - The character to replace.
    * @param headers - Event headers
    * @param timeZone - The timezone to use for formatting the timestamp
@@ -147,15 +187,66 @@ public class BucketPath {
    * value, smaller than the time supplied, defaults to 1, if <= 0(rounds off
    * to the second/minute/hour immediately lower than the timestamp supplied.
    * Ignored if needRounding is false.
+   *
    * @return
    */
+  @VisibleForTesting
+  @Deprecated
   public static String replaceShorthand(char c, Map<String, String> headers,
+<<<<<<< HEAD
       TimeZone timeZone, boolean needRounding, int unit, int roundDown) {
+=======
+    TimeZone timeZone, boolean needRounding, int unit, int roundDown,
+    boolean useLocalTimestamp) {
+    long ts = 0;
+    if (useLocalTimestamp) {
+      ts = clock.currentTimeMillis();
+    }
+    return replaceShorthand(c, headers, timeZone, needRounding, unit,
+        roundDown, false, ts);
+  }
+  
+  protected static final ThreadLocal<HashMap<String, SimpleDateFormat>> simpleDateFormatCache = new ThreadLocal<HashMap<String, SimpleDateFormat>>() {
+	  
+	  @Override
+	  protected HashMap<String, SimpleDateFormat> initialValue() {
+		  return new HashMap<String, SimpleDateFormat>();
+	  }
+  };
+  
+  protected static SimpleDateFormat getSimpleDateFormat(String string) {
+	HashMap<String, SimpleDateFormat> localCache = simpleDateFormatCache.get();
+	
+	SimpleDateFormat simpleDateFormat = localCache.get(string);
+	if (simpleDateFormat == null) {
+		simpleDateFormat = new SimpleDateFormat(string);
+		localCache.put(string, simpleDateFormat);
+		simpleDateFormatCache.set(localCache);
+	}
+	
+	return simpleDateFormat;
+  }
+  
+>>>>>>> refs/remotes/apache/trunk
 
-    String timestampHeader = headers.get("timestamp");
-    long ts;
+  /**
+   * Not intended as a public API
+   */
+  @VisibleForTesting
+  protected static String replaceShorthand(char c, Map<String, String> headers,
+      TimeZone timeZone, boolean needRounding, int unit, int roundDown,
+      boolean useLocalTimestamp, long ts) {
+
+    String timestampHeader = null;
     try {
-      ts = Long.valueOf(timestampHeader);
+      if(!useLocalTimestamp) {
+        timestampHeader = headers.get("timestamp");
+        Preconditions.checkNotNull(timestampHeader, "Expected timestamp in " +
+          "the Flume event headers, but it was null");
+        ts = Long.valueOf(timestampHeader);
+      } else {
+        timestampHeader = String.valueOf(ts);
+      }
     } catch (NumberFormatException e) {
       throw new RuntimeException("Flume wasn't able to parse timestamp header"
         + " in the event to resolve time based bucketing. Please check that"
@@ -190,6 +281,9 @@ public class BucketPath {
     case 'd':
       formatString = "dd";
       break;
+    case 'e':
+      formatString = "d";
+      break;
     case 'D':
       formatString = "MM/dd/yy";
       break;
@@ -213,6 +307,9 @@ public class BucketPath {
       break;
     case 'M':
       formatString = "mm";
+      break;
+    case 'n':
+      formatString = "M";
       break;
     case 'p':
       formatString = "a";
@@ -240,9 +337,17 @@ public class BucketPath {
       return "";
     }
 
+<<<<<<< HEAD
     SimpleDateFormat format = new SimpleDateFormat(formatString);
     if (timeZone != null) {
       format.setTimeZone(timeZone);
+=======
+    SimpleDateFormat format = getSimpleDateFormat(formatString);
+    if (timeZone != null) {
+      format.setTimeZone(timeZone);
+    } else {
+      format.setTimeZone(TimeZone.getDefault());
+>>>>>>> refs/remotes/apache/trunk
     }
 
     Date date = new Date(ts);
@@ -289,12 +394,22 @@ public class BucketPath {
 
   /**
    * A wrapper around
+<<<<<<< HEAD
    * {@link BucketPath#escapeString(String, Map, TimeZone, boolean, int, int)}
+=======
+   * {@link BucketPath#escapeString(String, Map, TimeZone, boolean, int, int,
+   boolean)}
+>>>>>>> refs/remotes/apache/trunk
    * with the timezone set to the default.
    */
   public static String escapeString(String in, Map<String, String> headers,
       boolean needRounding, int unit, int roundDown) {
+<<<<<<< HEAD
     return escapeString(in, headers, null, needRounding, unit, roundDown);
+=======
+    return escapeString(in, headers, null, needRounding, unit, roundDown,
+      false);
+>>>>>>> refs/remotes/apache/trunk
   }
 
   /**
@@ -319,7 +434,15 @@ public class BucketPath {
    * @return Escaped string.
    */
   public static String escapeString(String in, Map<String, String> headers,
+<<<<<<< HEAD
       TimeZone timeZone, boolean needRounding, int unit, int roundDown) {
+=======
+    TimeZone timeZone, boolean needRounding, int unit, int roundDown,
+    boolean useLocalTimeStamp) {
+
+    long ts = clock.currentTimeMillis();
+
+>>>>>>> refs/remotes/apache/trunk
     Matcher matcher = tagPattern.matcher(in);
     StringBuffer sb = new StringBuffer();
     while (matcher.find()) {
@@ -341,7 +464,11 @@ public class BucketPath {
             "Expected to match single character tag in string " + in);
         char c = matcher.group(1).charAt(0);
         replacement = replaceShorthand(c, headers, timeZone,
+<<<<<<< HEAD
             needRounding, unit, roundDown);
+=======
+            needRounding, unit, roundDown, useLocalTimeStamp, ts);
+>>>>>>> refs/remotes/apache/trunk
       }
 
       // The replacement string must have '$' and '\' chars escaped. This
@@ -368,10 +495,15 @@ public class BucketPath {
    * mapping of an attribute name to the value based on the escape sequence
    * found in the argument string.
    */
+  @VisibleForTesting
+  @Deprecated
   public static Map<String, String> getEscapeMapping(String in,
       Map<String, String> headers) {
     return getEscapeMapping(in, headers, false, 0, 0);
   }
+
+  @VisibleForTesting
+  @Deprecated
   public static Map<String, String> getEscapeMapping(String in,
       Map<String, String> headers, boolean needRounding,
       int unit, int roundDown) {
@@ -404,6 +536,22 @@ public class BucketPath {
     }
     return mapping;
 
+  }
+
+  /*
+   * May not be called from outside unit tests.
+   */
+  @VisibleForTesting
+  public static void setClock(Clock clk) {
+    clock = clk;
+  }
+
+  /*
+   * May not be called from outside unit tests.
+   */
+  @VisibleForTesting
+  public static Clock getClock() {
+    return clock;
   }
 }
 

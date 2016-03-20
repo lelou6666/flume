@@ -37,12 +37,27 @@ public class TestFileChannelBase {
   protected File checkpointDir;
   protected File[] dataDirs;
   protected String dataDir;
+<<<<<<< HEAD
+=======
+  protected File backupDir;
+  protected File uncompressedBackupCheckpoint;
+  protected File compressedBackupCheckpoint;
+>>>>>>> refs/remotes/apache/trunk
 
   @Before
   public void setup() throws Exception {
     baseDir = Files.createTempDir();
     checkpointDir = new File(baseDir, "chkpt");
+<<<<<<< HEAD
     Assert.assertTrue(checkpointDir.mkdirs() || checkpointDir.isDirectory());
+=======
+    backupDir = new File(baseDir, "backup");
+    uncompressedBackupCheckpoint = new File(backupDir, "checkpoint");
+    compressedBackupCheckpoint = new File(backupDir,
+      "checkpoint.snappy");
+    Assert.assertTrue(checkpointDir.mkdirs() || checkpointDir.isDirectory());
+    Assert.assertTrue(backupDir.mkdirs() || backupDir.isDirectory());
+>>>>>>> refs/remotes/apache/trunk
     dataDirs = new File[3];
     dataDir = "";
     for (int i = 0; i < dataDirs.length; i++) {
@@ -68,7 +83,11 @@ public class TestFileChannelBase {
 
   protected Context createContext(Map<String, String> overrides) {
     return TestUtils.createFileChannelContext(checkpointDir.getAbsolutePath(),
+<<<<<<< HEAD
         dataDir, overrides);
+=======
+        dataDir, backupDir.getAbsolutePath(), overrides);
+>>>>>>> refs/remotes/apache/trunk
   }
 
   protected FileChannel createFileChannel() {
@@ -77,6 +96,10 @@ public class TestFileChannelBase {
 
   protected FileChannel createFileChannel(Map<String, String> overrides) {
     return TestUtils.createFileChannel(checkpointDir.getAbsolutePath(),
+<<<<<<< HEAD
         dataDir, overrides);
+=======
+        dataDir, backupDir.getAbsolutePath(), overrides);
+>>>>>>> refs/remotes/apache/trunk
   }
 }

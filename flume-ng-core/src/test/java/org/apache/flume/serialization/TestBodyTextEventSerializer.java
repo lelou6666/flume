@@ -57,6 +57,10 @@ public class TestBodyTextEventSerializer {
     Assert.assertEquals("event 2", reader.readLine());
     Assert.assertEquals("event 3", reader.readLine());
     Assert.assertNull(reader.readLine());
+<<<<<<< HEAD
+=======
+    reader.close();
+>>>>>>> refs/remotes/apache/trunk
 
     FileUtils.forceDelete(testFile);
   }
@@ -83,6 +87,10 @@ public class TestBodyTextEventSerializer {
     Assert.assertEquals("event 2", reader.readLine());
     Assert.assertEquals("event 3", reader.readLine());
     Assert.assertNull(reader.readLine());
+<<<<<<< HEAD
+=======
+    reader.close();
+>>>>>>> refs/remotes/apache/trunk
 
     FileUtils.forceDelete(testFile);
   }

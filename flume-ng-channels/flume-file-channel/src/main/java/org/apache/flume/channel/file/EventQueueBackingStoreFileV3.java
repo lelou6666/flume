@@ -38,9 +38,23 @@ final class EventQueueBackingStoreFileV3 extends EventQueueBackingStoreFile {
       .getLogger(EventQueueBackingStoreFileV3.class);
   private final File metaDataFile;
 
+<<<<<<< HEAD
   EventQueueBackingStoreFileV3(File checkpointFile, int capacity, String name)
       throws IOException, BadCheckpointException {
     super(capacity, name, checkpointFile);
+=======
+  EventQueueBackingStoreFileV3(File checkpointFile, int capacity,
+      String name) throws IOException, BadCheckpointException {
+    this(checkpointFile, capacity, name, null, false, false);
+  }
+
+  EventQueueBackingStoreFileV3(File checkpointFile, int capacity,
+      String name, File checkpointBackupDir,
+      boolean backupCheckpoint, boolean compressBackup)
+      throws IOException, BadCheckpointException {
+    super(capacity, name, checkpointFile, checkpointBackupDir, backupCheckpoint,
+      compressBackup);
+>>>>>>> refs/remotes/apache/trunk
     Preconditions.checkArgument(capacity > 0,
         "capacity must be greater than 0 " + capacity);
     metaDataFile = Serialization.getMetaDataFile(checkpointFile);
@@ -89,6 +103,14 @@ final class EventQueueBackingStoreFileV3 extends EventQueueBackingStoreFile {
         }
       }
     } else {
+<<<<<<< HEAD
+=======
+      if(backupExists(checkpointBackupDir) && shouldBackup) {
+        // If a backup exists, then throw an exception to recover checkpoint
+        throw new BadCheckpointException("The checkpoint metadata file does " +
+            "not exist, but a backup exists");
+      }
+>>>>>>> refs/remotes/apache/trunk
       ProtosFactory.Checkpoint.Builder checkpointBuilder =
           ProtosFactory.Checkpoint.newBuilder();
       checkpointBuilder.setVersion(getVersion());

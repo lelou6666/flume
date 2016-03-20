@@ -20,23 +20,40 @@
 package org.apache.flume.source;
 
 import org.apache.flume.Event;
+<<<<<<< HEAD
+=======
+import org.apache.flume.annotations.InterfaceAudience;
+import org.apache.flume.annotations.InterfaceStability;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.event.EventBuilder;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+<<<<<<< HEAD
+=======
+import java.util.Set;
+>>>>>>> refs/remotes/apache/trunk
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+<<<<<<< HEAD
+=======
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
+>>>>>>> refs/remotes/apache/trunk
 public class SyslogUtils {
   final public static String SYSLOG_TIMESTAMP_FORMAT_RFC5424_2 = "yyyy-MM-dd'T'HH:mm:ss.SZ";
   final public static String SYSLOG_TIMESTAMP_FORMAT_RFC5424_1 = "yyyy-MM-dd'T'HH:mm:ss.S";
@@ -45,24 +62,37 @@ public class SyslogUtils {
   final public static String SYSLOG_TIMESTAMP_FORMAT_RFC3164_1 = "yyyyMMM d HH:mm:ss";
 
   final public static String SYSLOG_MSG_RFC5424_0 =
+<<<<<<< HEAD
       "(?:\\d\\s)?" +// version
   // yyyy-MM-dd'T'HH:mm:ss.SZ or yyyy-MM-dd'T'HH:mm:ss.S+hh:mm or - (null stamp)
       "(?:(\\d{4}[-]\\d{2}[-]\\d{2}[T]\\d{2}[:]\\d{2}[:]\\d{2}(?:\\.\\d{1,6})?(?:[+-]\\d{2}[:]\\d{2}|Z)?)|-)" + // stamp
+=======
+      "(?:\\<(\\d{1,3})\\>)" + // priority
+      "(?:(\\d?)\\s?)" + // version
+      /* yyyy-MM-dd'T'HH:mm:ss.SZ or yyyy-MM-dd'T'HH:mm:ss.S+hh:mm or - (null stamp) */
+      "(?:" +
+        "(\\d{4}[-]\\d{2}[-]\\d{2}[T]\\d{2}[:]\\d{2}[:]\\d{2}" +
+        "(?:\\.\\d{1,6})?(?:[+-]\\d{2}[:]\\d{2}|Z)?)|-)" + // stamp
+>>>>>>> refs/remotes/apache/trunk
       "\\s" + // separator
-      "(?:([\\w][\\w\\d\\.@-]*)|-)" + // host name or - (null)
+      "(?:([\\w][\\w\\d\\.@\\-]*)|-)" + // host name or - (null)
       "\\s" + // separator
       "(.*)$"; // body
 
   final public static String SYSLOG_MSG_RFC3164_0 =
+      "(?:\\<(\\d{1,3})\\>)" +
+      "(?:(\\d)?\\s?)" + // version
       // stamp MMM d HH:mm:ss, single digit date has two spaces
       "([A-Z][a-z][a-z]\\s{1,2}\\d{1,2}\\s\\d{2}[:]\\d{2}[:]\\d{2})" +
       "\\s" + // separator
       "([\\w][\\w\\d\\.@-]*)" + // host
       "\\s(.*)$";  // body
 
-  final public static int SYSLOG_TIMESTAMP_POS = 1;
-  final public static int SYSLOG_HOSTNAME_POS = 2;
-  final public static int SYSLOG_BODY_POS = 3;
+  final public static int SYSLOG_PRIORITY_POS = 1;
+  final public static int SYSLOG_VERSION_POS = 2;
+  final public static int SYSLOG_TIMESTAMP_POS = 3;
+  final public static int SYSLOG_HOSTNAME_POS = 4;
+  final public static int SYSLOG_BODY_POS = 5;
 
   private Mode m = Mode.START;
   private StringBuilder prio = new StringBuilder();
@@ -72,6 +102,8 @@ public class SyslogUtils {
 
   final public static String SYSLOG_FACILITY = "Facility";
   final public static String SYSLOG_SEVERITY = "Severity";
+  final public static String SYSLOG_PRIORITY = "Priority";
+  final public static String SYSLOG_VERSION = "Version";
   final public static String EVENT_STATUS = "flume.syslog.status";
   final public static Integer MIN_SIZE = 10;
   final public static Integer DEFAULT_SIZE = 2500;
@@ -79,6 +111,7 @@ public class SyslogUtils {
   private boolean isBadEvent;
   private boolean isIncompleteEvent;
   private Integer maxSize;
+  private Set<String> keepFields;
 
   private class SyslogFormatter {
     public Pattern regexPattern;
@@ -89,24 +122,99 @@ public class SyslogUtils {
   }
   private ArrayList<SyslogFormatter> formats = new ArrayList<SyslogFormatter>();
 
+  private String priority = null;
+  private String version = null;
   private String timeStamp = null;
   private String hostName = null;
   private String msgBody = null;
+
+  private static final String[] DEFAULT_FIELDS_TO_KEEP = {
+    SyslogSourceConfigurationConstants.CONFIG_KEEP_FIELDS_PRIORITY,
+    SyslogSourceConfigurationConstants.CONFIG_KEEP_FIELDS_VERSION,
+    SyslogSourceConfigurationConstants.CONFIG_KEEP_FIELDS_TIMESTAMP,
+    SyslogSourceConfigurationConstants.CONFIG_KEEP_FIELDS_HOSTNAME
+  };
+  public static final String KEEP_FIELDS_ALL = "--all--";
+
+  public static boolean keepAllFields(Set<String> keepFields) {
+    if (keepFields == null) {
+      return false;
+    }
+    return keepFields.contains(KEEP_FIELDS_ALL);
+  }
+
+  public static Set<String> chooseFieldsToKeep(String keepFields) {
+    if (keepFields == null) {
+      return null;
+    }
+
+    keepFields = keepFields.trim().toLowerCase(Locale.ENGLISH);
+
+    if (keepFields.equals("false") || keepFields.equals("none")) {
+      return null;
+    }
+
+    if (keepFields.equals("true") || keepFields.equals("all")) {
+      Set<String> fieldsToKeep = new HashSet<String>(1);
+      fieldsToKeep.add(KEEP_FIELDS_ALL);
+      return fieldsToKeep;
+    }
+
+    Set<String> fieldsToKeep = new HashSet<String>(DEFAULT_FIELDS_TO_KEEP.length);
+
+    for (String field : DEFAULT_FIELDS_TO_KEEP) {
+      if (keepFields.indexOf(field) != -1) {
+        fieldsToKeep.add(field);
+      }
+    }
+
+    return fieldsToKeep;
+  }
+
+  public static String addFieldsToBody(Set<String> keepFields,
+                                       String body,
+                                       String priority,
+                                       String version,
+                                       String timestamp,
+                                       String hostname) {
+    // Prepend fields to be kept in message body.
+    if (keepFields != null) {
+      if (keepFields.contains(SyslogSourceConfigurationConstants.CONFIG_KEEP_FIELDS_HOSTNAME)) {
+        body = hostname + " " + body;
+      }
+      if (keepFields.contains(SyslogSourceConfigurationConstants.CONFIG_KEEP_FIELDS_TIMESTAMP)) {
+        body = timestamp + " " + body;
+      }
+      if (keepFields.contains(SyslogSourceConfigurationConstants.CONFIG_KEEP_FIELDS_VERSION)) {
+        if (version != null && !version.isEmpty()) {
+          body = version + " " + body;
+        }
+      }
+      if (keepFields.contains(SyslogSourceConfigurationConstants.CONFIG_KEEP_FIELDS_PRIORITY)) {
+        body = "<" + priority + ">" + body;
+      }
+    }
+
+    return body;
+  }
 
   public SyslogUtils() {
     this(false);
   }
 
   public SyslogUtils(boolean isUdp) {
-    this(DEFAULT_SIZE, isUdp);
+    this(DEFAULT_SIZE,
+        new HashSet<String>(Arrays.asList(SyslogSourceConfigurationConstants.DEFAULT_KEEP_FIELDS)),
+        isUdp);
   }
 
-  public SyslogUtils(Integer eventSize, boolean isUdp){
+  public SyslogUtils(Integer eventSize, Set<String> keepFields, boolean isUdp) {
     this.isUdp = isUdp;
     isBadEvent = false;
     isIncompleteEvent = false;
     maxSize = (eventSize < MIN_SIZE) ? MIN_SIZE : eventSize;
     baos = new ByteArrayOutputStream(eventSize);
+    this.keepFields = keepFields;
     initHeaderFormats();
   }
 
@@ -148,10 +256,13 @@ public class SyslogUtils {
     // timezone in RFC5424 is [+-]tt:tt, so remove the ':' for java date formatting
     fmt1.searchPattern.add("([+-])(\\d{2})[:](\\d{2})");
     fmt1.replacePattern.add("$1$2$3");
-    fmt1.dateFormat.add(new SimpleDateFormat(SYSLOG_TIMESTAMP_FORMAT_RFC5424_1));
-    fmt1.dateFormat.add(new SimpleDateFormat(SYSLOG_TIMESTAMP_FORMAT_RFC5424_2));
-    fmt1.dateFormat.add(new SimpleDateFormat(SYSLOG_TIMESTAMP_FORMAT_RFC5424_3));
-    fmt1.dateFormat.add(new SimpleDateFormat(SYSLOG_TIMESTAMP_FORMAT_RFC5424_4));
+    // FLUME-2497: SimpleDateFormat does not handle microseconds, Truncate after 3 digits.
+    fmt1.searchPattern.add("(T\\d{2}:\\d{2}:\\d{2}\\.\\d{3})(\\d*)");
+    fmt1.replacePattern.add("$1");
+    fmt1.dateFormat.add(new SimpleDateFormat(SYSLOG_TIMESTAMP_FORMAT_RFC5424_1, Locale.ENGLISH));
+    fmt1.dateFormat.add(new SimpleDateFormat(SYSLOG_TIMESTAMP_FORMAT_RFC5424_2, Locale.ENGLISH));
+    fmt1.dateFormat.add(new SimpleDateFormat(SYSLOG_TIMESTAMP_FORMAT_RFC5424_3, Locale.ENGLISH));
+    fmt1.dateFormat.add(new SimpleDateFormat(SYSLOG_TIMESTAMP_FORMAT_RFC5424_4, Locale.ENGLISH));
     fmt1.addYear = false;
 
     // setup RFC3164 formater
@@ -160,7 +271,7 @@ public class SyslogUtils {
     // the single digit date has two spaces, so trim it
     fmt2.searchPattern.add("  ");
     fmt2.replacePattern.add(" ");
-    fmt2.dateFormat.add(new SimpleDateFormat(SYSLOG_TIMESTAMP_FORMAT_RFC3164_1));
+    fmt2.dateFormat.add(new SimpleDateFormat(SYSLOG_TIMESTAMP_FORMAT_RFC3164_1, Locale.ENGLISH));
     fmt2.addYear = true;
 
     formats.add(fmt1);
@@ -189,6 +300,7 @@ public class SyslogUtils {
 
   // create the event from syslog data
   Event buildEvent() {
+<<<<<<< HEAD
     byte[] body;
     int pri = 0;
     int sev = 0;
@@ -200,38 +312,70 @@ public class SyslogUtils {
       facility = pri / 8;
       formatHeaders();
     }
+=======
+    try {
+      byte[] body;
+      int pri = 0;
+      int sev = 0;
+      int facility = 0;
 
-    Map <String, String> headers = new HashMap<String, String>();
-    headers.put(SYSLOG_FACILITY, String.valueOf(facility));
-    headers.put(SYSLOG_SEVERITY, String.valueOf(sev));
-    if ((timeStamp != null) && timeStamp.length() > 0) {
-      headers.put("timestamp", timeStamp);
-    }
-    if ((hostName != null) && (hostName.length() > 0)) {
-      headers.put("host", hostName);
-    }
-    if(isBadEvent){
-      logger.warn("Event created from Invalid Syslog data.");
-      headers.put(EVENT_STATUS, SyslogStatus.INVALID.getSyslogStatus());
-    } else if(isIncompleteEvent){
-      logger.warn("Event size larger than specified event size: {}. You should " +
-          "consider increasing your event size.", maxSize);
-      headers.put(EVENT_STATUS, SyslogStatus.INCOMPLETE.getSyslogStatus());
-    }
+      if(!isBadEvent){
+        pri = Integer.parseInt(prio.toString());
+        sev = pri % 8;
+        facility = pri / 8;
+        formatHeaders();
+      }
+>>>>>>> refs/remotes/apache/trunk
 
-    if ((msgBody != null) && (msgBody.length() > 0)) {
-      body = msgBody.getBytes();
-    } else {
-      body = baos.toByteArray();
+      Map <String, String> headers = new HashMap<String, String>();
+      headers.put(SYSLOG_FACILITY, String.valueOf(facility));
+      headers.put(SYSLOG_SEVERITY, String.valueOf(sev));
+      if ((priority != null) && (priority.length() > 0)) {
+        headers.put("priority", priority);
+      }
+      if ((version != null) && (version.length() > 0)) {
+        headers.put("version", version);
+      }
+      if ((timeStamp != null) && timeStamp.length() > 0) {
+        headers.put("timestamp", timeStamp);
+      }
+      if ((hostName != null) && (hostName.length() > 0)) {
+        headers.put("host", hostName);
+      }
+      if(isBadEvent){
+        logger.warn("Event created from Invalid Syslog data.");
+        headers.put(EVENT_STATUS, SyslogStatus.INVALID.getSyslogStatus());
+      } else if(isIncompleteEvent){
+        logger.warn("Event size larger than specified event size: {}. You should " +
+            "consider increasing your event size.", maxSize);
+        headers.put(EVENT_STATUS, SyslogStatus.INCOMPLETE.getSyslogStatus());
+      }
+
+      if (!keepAllFields(keepFields)) {
+        if ((msgBody != null) && (msgBody.length() > 0)) {
+          body = msgBody.getBytes();
+        } else {
+          // Parse failed.
+          body = baos.toByteArray();
+        }
+      } else {
+        body = baos.toByteArray();
+      }
+      // format the message
+      return EventBuilder.withBody(body, headers);
+    } finally {
+      reset();
     }
-    reset();
-    // format the message
-    return EventBuilder.withBody(body, headers);
   }
 
   // Apply each known pattern to message
   private void formatHeaders() {
     String eventStr = baos.toString();
+<<<<<<< HEAD
+=======
+    String timeStampString = null;
+
+>>>>>>> refs/remotes/apache/trunk
     for(int p=0; p < formats.size(); p++) {
       SyslogFormatter fmt = formats.get(p);
       Pattern pattern = fmt.regexPattern;
@@ -243,6 +387,8 @@ public class SyslogUtils {
       for (int grp=1; grp <= res.groupCount(); grp++) {
         String value = res.group(grp);
         if (grp == SYSLOG_TIMESTAMP_POS) {
+          timeStampString = value;
+
           // apply available format replacements to timestamp
           if (value != null) {
             for (int sp=0; sp < fmt.searchPattern.size(); sp++) {
@@ -265,8 +411,12 @@ public class SyslogUtils {
           }
         } else if (grp == SYSLOG_HOSTNAME_POS) {
           hostName = value;
+        } else if (grp == SYSLOG_PRIORITY_POS) {
+          priority = value;
+        } else if (grp == SYSLOG_VERSION_POS) {
+          version = value;
         } else if (grp == SYSLOG_BODY_POS) {
-          msgBody = value;
+          msgBody = addFieldsToBody(keepFields, value, priority, version, timeStampString, hostName);
         }
       }
       break; // we successfully parsed the message using this pattern
@@ -305,14 +455,15 @@ public class SyslogUtils {
         switch (m) {
         case START:
           if (b == '<') {
+            baos.write(b);
             m = Mode.PRIO;
           } else if(b == '\n'){
-          //If the character is \n, it was because the last event was exactly
-          //as long  as the maximum size allowed and
-          //the only remaining character was the delimiter - '\n', or
-          //multiple delimiters were sent in a row.
-          //Just ignore it, and move forward, don't change the mode.
-          //This is a no-op, just ignore it.
+            //If the character is \n, it was because the last event was exactly
+            //as long  as the maximum size allowed and
+            //the only remaining character was the delimiter - '\n', or
+            //multiple delimiters were sent in a row.
+            //Just ignore it, and move forward, don't change the mode.
+            //This is a no-op, just ignore it.
             logger.debug("Delimiter found while in START mode, ignoring..");
 
           } else {
@@ -323,16 +474,21 @@ public class SyslogUtils {
           }
           break;
         case PRIO:
+          baos.write(b);
           if (b == '>') {
+            if (prio.length() == 0) {
+              isBadEvent = true;
+            }
             m = Mode.DATA;
           } else {
             char ch = (char) b;
             prio.append(ch);
-            if (!Character.isDigit(ch)) {
+            // Priority is max 3 digits per both RFC 3164 and 5424
+            // With this check there is basically no danger of
+            // boas.size() exceeding this.maxSize before getting to the
+            // DATA state where this is actually checked
+            if (!Character.isDigit(ch) || prio.length() > 3) {
               isBadEvent = true;
-              //Append the priority to baos:
-              String badPrio = "<"+ prio;
-              baos.write(badPrio.getBytes());
               //If we hit a bad priority, just write as if everything is data.
               m = Mode.DATA;
             }
@@ -346,7 +502,7 @@ public class SyslogUtils {
           } else {
             baos.write(b);
           }
-          if(baos.size() == this.maxSize && !doneReading){
+          if(baos.size() == this.maxSize && !doneReading) {
             isIncompleteEvent = true;
             e = buildEvent();
             doneReading = true;
@@ -361,10 +517,6 @@ public class SyslogUtils {
         doneReading = true;
         e = buildEvent();
       }
-    //} catch (IndexOutOfBoundsException eF) {
-    //    e = buildEvent(prio, baos);
-    } catch (IOException e1) {
-      //no op
     } finally {
       // no-op
     }
@@ -380,4 +532,9 @@ public class SyslogUtils {
     this.maxSize = eventSize;
   }
 
+  public void setKeepFields(Set<String> keepFields) {
+    this.keepFields = keepFields;
+  }
 }
+
+

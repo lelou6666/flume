@@ -17,12 +17,16 @@
  */
 package org.apache.flume.source.http;
 
+<<<<<<< HEAD
 import static org.fest.reflect.core.Reflection.*;
 
+=======
+>>>>>>> refs/remotes/apache/trunk
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+<<<<<<< HEAD
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -36,13 +40,25 @@ import org.apache.flume.ChannelSelector;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.Transaction;
+=======
+import junit.framework.Assert;
+import org.apache.flume.*;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.channel.ChannelProcessor;
 import org.apache.flume.channel.MemoryChannel;
 import org.apache.flume.channel.ReplicatingChannelSelector;
 import org.apache.flume.conf.Configurables;
 import org.apache.flume.event.JSONEvent;
 import org.apache.http.HttpResponse;
+<<<<<<< HEAD
 import org.apache.http.client.methods.HttpPost;
+=======
+import org.apache.http.client.methods.HttpOptions;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.methods.HttpTrace;
+import org.apache.http.conn.ssl.SSLSocketFactory;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.AfterClass;
@@ -50,12 +66,30 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+<<<<<<< HEAD
+=======
+import javax.net.ssl.*;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.net.*;
+import java.security.SecureRandom;
+import java.security.cert.CertificateException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
+import static org.fest.reflect.core.Reflection.field;
+
+>>>>>>> refs/remotes/apache/trunk
 /**
  *
  */
 public class TestHTTPSource {
 
   private static HTTPSource source;
+<<<<<<< HEAD
   private static Channel channel;
   private int selectedPort;
   DefaultHttpClient httpClient;
@@ -66,6 +100,34 @@ public class TestHTTPSource {
     source = new HTTPSource();
     channel = new MemoryChannel();
 
+=======
+  private static HTTPSource httpsSource;
+//  private static Channel httpsChannel;
+
+  private static Channel channel;
+  private static int selectedPort;
+  private static int sslPort;
+  DefaultHttpClient httpClient;
+  HttpPost postRequest;
+
+  private static int findFreePort() throws IOException {
+    ServerSocket socket = new ServerSocket(0);
+    int port = socket.getLocalPort();
+    socket.close();
+    return port;
+  }
+
+  @BeforeClass
+  public static void setUpClass() throws Exception {
+    selectedPort = findFreePort();
+
+    source = new HTTPSource();
+    channel = new MemoryChannel();
+
+    httpsSource = new HTTPSource();
+    httpsSource.setName("HTTPS Source");
+
+>>>>>>> refs/remotes/apache/trunk
     Context ctx = new Context();
     ctx.put("capacity", "100");
     Configurables.configure(channel, ctx);
@@ -79,24 +141,57 @@ public class TestHTTPSource {
     source.setChannelProcessor(new ChannelProcessor(rcs));
 
     channel.start();
+<<<<<<< HEAD
     Context context = new Context();
 
     context.put("port", String.valueOf(41404));
 
     Configurables.configure(source, context);
     source.start();
+=======
+
+    httpsSource.setChannelProcessor(new ChannelProcessor(rcs));
+
+    // HTTP context
+    Context context = new Context();
+
+    context.put("port", String.valueOf(selectedPort));
+    context.put("host", "0.0.0.0");
+
+    // SSL context props
+    Context sslContext = new Context();
+    sslContext.put(HTTPSourceConfigurationConstants.SSL_ENABLED, "true");
+    sslPort = findFreePort();
+    sslContext.put(HTTPSourceConfigurationConstants.CONFIG_PORT,
+      String.valueOf(sslPort));
+    sslContext.put(HTTPSourceConfigurationConstants.SSL_KEYSTORE_PASSWORD, "password");
+    sslContext.put(HTTPSourceConfigurationConstants.SSL_KEYSTORE, "src/test/resources/jettykeystore");
+
+    Configurables.configure(source, context);
+    Configurables.configure(httpsSource, sslContext);
+    source.start();
+    httpsSource.start();
+>>>>>>> refs/remotes/apache/trunk
   }
 
   @AfterClass
   public static void tearDownClass() throws Exception {
     source.stop();
     channel.stop();
+<<<<<<< HEAD
+=======
+    httpsSource.stop();
+>>>>>>> refs/remotes/apache/trunk
   }
 
   @Before
   public void setUp() {
     httpClient = new DefaultHttpClient();
+<<<<<<< HEAD
     postRequest = new HttpPost("http://0.0.0.0:41404");
+=======
+    postRequest = new HttpPost("http://0.0.0.0:" + selectedPort);
+>>>>>>> refs/remotes/apache/trunk
   }
 
   @Test
@@ -129,6 +224,26 @@ public class TestHTTPSource {
   }
 
   @Test
+<<<<<<< HEAD
+=======
+  public void testTrace() throws Exception {
+    doTestForbidden(new HttpTrace("http://0.0.0.0:" + selectedPort));
+  }
+
+  @Test
+  public void testOptions() throws Exception {
+    doTestForbidden(new HttpOptions("http://0.0.0.0:" + selectedPort));
+  }
+
+
+  private void doTestForbidden(HttpRequestBase request) throws Exception {
+    HttpResponse response = httpClient.execute(request);
+    Assert.assertEquals(HttpServletResponse.SC_FORBIDDEN,
+      response.getStatusLine().getStatusCode());
+  }
+
+  @Test
+>>>>>>> refs/remotes/apache/trunk
   public void testSimpleUTF16() throws IOException, InterruptedException {
 
     StringEntity input = new StringEntity("[{\"headers\":{\"a\": \"b\"},\"body\": \"random_body\"},"
@@ -256,6 +371,144 @@ public class TestHTTPSource {
     return new ResultWrapper(resp, events);
   }
 
+<<<<<<< HEAD
+=======
+  @Test
+  public void testHttps() throws Exception {
+    doTestHttps(null);
+  }
+
+  @Test (expected = javax.net.ssl.SSLHandshakeException.class)
+  public void testHttpsSSLv3() throws Exception {
+    doTestHttps("SSLv3");
+  }
+
+  public void doTestHttps(String protocol) throws Exception {
+    Type listType = new TypeToken<List<JSONEvent>>() {
+    }.getType();
+    List<JSONEvent> events = Lists.newArrayList();
+    Random rand = new Random();
+    for (int i = 0; i < 10; i++) {
+      Map<String, String> input = Maps.newHashMap();
+      for (int j = 0; j < 10; j++) {
+        input.put(String.valueOf(i) + String.valueOf(j), String.valueOf(i));
+      }
+      input.put("MsgNum", String.valueOf(i));
+      JSONEvent e = new JSONEvent();
+      e.setHeaders(input);
+      e.setBody(String.valueOf(rand.nextGaussian()).getBytes("UTF-8"));
+      events.add(e);
+    }
+    Gson gson = new Gson();
+    String json = gson.toJson(events, listType);
+    HttpsURLConnection httpsURLConnection = null;
+    try {
+      TrustManager[] trustAllCerts = {new X509TrustManager() {
+        @Override
+        public void checkClientTrusted(
+          java.security.cert.X509Certificate[] x509Certificates, String s)
+          throws CertificateException {
+          // noop
+        }
+
+        @Override
+        public void checkServerTrusted(
+          java.security.cert.X509Certificate[] x509Certificates, String s)
+          throws CertificateException {
+          // noop
+        }
+
+        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+          return null;
+        }
+      }};
+
+      SSLContext sc = null;
+      javax.net.ssl.SSLSocketFactory factory = null;
+      if (System.getProperty("java.vendor").contains("IBM")) {
+        sc = SSLContext.getInstance("SSL_TLS");
+      } else {
+        sc = SSLContext.getInstance("SSL");
+      }
+
+      HostnameVerifier hv = new HostnameVerifier() {
+        public boolean verify(String arg0, SSLSession arg1) {
+          return true;
+        }
+      };
+      sc.init(null, trustAllCerts, new SecureRandom());
+
+      if(protocol != null) {
+        factory = new DisabledProtocolsSocketFactory(sc.getSocketFactory(), protocol);
+      } else {
+        factory = sc.getSocketFactory();
+      }
+      HttpsURLConnection.setDefaultSSLSocketFactory(factory);
+      HttpsURLConnection.setDefaultHostnameVerifier(
+        SSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+      URL sslUrl = new URL("https://0.0.0.0:" + sslPort);
+      httpsURLConnection = (HttpsURLConnection) sslUrl.openConnection();
+      httpsURLConnection.setDoInput(true);
+      httpsURLConnection.setDoOutput(true);
+      httpsURLConnection.setRequestMethod("POST");
+      httpsURLConnection.getOutputStream().write(json.getBytes());
+
+      int statusCode = httpsURLConnection.getResponseCode();
+      Assert.assertEquals(200, statusCode);
+
+      Transaction transaction = channel.getTransaction();
+      transaction.begin();
+      for(int i = 0; i < 10; i++) {
+        Event e = channel.take();
+        Assert.assertNotNull(e);
+        Assert.assertEquals(String.valueOf(i), e.getHeaders().get("MsgNum"));
+      }
+
+    transaction.commit();
+    transaction.close();
+    } finally {
+      httpsURLConnection.disconnect();
+    }
+  }
+
+  @Test
+  public void testHttpsSourceNonHttpsClient() throws Exception {
+    Type listType = new TypeToken<List<JSONEvent>>() {
+    }.getType();
+    List<JSONEvent> events = Lists.newArrayList();
+    Random rand = new Random();
+    for (int i = 0; i < 10; i++) {
+        Map<String, String> input = Maps.newHashMap();
+        for (int j = 0; j < 10; j++) {
+            input.put(String.valueOf(i) + String.valueOf(j), String.valueOf(i));
+        }
+        input.put("MsgNum", String.valueOf(i));
+        JSONEvent e = new JSONEvent();
+        e.setHeaders(input);
+        e.setBody(String.valueOf(rand.nextGaussian()).getBytes("UTF-8"));
+        events.add(e);
+    }
+    Gson gson = new Gson();
+    String json = gson.toJson(events, listType);
+    HttpURLConnection httpURLConnection = null;
+    try {
+        URL url = new URL("http://0.0.0.0:" + sslPort);
+        httpURLConnection = (HttpURLConnection) url.openConnection();
+        httpURLConnection.setDoInput(true);
+        httpURLConnection.setDoOutput(true);
+        httpURLConnection.setRequestMethod("POST");
+        httpURLConnection.getOutputStream().write(json.getBytes());
+        httpURLConnection.getResponseCode();
+
+        Assert.fail("HTTP Client cannot connect to HTTPS source");
+    } catch (Exception exception) {
+        Assert.assertTrue("Exception expected", true);
+    } finally {
+        httpURLConnection.disconnect();
+    }
+  }
+
+>>>>>>> refs/remotes/apache/trunk
   private void takeWithEncoding(String encoding, int n, List<JSONEvent> events)
           throws Exception{
     Transaction tx = channel.getTransaction();
@@ -295,4 +548,71 @@ public class TestHTTPSource {
       this.events = events;
     }
   }
+<<<<<<< HEAD
+=======
+
+  private class DisabledProtocolsSocketFactory extends javax.net.ssl.SSLSocketFactory {
+
+    private final javax.net.ssl.SSLSocketFactory socketFactory;
+    private final String[] protocols;
+
+    DisabledProtocolsSocketFactory(javax.net.ssl.SSLSocketFactory factory, String protocol) {
+      this.socketFactory = factory;
+      protocols = new String[1];
+      protocols[0] = protocol;
+    }
+
+    @Override
+    public String[] getDefaultCipherSuites() {
+      return socketFactory.getDefaultCipherSuites();
+    }
+
+    @Override
+    public String[] getSupportedCipherSuites() {
+      return socketFactory.getSupportedCipherSuites();
+    }
+
+    @Override
+    public Socket createSocket(Socket socket, String s, int i, boolean b)
+      throws IOException {
+      SSLSocket sc = (SSLSocket) socketFactory.createSocket(socket, s, i, b);
+      sc.setEnabledProtocols(protocols);
+      return sc;
+    }
+
+    @Override
+    public Socket createSocket(String s, int i)
+      throws IOException, UnknownHostException {
+      SSLSocket sc = (SSLSocket)socketFactory.createSocket(s, i);
+      sc.setEnabledProtocols(protocols);
+      return sc;
+    }
+
+    @Override
+    public Socket createSocket(String s, int i, InetAddress inetAddress, int i2)
+      throws IOException, UnknownHostException {
+      SSLSocket sc = (SSLSocket)socketFactory.createSocket(s, i, inetAddress,
+        i2);
+      sc.setEnabledProtocols(protocols);
+      return sc;
+    }
+
+    @Override
+    public Socket createSocket(InetAddress inetAddress, int i)
+      throws IOException {
+      SSLSocket sc = (SSLSocket)socketFactory.createSocket(inetAddress, i);
+      sc.setEnabledProtocols(protocols);
+      return sc;
+    }
+
+    @Override
+    public Socket createSocket(InetAddress inetAddress, int i,
+      InetAddress inetAddress2, int i2) throws IOException {
+      SSLSocket sc = (SSLSocket)socketFactory.createSocket(inetAddress, i,
+        inetAddress2, i2);
+      sc.setEnabledProtocols(protocols);
+      return sc;
+    }
+  }
+>>>>>>> refs/remotes/apache/trunk
 }

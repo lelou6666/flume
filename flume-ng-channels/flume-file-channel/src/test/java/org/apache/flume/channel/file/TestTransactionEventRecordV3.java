@@ -53,7 +53,11 @@ public class TestTransactionEventRecordV3 {
         commit.getRecordType());
   }
   @Test
+<<<<<<< HEAD
   public void testPutSerialization() throws IOException {
+=======
+  public void testPutSerialization() throws IOException, CorruptEventException {
+>>>>>>> refs/remotes/apache/trunk
     Map<String, String> headers = new HashMap<String, String>();
     headers.put("key", "value");
     Put in = new Put(System.currentTimeMillis(),
@@ -70,7 +74,12 @@ public class TestTransactionEventRecordV3 {
     Assert.assertTrue(Arrays.equals(in.getEvent().getBody(), out.getEvent().getBody()));
   }
   @Test
+<<<<<<< HEAD
   public void testPutSerializationNullHeader() throws IOException {
+=======
+  public void testPutSerializationNullHeader() throws IOException,
+    CorruptEventException {
+>>>>>>> refs/remotes/apache/trunk
     Put in = new Put(System.currentTimeMillis(),
         WriteOrderOracle.next(),
         new FlumeEvent(null, new byte[0]));
@@ -84,7 +93,12 @@ public class TestTransactionEventRecordV3 {
     Assert.assertTrue(Arrays.equals(in.getEvent().getBody(), out.getEvent().getBody()));
   }
   @Test
+<<<<<<< HEAD
   public void testTakeSerialization() throws IOException {
+=======
+  public void testTakeSerialization() throws IOException,
+    CorruptEventException {
+>>>>>>> refs/remotes/apache/trunk
     Take in = new Take(System.currentTimeMillis(),
         WriteOrderOracle.next(), 10, 20);
     Take out = (Take)TransactionEventRecord.fromByteArray(toByteArray(in));
@@ -97,7 +111,12 @@ public class TestTransactionEventRecordV3 {
   }
 
   @Test
+<<<<<<< HEAD
   public void testRollbackSerialization() throws IOException {
+=======
+  public void testRollbackSerialization() throws IOException,
+    CorruptEventException {
+>>>>>>> refs/remotes/apache/trunk
     Rollback in = new Rollback(System.currentTimeMillis(),
         WriteOrderOracle.next());
     Rollback out = (Rollback)TransactionEventRecord.fromByteArray(toByteArray(in));
@@ -108,7 +127,12 @@ public class TestTransactionEventRecordV3 {
   }
 
   @Test
+<<<<<<< HEAD
   public void testCommitSerialization() throws IOException {
+=======
+  public void testCommitSerialization() throws IOException,
+    CorruptEventException {
+>>>>>>> refs/remotes/apache/trunk
     Commit in = new Commit(System.currentTimeMillis(),
         WriteOrderOracle.next());
     Commit out = (Commit)TransactionEventRecord.fromByteArray(toByteArray(in));
@@ -119,7 +143,11 @@ public class TestTransactionEventRecordV3 {
   }
 
   @Test
+<<<<<<< HEAD
   public void testBadType() throws IOException {
+=======
+  public void testBadType() throws IOException, CorruptEventException {
+>>>>>>> refs/remotes/apache/trunk
     TransactionEventRecord in = mock(TransactionEventRecord.class);
     when(in.getRecordType()).thenReturn(Short.MIN_VALUE);
     try {

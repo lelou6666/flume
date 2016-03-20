@@ -19,8 +19,16 @@
 
 package org.apache.flume.client.avro;
 
+<<<<<<< HEAD
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+=======
+import static org.apache.flume.client.avro.TestSpoolingFileLineReader.bodyAsString;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.apache.flume.client.avro.TestSpoolingFileLineReader
+    .bodiesAsStrings;
+>>>>>>> refs/remotes/apache/trunk
 
 import java.io.File;
 import java.io.FileReader;
@@ -57,6 +65,7 @@ public class TestBufferedLineReader {
                 "file1line5\nfile1line6\nfile1line7\nfile1line8\n",
                 f1, Charsets.UTF_8);
 
+<<<<<<< HEAD
     BufferedLineReader reader = new BufferedLineReader(new FileReader(f1));
 
     assertEquals("file1line1", reader.readLine());
@@ -68,6 +77,19 @@ public class TestBufferedLineReader {
     assertEquals("file1line7", reader.readLine());
     assertEquals("file1line8", reader.readLine());
     assertEquals(null, reader.readLine());
+=======
+    SimpleTextLineEventReader reader = new SimpleTextLineEventReader(new FileReader(f1));
+
+    assertEquals("file1line1", bodyAsString(reader.readEvent()));
+    assertEquals("file1line2", bodyAsString(reader.readEvent()));
+    assertEquals("file1line3", bodyAsString(reader.readEvent()));
+    assertEquals("file1line4", bodyAsString(reader.readEvent()));
+    assertEquals("file1line5", bodyAsString(reader.readEvent()));
+    assertEquals("file1line6", bodyAsString(reader.readEvent()));
+    assertEquals("file1line7", bodyAsString(reader.readEvent()));
+    assertEquals("file1line8", bodyAsString(reader.readEvent()));
+    assertEquals(null, reader.readEvent());
+>>>>>>> refs/remotes/apache/trunk
   }
 
   @Test
@@ -77,9 +99,15 @@ public class TestBufferedLineReader {
                 "file1line5\nfile1line6\nfile1line7\nfile1line8\n",
                 f1, Charsets.UTF_8);
 
+<<<<<<< HEAD
     BufferedLineReader reader = new BufferedLineReader(new FileReader(f1));
 
     List<String> out = reader.readLines(5);
+=======
+    SimpleTextLineEventReader reader = new SimpleTextLineEventReader(new FileReader(f1));
+
+    List<String> out = bodiesAsStrings(reader.readEvents(5));
+>>>>>>> refs/remotes/apache/trunk
 
     // Make sure we got every line
     assertEquals(5, out.size());
@@ -97,9 +125,15 @@ public class TestBufferedLineReader {
                 "file1line5\nfile1line6\nfile1line7\nfile1line8\n",
                 f1, Charsets.UTF_8);
 
+<<<<<<< HEAD
     BufferedLineReader reader = new BufferedLineReader(new FileReader(f1));
 
     List<String> out = reader.readLines(10);
+=======
+    SimpleTextLineEventReader reader = new SimpleTextLineEventReader(new FileReader(f1));
+
+    List<String> out = bodiesAsStrings(reader.readEvents(10));
+>>>>>>> refs/remotes/apache/trunk
 
     // Make sure we got exactly 8 lines
     assertEquals(8, out.size());

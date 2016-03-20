@@ -29,8 +29,15 @@ import java.io.OutputStream;
 import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
 
+<<<<<<< HEAD
 import org.apache.flume.channel.file.proto.ProtosFactory;
 import org.apache.hadoop.io.Writable;
+=======
+import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.flume.annotations.InterfaceAudience;
+import org.apache.flume.annotations.InterfaceStability;
+import org.apache.flume.channel.file.proto.ProtosFactory;
+>>>>>>> refs/remotes/apache/trunk
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +48,13 @@ import com.google.common.collect.ImmutableMap;
 /**
  * Base class for records in data file: Put, Take, Rollback, Commit
  */
+<<<<<<< HEAD
 abstract class TransactionEventRecord implements Writable {
+=======
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+public abstract class TransactionEventRecord implements Writable {
+>>>>>>> refs/remotes/apache/trunk
   private static final Logger LOG = LoggerFactory
       .getLogger(TransactionEventRecord.class);
   private final long transactionID;
@@ -63,7 +76,11 @@ abstract class TransactionEventRecord implements Writable {
 
   abstract void writeProtos(OutputStream out) throws IOException;
 
+<<<<<<< HEAD
   abstract void readProtos(InputStream in) throws IOException;
+=======
+  abstract void readProtos(InputStream in) throws IOException, CorruptEventException;
+>>>>>>> refs/remotes/apache/trunk
 
   long getLogWriteOrderID() {
     return logWriteOrderID;
@@ -187,7 +204,11 @@ abstract class TransactionEventRecord implements Writable {
 
 
   static TransactionEventRecord fromByteArray(byte[] buffer)
+<<<<<<< HEAD
       throws IOException {
+=======
+      throws IOException, CorruptEventException {
+>>>>>>> refs/remotes/apache/trunk
     ByteArrayInputStream in = new ByteArrayInputStream(buffer);
     try {
       ProtosFactory.TransactionEventHeader header = Preconditions.
@@ -204,6 +225,12 @@ abstract class TransactionEventRecord implements Writable {
           ProtosFactory.TransactionEventFooter.
           parseDelimitedFrom(in), "Footer cannot be null");
       return transactionEvent;
+<<<<<<< HEAD
+=======
+    } catch (InvalidProtocolBufferException ex) {
+      throw new CorruptEventException(
+        "Could not parse event from data file.", ex);
+>>>>>>> refs/remotes/apache/trunk
     } finally {
       try {
         in.close();

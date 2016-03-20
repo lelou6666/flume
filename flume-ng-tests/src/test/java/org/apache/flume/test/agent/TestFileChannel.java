@@ -122,18 +122,24 @@ public class TestFileChannel {
    public void testInOut() throws Exception {
       LOGGER.debug("testInOut() started.");
 
+<<<<<<< HEAD
       /* Find hadoop jar and append it to the flume agent's classpath */
 
       String hadoopJarPath = findHadoopJar();
       Assert.assertNotNull("Hadoop jar not found in classpath.",
               hadoopJarPath);
       StagedInstall.getInstance().setAgentClasspath(hadoopJarPath);
+=======
+>>>>>>> refs/remotes/apache/trunk
       StagedInstall.getInstance().startAgent("a1", agentProps);
       TimeUnit.SECONDS.sleep(10); // Wait for source and sink to finish
                                   // TODO make this more deterministic
 
+<<<<<<< HEAD
       LOGGER.info("Started flume agent with hadoop in classpath");
 
+=======
+>>>>>>> refs/remotes/apache/trunk
       /* Create expected output */
 
       StringBuffer sb = new StringBuffer();
@@ -161,6 +167,7 @@ public class TestFileChannel {
       LOGGER.debug("testInOut() ended.");
   }
 
+<<<<<<< HEAD
   /**
    * Search for and return the first path element found that includes hadoop.
    * We search the class path of the current JVM process to grab the same
@@ -194,4 +201,6 @@ public class TestFileChannel {
       return null;
   }
 
+=======
+>>>>>>> refs/remotes/apache/trunk
 }

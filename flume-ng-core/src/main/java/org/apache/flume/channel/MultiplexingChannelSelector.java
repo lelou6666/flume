@@ -18,7 +18,6 @@
  */
 package org.apache.flume.channel;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -86,17 +85,10 @@ public class MultiplexingChannelSelector extends AbstractChannelSelector {
     this.headerName = context.getString(CONFIG_MULTIPLEX_HEADER_NAME,
         DEFAULT_MULTIPLEX_HEADER);
 
-    Map<String, Channel> channelNameMap = new HashMap<String, Channel>();
-    for (Channel ch : getAllChannels()) {
-      channelNameMap.put(ch.getName(), ch);
-    }
+    Map<String, Channel> channelNameMap = getChannelNameMap();
 
     defaultChannels = getChannelListFromNames(
         context.getString(CONFIG_DEFAULT_CHANNEL), channelNameMap);
-
-    if(defaultChannels.isEmpty()){
-      throw new FlumeException("Default channel list empty");
-    }
 
     Map<String, String> mapConfig =
         context.getSubProperties(CONFIG_PREFIX_MAPPING);
@@ -133,6 +125,25 @@ public class MultiplexingChannelSelector extends AbstractChannelSelector {
       }
       //Remove channels from optional channels, which are already
       //configured to be required channels.
+<<<<<<< HEAD
+
+      List<Channel> reqdChannels = channelMapping.get(hdr);
+      //Check if there are required channels, else defaults to default channels
+      if(reqdChannels == null || reqdChannels.isEmpty()) {
+        reqdChannels = defaultChannels;
+      }
+      for (Channel c : reqdChannels) {
+        if (confChannels.contains(c)) {
+          confChannels.remove(c);
+        }
+      }
+
+      if (optionalChannels.put(hdr, confChannels) != null) {
+        throw new FlumeException("Selector channel configured twice");
+      }
+    }
+=======
+>>>>>>> refs/remotes/apache/trunk
 
       List<Channel> reqdChannels = channelMapping.get(hdr);
       //Check if there are required channels, else defaults to default channels
@@ -150,24 +161,6 @@ public class MultiplexingChannelSelector extends AbstractChannelSelector {
       }
     }
 
-  }
-
-  //Given a list of channel names as space delimited string,
-  //returns list of channels.
-  private List<Channel> getChannelListFromNames(String channels,
-      Map<String, Channel> channelNameMap){
-    List<Channel> configuredChannels = new ArrayList<Channel>();
-    String[] chNames = channels.split(" ");
-    for (String name : chNames) {
-      Channel ch = channelNameMap.get(name);
-      if (ch != null) {
-        configuredChannels.add(ch);
-      } else {
-        throw new FlumeException("Selector channel not found: "
-            + name);
-      }
-    }
-    return configuredChannels;
   }
 
 }

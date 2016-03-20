@@ -24,7 +24,11 @@
   <parent>
     <artifactId>flume-ng-channels</artifactId>
     <groupId>org.apache.flume</groupId>
+<<<<<<< HEAD
     <version>1.3.1</version>
+=======
+    <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
   </parent>
 
   <groupId>org.apache.flume.flume-ng-channels</groupId>
@@ -81,7 +85,12 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-all</artifactId>
-      <version>1.9.0</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.easytesting</groupId>
+      <artifactId>fest-reflect</artifactId>
       <scope>test</scope>
     </dependency>
 
@@ -99,9 +108,19 @@
     </dependency>
 
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>${hadoop.common.artifact.id}</artifactId>
-      <optional>true</optional>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.mapdb</groupId>
+      <artifactId>mapdb</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
     </dependency>
 
     <dependency>
@@ -114,6 +133,7 @@
 
   <profiles>
 
+<<<<<<< HEAD
     <profile>
       <id>hadoop-2</id>
       <activation>
@@ -130,6 +150,59 @@
         </dependency>
       </dependencies>
     </profile>
+=======
+   <profile>
+     <id>compile-proto</id>
+     <build>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-antrun-plugin</artifactId>
+          <configuration>
+            <skipTests>false</skipTests>
+          </configuration>
+          <executions>
+            <execution>
+              <id>compile-proto</id>
+              <phase>generate-sources</phase>
+              <goals>
+                <goal>run</goal>
+              </goals>
+              <configuration>
+                <target>
+                  <echo file="target/compile-proto.sh">
+                      PROTO_DIR=src/main/proto
+                      JAVA_DIR=src/main/java
+                      which cygpath 2&gt; /dev/null
+                      if [ $? = 1 ]; then
+                        IS_WIN=false
+                      else
+                        IS_WIN=true
+                        WIN_PROTO_DIR=`cygpath --windows $PROTO_DIR`
+                        WIN_JAVA_DIR=`cygpath --windows $JAVA_DIR`
+                      fi
+                      mkdir -p $JAVA_DIR 2&gt; /dev/null
+                      for PROTO_FILE in `ls $PROTO_DIR/*.proto 2&gt; /dev/null`
+                      do
+                          if [ "$IS_WIN" = "true" ]; then
+                            protoc -I$WIN_PROTO_DIR --java_out=$WIN_JAVA_DIR $PROTO_FILE
+                          else
+                            protoc -I$PROTO_DIR --java_out=$JAVA_DIR $PROTO_FILE
+                          fi
+                      done
+                  </echo>
+                  <exec executable="sh" dir="${basedir}" failonerror="true">
+                    <arg line="target/compile-proto.sh"/>
+                  </exec>
+                </target>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+     </build>
+   </profile>
+>>>>>>> refs/remotes/apache/trunk
 
 
    <profile>

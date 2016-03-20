@@ -21,14 +21,22 @@ package org.apache.flume.channel.file;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.flume.channel.file.proto.ProtosFactory;
@@ -55,7 +63,11 @@ public class TestLogFile {
     dataFile = new File(dataDir, String.valueOf(fileID));
     Assert.assertTrue(dataDir.isDirectory());
     logFileWriter = LogFileFactory.getWriter(dataFile, fileID,
+<<<<<<< HEAD
         Integer.MAX_VALUE, null, null, null, Long.MAX_VALUE);
+=======
+        Integer.MAX_VALUE, null, null, null, Long.MAX_VALUE, true, 0);
+>>>>>>> refs/remotes/apache/trunk
   }
   @After
   public void cleanup() throws IOException {
@@ -72,7 +84,11 @@ public class TestLogFile {
     Assert.assertTrue(dataFile.isFile() || dataFile.createNewFile());
     try {
       LogFileFactory.getWriter(dataFile, fileID, Integer.MAX_VALUE, null, null,
+<<<<<<< HEAD
           null, Long.MAX_VALUE);
+=======
+          null, Long.MAX_VALUE, true, 0);
+>>>>>>> refs/remotes/apache/trunk
       Assert.fail();
     } catch (IllegalStateException e) {
       Assert.assertEquals("File already exists " + dataFile.getAbsolutePath(),
@@ -86,7 +102,11 @@ public class TestLogFile {
     Assert.assertTrue(dataFile.mkdirs());
     try {
       LogFileFactory.getWriter(dataFile, fileID, Integer.MAX_VALUE, null, null,
+<<<<<<< HEAD
           null, Long.MAX_VALUE);
+=======
+          null, Long.MAX_VALUE, true, 0);
+>>>>>>> refs/remotes/apache/trunk
       Assert.fail();
     } catch (IllegalStateException e) {
       Assert.assertEquals("File already exists " + dataFile.getAbsolutePath(),
@@ -98,8 +118,15 @@ public class TestLogFile {
     final List<Throwable> errors =
         Collections.synchronizedList(new ArrayList<Throwable>());
     ExecutorService executorService = Executors.newFixedThreadPool(10);
+<<<<<<< HEAD
     final LogFile.RandomReader logFileReader =
         LogFileFactory.getRandomReader(dataFile, null);
+=======
+    CompletionService<Void> completionService = new ExecutorCompletionService
+      <Void>(executorService);
+    final LogFile.RandomReader logFileReader =
+        LogFileFactory.getRandomReader(dataFile, null, true);
+>>>>>>> refs/remotes/apache/trunk
     for (int i = 0; i < 1000; i++) {
       // first try and throw failures
       synchronized (errors) {
@@ -117,7 +144,7 @@ public class TestLogFile {
       ByteBuffer bytes = TransactionEventRecord.toByteBuffer(put);
       FlumeEventPointer ptr = logFileWriter.put(bytes);
       final int offset = ptr.getOffset();
-      executorService.submit(new Runnable() {
+      completionService.submit(new Runnable() {
         @Override
         public void run() {
           try {
@@ -130,7 +157,11 @@ public class TestLogFile {
             }
           }
         }
-      });
+      }, null);
+    }
+
+    for(int i = 0; i < 1000; i++) {
+      completionService.take();
     }
     // first try and throw failures
     for(Throwable throwable : errors) {
@@ -142,7 +173,8 @@ public class TestLogFile {
     }
   }
   @Test
-  public void testReader() throws InterruptedException, IOException {
+  public void testReader() throws InterruptedException, IOException,
+    CorruptEventException {
     Map<Integer, Put> puts = Maps.newHashMap();
     for (int i = 0; i < 1000; i++) {
       FlumeEvent eventIn = TestUtils.newPersistableEvent();
@@ -153,7 +185,11 @@ public class TestLogFile {
       puts.put(ptr.getOffset(), put);
     }
     LogFile.SequentialReader reader =
+<<<<<<< HEAD
         LogFileFactory.getSequentialReader(dataFile, null);
+=======
+        LogFileFactory.getSequentialReader(dataFile, null, true);
+>>>>>>> refs/remotes/apache/trunk
     LogRecord entry;
     while((entry = reader.next()) != null) {
       Integer offset = entry.getOffset();
@@ -169,7 +205,12 @@ public class TestLogFile {
   }
 
   @Test
+<<<<<<< HEAD
   public void testReaderOldMetaFile() throws InterruptedException, IOException {
+=======
+  public void testReaderOldMetaFile() throws InterruptedException,
+    IOException, CorruptEventException {
+>>>>>>> refs/remotes/apache/trunk
     Map<Integer, Put> puts = Maps.newHashMap();
     for (int i = 0; i < 1000; i++) {
       FlumeEvent eventIn = TestUtils.newPersistableEvent();
@@ -186,7 +227,11 @@ public class TestLogFile {
       Assert.fail("Renaming to meta.old failed");
     }
     LogFile.SequentialReader reader =
+<<<<<<< HEAD
             LogFileFactory.getSequentialReader(dataFile, null);
+=======
+            LogFileFactory.getSequentialReader(dataFile, null, true);
+>>>>>>> refs/remotes/apache/trunk
     Assert.assertTrue(metadataFile.exists());
     Assert.assertFalse(oldMetadataFile.exists());
     LogRecord entry;
@@ -204,7 +249,12 @@ public class TestLogFile {
   }
 
     @Test
+<<<<<<< HEAD
   public void testReaderTempMetaFile() throws InterruptedException, IOException {
+=======
+  public void testReaderTempMetaFile() throws InterruptedException,
+      IOException, CorruptEventException {
+>>>>>>> refs/remotes/apache/trunk
     Map<Integer, Put> puts = Maps.newHashMap();
     for (int i = 0; i < 1000; i++) {
       FlumeEvent eventIn = TestUtils.newPersistableEvent();
@@ -223,7 +273,11 @@ public class TestLogFile {
       Assert.fail("Renaming to meta.temp failed");
     }
     LogFile.SequentialReader reader =
+<<<<<<< HEAD
             LogFileFactory.getSequentialReader(dataFile, null);
+=======
+            LogFileFactory.getSequentialReader(dataFile, null, true);
+>>>>>>> refs/remotes/apache/trunk
     Assert.assertTrue(metadataFile.exists());
     Assert.assertFalse(tempMetadataFile.exists());
     Assert.assertFalse(oldMetadataFile.exists());
@@ -260,4 +314,142 @@ public class TestLogFile {
     Assert.assertEquals(3, metaData.getCheckpointPosition());
     Assert.assertEquals(4, metaData.getCheckpointWriteOrderID());
   }
+<<<<<<< HEAD
+=======
+
+  @Test (expected = CorruptEventException.class)
+  public void testPutGetCorruptEvent() throws Exception {
+    final LogFile.RandomReader logFileReader =
+      LogFileFactory.getRandomReader(dataFile, null, true);
+    final FlumeEvent eventIn = TestUtils.newPersistableEvent(2500);
+    final Put put = new Put(++transactionID, WriteOrderOracle.next(),
+      eventIn);
+    ByteBuffer bytes = TransactionEventRecord.toByteBuffer(put);
+    FlumeEventPointer ptr = logFileWriter.put(bytes);
+    logFileWriter.commit(TransactionEventRecord.toByteBuffer(new Commit
+      (transactionID, WriteOrderOracle.next())));
+    logFileWriter.sync();
+    final int offset = ptr.getOffset();
+    RandomAccessFile writer = new RandomAccessFile(dataFile, "rw");
+    writer.seek(offset + 1500);
+    writer.write((byte) 45);
+    writer.write((byte) 12);
+    writer.getFD().sync();
+    logFileReader.get(offset);
+
+    // Should have thrown an exception by now.
+    Assert.fail();
+
+  }
+
+  @Test (expected = NoopRecordException.class)
+  public void testPutGetNoopEvent() throws Exception {
+    final LogFile.RandomReader logFileReader =
+      LogFileFactory.getRandomReader(dataFile, null, true);
+    final FlumeEvent eventIn = TestUtils.newPersistableEvent(2500);
+    final Put put = new Put(++transactionID, WriteOrderOracle.next(),
+      eventIn);
+    ByteBuffer bytes = TransactionEventRecord.toByteBuffer(put);
+    FlumeEventPointer ptr = logFileWriter.put(bytes);
+    logFileWriter.commit(TransactionEventRecord.toByteBuffer(new Commit
+      (transactionID, WriteOrderOracle.next())));
+    logFileWriter.sync();
+    final int offset = ptr.getOffset();
+    LogFile.OperationRecordUpdater updater = new LogFile
+      .OperationRecordUpdater(dataFile);
+    updater.markRecordAsNoop(offset);
+    logFileReader.get(offset);
+
+    // Should have thrown an exception by now.
+    Assert.fail();
+  }
+
+  @Test
+  public void testOperationRecordUpdater() throws Exception {
+    File tempDir = Files.createTempDir();
+    File temp = new File(tempDir, "temp");
+    final RandomAccessFile tempFile = new RandomAccessFile(temp, "rw");
+    for(int i = 0; i < 5000; i++) {
+      tempFile.write(LogFile.OP_RECORD);
+    }
+    tempFile.seek(0);
+    LogFile.OperationRecordUpdater recordUpdater = new LogFile
+      .OperationRecordUpdater(temp);
+    //Convert every 10th byte into a noop byte
+    for(int i = 0; i < 5000; i+=10) {
+      recordUpdater.markRecordAsNoop(i);
+    }
+    recordUpdater.close();
+
+    tempFile.seek(0);
+    // Verify every 10th byte is actually a NOOP
+    for(int i = 0; i < 5000; i+=10) {
+      tempFile.seek(i);
+      Assert.assertEquals(LogFile.OP_NOOP, tempFile.readByte());
+    }
+
+  }
+
+  @Test
+  public void testOpRecordUpdaterWithFlumeEvents() throws Exception{
+    final FlumeEvent eventIn = TestUtils.newPersistableEvent(2500);
+    final Put put = new Put(++transactionID, WriteOrderOracle.next(),
+      eventIn);
+    ByteBuffer bytes = TransactionEventRecord.toByteBuffer(put);
+    FlumeEventPointer ptr = logFileWriter.put(bytes);
+    logFileWriter.commit(TransactionEventRecord.toByteBuffer(new Commit
+      (transactionID, WriteOrderOracle.next())));
+    logFileWriter.sync();
+    final int offset = ptr.getOffset();
+    LogFile.OperationRecordUpdater updater = new LogFile
+      .OperationRecordUpdater(dataFile);
+    updater.markRecordAsNoop(offset);
+    RandomAccessFile fileReader = new RandomAccessFile(dataFile, "rw");
+    Assert.assertEquals(LogFile.OP_NOOP, fileReader.readByte());
+  }
+
+  @Test
+  public void testGroupCommit() throws Exception {
+    final FlumeEvent eventIn = TestUtils.newPersistableEvent(250);
+    final CyclicBarrier barrier = new CyclicBarrier(20);
+    ExecutorService executorService = Executors.newFixedThreadPool(20);
+    ExecutorCompletionService<Void> completionService = new
+      ExecutorCompletionService<Void>(executorService);
+    final LogFile.Writer writer = logFileWriter;
+    final AtomicLong txnId = new AtomicLong(++transactionID);
+    for (int i = 0; i < 20; i++) {
+      completionService.submit(new Callable<Void>() {
+        @Override
+        public Void call() {
+          try {
+            Put put = new Put(txnId.incrementAndGet(),
+              WriteOrderOracle.next(), eventIn);
+            ByteBuffer bytes = TransactionEventRecord.toByteBuffer(put);
+            writer.put(bytes);
+            writer.commit(TransactionEventRecord.toByteBuffer(
+              new Commit(txnId.get(), WriteOrderOracle.next())));
+            barrier.await();
+            writer.sync();
+          } catch (Exception ex) {
+            Throwables.propagate(ex);
+          }
+          return null;
+        }
+      });
+    }
+
+    for(int i = 0; i < 20; i++) {
+      completionService.take().get();
+    }
+
+    //At least 250*20, but can be higher due to serialization overhead
+    Assert.assertTrue(logFileWriter.position() >= 5000);
+    Assert.assertEquals(1, writer.getSyncCount());
+    Assert.assertTrue(logFileWriter.getLastCommitPosition() ==
+      logFileWriter.getLastSyncPosition());
+
+    executorService.shutdown();
+
+  }
+>>>>>>> refs/remotes/apache/trunk
 }

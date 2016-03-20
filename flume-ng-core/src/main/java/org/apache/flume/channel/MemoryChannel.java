@@ -25,10 +25,15 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.concurrent.GuardedBy;
 
 import org.apache.flume.ChannelException;
+import org.apache.flume.ChannelFullException;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.annotations.InterfaceAudience;
 import org.apache.flume.annotations.InterfaceStability;
+<<<<<<< HEAD
+=======
+import org.apache.flume.annotations.Recyclable;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.instrumentation.ChannelCounter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +53,10 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
+<<<<<<< HEAD
+=======
+@Recyclable
+>>>>>>> refs/remotes/apache/trunk
 public class MemoryChannel extends BasicChannelSemantics {
   private static Logger LOGGER = LoggerFactory.getLogger(MemoryChannel.class);
   private static final Integer defaultCapacity = 100;
@@ -77,6 +86,7 @@ public class MemoryChannel extends BasicChannelSemantics {
       channelCounter.incrementEventPutAttemptCount();
       int eventByteSize = (int)Math.ceil(estimateEventSize(event)/byteCapacitySlotSize);
 
+<<<<<<< HEAD
       if (bytesRemaining.tryAcquire(eventByteSize, keepAlive, TimeUnit.SECONDS)) {
         if(!putList.offer(event)) {
           throw new ChannelException("Put queue for MemoryTransaction of capacity " +
@@ -89,6 +99,13 @@ public class MemoryChannel extends BasicChannelSemantics {
             " event of size " + estimateEventSize(event) + " bytes because " +
              (bytesRemaining.availablePermits() * (int)byteCapacitySlotSize) + " bytes are already used." +
             " Try consider comitting more frequently, increasing byteCapacity or increasing thread count");
+=======
+      if (!putList.offer(event)) {
+        throw new ChannelException(
+          "Put queue for MemoryTransaction of capacity " +
+            putList.size() + " full, consider committing more frequently, " +
+            "increasing capacity or increasing thread count");
+>>>>>>> refs/remotes/apache/trunk
       }
       putByteCounter += eventByteSize;
     }
@@ -122,8 +139,16 @@ public class MemoryChannel extends BasicChannelSemantics {
     protected void doCommit() throws InterruptedException {
       int remainingChange = takeList.size() - putList.size();
       if(remainingChange < 0) {
+        if(!bytesRemaining.tryAcquire(putByteCounter, keepAlive,
+          TimeUnit.SECONDS)) {
+          throw new ChannelException("Cannot commit transaction. Byte capacity " +
+            "allocated to store event body " + byteCapacity * byteCapacitySlotSize +
+            "reached. Please increase heap space/byte capacity allocated to " +
+            "the channel as the sinks may not be keeping up with the sources");
+        }
         if(!queueRemaining.tryAcquire(-remainingChange, keepAlive, TimeUnit.SECONDS)) {
-          throw new ChannelException("Space for commit to queue couldn't be acquired" +
+          bytesRemaining.release(putByteCounter);
+          throw new ChannelFullException("Space for commit to queue couldn't be acquired." +
               " Sinks are likely not keeping up with sources, or the buffer size is too tight");
         }
       }
@@ -239,6 +264,7 @@ public class MemoryChannel extends BasicChannelSemantics {
       transCapacity = defaultTransCapacity;
       LOGGER.warn("Invalid transation capacity specified, initializing channel"
           + " to default capacity of {}", defaultTransCapacity);
+<<<<<<< HEAD
     }
 
     if (transCapacity <= 0) {
@@ -250,6 +276,19 @@ public class MemoryChannel extends BasicChannelSemantics {
         "Transaction Capacity of Memory Channel cannot be higher than " +
             "the capacity.");
 
+=======
+    }
+
+    if (transCapacity <= 0) {
+      transCapacity = defaultTransCapacity;
+      LOGGER.warn("Invalid transation capacity specified, initializing channel"
+          + " to default capacity of {}", defaultTransCapacity);
+    }
+    Preconditions.checkState(transCapacity <= capacity,
+        "Transaction Capacity of Memory Channel cannot be higher than " +
+            "the capacity.");
+
+>>>>>>> refs/remotes/apache/trunk
     try {
       byteCapacityBufferPercentage = context.getInteger("byteCapacityBufferPercentage", defaultByteCapacityBufferPercentage);
     } catch(NumberFormatException e) {

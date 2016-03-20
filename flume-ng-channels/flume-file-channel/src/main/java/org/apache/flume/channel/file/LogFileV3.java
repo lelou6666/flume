@@ -18,6 +18,24 @@
  */
 package org.apache.flume.channel.file;
 
+<<<<<<< HEAD
+=======
+import com.google.common.base.Preconditions;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.GeneratedMessage;
+import org.apache.flume.Transaction;
+import org.apache.flume.annotations.InterfaceAudience;
+import org.apache.flume.annotations.InterfaceStability;
+import org.apache.flume.channel.file.encryption.CipherProvider;
+import org.apache.flume.channel.file.encryption.CipherProviderFactory;
+import org.apache.flume.channel.file.encryption.DecryptionFailureException;
+import org.apache.flume.channel.file.encryption.KeyProvider;
+import org.apache.flume.channel.file.proto.ProtosFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nullable;
+>>>>>>> refs/remotes/apache/trunk
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
@@ -28,6 +46,7 @@ import java.security.Key;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
+<<<<<<< HEAD
 import javax.annotation.Nullable;
 
 import org.apache.flume.channel.file.proto.ProtosFactory;
@@ -41,11 +60,19 @@ import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.GeneratedMessage;
 
+=======
+>>>>>>> refs/remotes/apache/trunk
 /**
  * Represents a single data file on disk. Has methods to write,
  * read sequentially (replay), and read randomly (channel takes).
  */
+<<<<<<< HEAD
 class LogFileV3 extends LogFile {
+=======
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+public class LogFileV3 extends LogFile {
+>>>>>>> refs/remotes/apache/trunk
   protected static final Logger LOGGER =
       LoggerFactory.getLogger(LogFileV3.class);
 
@@ -81,9 +108,21 @@ class LogFileV3 extends LogFile {
           ProtosFactory.LogFileMetaData.newBuilder(logFileMetaData);
       metaDataBuilder.setCheckpointPosition(currentPosition);
       metaDataBuilder.setCheckpointWriteOrderID(logWriteOrderID);
+<<<<<<< HEAD
       logFileMetaData = metaDataBuilder.build();
       LOGGER.info("Updating " + metaDataFile.getName()  + " currentPosition = "
           + currentPosition + ", logWriteOrderID = " + logWriteOrderID);
+=======
+      /*
+       * Set the previous checkpoint position and write order id so that it
+       * would be possible to recover from a backup.
+       */
+      metaDataBuilder.setBackupCheckpointPosition(logFileMetaData
+        .getCheckpointPosition());
+      metaDataBuilder.setBackupCheckpointWriteOrderID(logFileMetaData
+        .getCheckpointWriteOrderID());
+      logFileMetaData = metaDataBuilder.build();
+>>>>>>> refs/remotes/apache/trunk
       writeDelimitedTo(logFileMetaData, metaDataFile);
     }
   }
@@ -101,7 +140,11 @@ class LogFileV3 extends LogFile {
       FileInputStream inputStream = new FileInputStream(metaDataFile);
       try {
         ProtosFactory.LogFileMetaData metaData = Preconditions.checkNotNull(
+<<<<<<< HEAD
             ProtosFactory.LogFileMetaData.
+=======
+          ProtosFactory.LogFileMetaData.
+>>>>>>> refs/remotes/apache/trunk
             parseDelimitedFrom(inputStream), "Metadata cannot be null");
         if (metaData.getLogFileID() != logFileID) {
           throw new IOException("The file id of log file: "
@@ -170,11 +213,19 @@ class LogFileV3 extends LogFile {
         @Nullable Key encryptionKey,
         @Nullable String encryptionKeyAlias,
         @Nullable String encryptionCipherProvider,
+<<<<<<< HEAD
         long usableSpaceRefreshInterval)
         throws IOException {
       super(file, logFileID, maxFileSize, CipherProviderFactory.
           getEncrypter(encryptionCipherProvider, encryptionKey),
           usableSpaceRefreshInterval);
+=======
+        long usableSpaceRefreshInterval, boolean fsyncPerTransaction,
+        int fsyncInterval) throws IOException {
+      super(file, logFileID, maxFileSize, CipherProviderFactory.
+          getEncrypter(encryptionCipherProvider, encryptionKey),
+          usableSpaceRefreshInterval, fsyncPerTransaction, fsyncInterval);
+>>>>>>> refs/remotes/apache/trunk
       ProtosFactory.LogFileMetaData.Builder metaDataBuilder =
           ProtosFactory.LogFileMetaData.newBuilder();
       if(encryptionKey != null) {
@@ -193,6 +244,11 @@ class LogFileV3 extends LogFile {
       metaDataBuilder.setLogFileID(logFileID);
       metaDataBuilder.setCheckpointPosition(0L);
       metaDataBuilder.setCheckpointWriteOrderID(0L);
+<<<<<<< HEAD
+=======
+      metaDataBuilder.setBackupCheckpointPosition(0L);
+      metaDataBuilder.setBackupCheckpointWriteOrderID(0L);
+>>>>>>> refs/remotes/apache/trunk
       File metaDataFile = Serialization.getMetaDataFile(file);
       writeDelimitedTo(metaDataBuilder.build(), metaDataFile);
     }
@@ -209,10 +265,18 @@ class LogFileV3 extends LogFile {
     private volatile String cipherProvider;
     private volatile byte[] parameters;
     private BlockingQueue<CipherProvider.Decryptor> decryptors =
+<<<<<<< HEAD
         new LinkedBlockingDeque<CipherProvider.Decryptor>();
     RandomReader(File file, @Nullable KeyProvider encryptionKeyProvider)
         throws IOException {
       super(file, encryptionKeyProvider);
+=======
+      new LinkedBlockingDeque<CipherProvider.Decryptor>();
+
+    RandomReader(File file, @Nullable KeyProvider encryptionKeyProvider,
+      boolean fsyncPerTransaction) throws IOException {
+      super(file, encryptionKeyProvider, fsyncPerTransaction);
+>>>>>>> refs/remotes/apache/trunk
     }
     private void initialize() throws IOException {
       File metaDataFile = Serialization.getMetaDataFile(getFile());
@@ -261,7 +325,11 @@ class LogFileV3 extends LogFile {
     }
     @Override
     protected TransactionEventRecord doGet(RandomAccessFile fileHandle)
+<<<<<<< HEAD
         throws IOException {
+=======
+        throws IOException, CorruptEventException {
+>>>>>>> refs/remotes/apache/trunk
       // readers are opened right when the file is created and thus
       // empty. As such we wait to initialize until there is some
       // data before we we initialize
@@ -271,10 +339,17 @@ class LogFileV3 extends LogFile {
           initialize();
         }
       }
+<<<<<<< HEAD
       byte[] buffer = readDelimitedBuffer(fileHandle);
       CipherProvider.Decryptor decryptor = null;
       boolean success = false;
       try {
+=======
+      boolean success = false;
+      CipherProvider.Decryptor decryptor = null;
+      try {
+        byte[] buffer = readDelimitedBuffer(fileHandle);
+>>>>>>> refs/remotes/apache/trunk
         if(encryptionEnabled) {
           decryptor = getDecryptor();
           buffer = decryptor.decrypt(buffer);
@@ -283,6 +358,11 @@ class LogFileV3 extends LogFile {
             fromByteArray(buffer);
         success = true;
         return event;
+<<<<<<< HEAD
+=======
+      } catch(DecryptionFailureException ex) {
+        throw new CorruptEventException("Error decrypting event", ex);
+>>>>>>> refs/remotes/apache/trunk
       } finally {
         if(success && encryptionEnabled && decryptor != null) {
           decryptors.offer(decryptor);
@@ -291,11 +371,22 @@ class LogFileV3 extends LogFile {
     }
   }
 
+<<<<<<< HEAD
   static class SequentialReader extends LogFile.SequentialReader {
     private CipherProvider.Decryptor decryptor;
     SequentialReader(File file, @Nullable KeyProvider encryptionKeyProvider)
         throws EOFException, IOException {
       super(file, encryptionKeyProvider);
+=======
+  public static class SequentialReader extends LogFile.SequentialReader {
+    private CipherProvider.Decryptor decryptor;
+    private final boolean fsyncPerTransaction;
+    public SequentialReader(File file, @Nullable KeyProvider
+      encryptionKeyProvider, boolean fsyncPerTransaction) throws EOFException,
+      IOException {
+      super(file, encryptionKeyProvider);
+      this.fsyncPerTransaction = fsyncPerTransaction;
+>>>>>>> refs/remotes/apache/trunk
       File metaDataFile = Serialization.getMetaDataFile(file);
       FileInputStream inputStream = new FileInputStream(metaDataFile);
       try {
@@ -322,6 +413,12 @@ class LogFileV3 extends LogFile {
         setLogFileID(metaData.getLogFileID());
         setLastCheckpointPosition(metaData.getCheckpointPosition());
         setLastCheckpointWriteOrderID(metaData.getCheckpointWriteOrderID());
+<<<<<<< HEAD
+=======
+        setPreviousCheckpointPosition(metaData.getBackupCheckpointPosition());
+        setPreviousCheckpointWriteOrderID(
+          metaData.getBackupCheckpointWriteOrderID());
+>>>>>>> refs/remotes/apache/trunk
       } finally {
         try {
           inputStream.close();
@@ -335,6 +432,7 @@ class LogFileV3 extends LogFile {
     public int getVersion() {
       return Serialization.VERSION_3;
     }
+<<<<<<< HEAD
     @Override
     LogRecord doNext(int offset) throws IOException {
       byte[] buffer = readDelimitedBuffer(getFileHandle());
@@ -343,6 +441,37 @@ class LogFileV3 extends LogFile {
       }
       TransactionEventRecord event =
           TransactionEventRecord.fromByteArray(buffer);
+=======
+
+    @Override
+    LogRecord doNext(int offset) throws IOException, CorruptEventException,
+      DecryptionFailureException {
+      byte[] buffer = null;
+      TransactionEventRecord event = null;
+      try {
+        buffer = readDelimitedBuffer(getFileHandle());
+        if (decryptor != null) {
+          buffer = decryptor.decrypt(buffer);
+        }
+        event = TransactionEventRecord.fromByteArray(buffer);
+      } catch (CorruptEventException ex) {
+        LOGGER.warn("Corrupt file found. File id: log-" + this.getLogFileID(),
+          ex);
+        // Return null so that replay handler thinks all events in this file
+        // have been taken.
+        if (!fsyncPerTransaction) {
+          return null;
+        }
+        throw ex;
+      } catch (DecryptionFailureException ex) {
+        if (!fsyncPerTransaction) {
+          LOGGER.warn("Could not decrypt even read from channel. Skipping " +
+            "event.", ex);
+          return null;
+        }
+        throw ex;
+      }
+>>>>>>> refs/remotes/apache/trunk
       return new LogRecord(getLogFileID(), offset, event);
     }
   }

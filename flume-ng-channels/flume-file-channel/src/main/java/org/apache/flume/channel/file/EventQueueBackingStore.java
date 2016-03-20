@@ -29,6 +29,11 @@ abstract class EventQueueBackingStore {
   private long logWriteOrderID;
   private final int capacity;
   private final String name;
+<<<<<<< HEAD
+=======
+  public static final String BACKUP_COMPLETE_FILENAME = "backupComplete";
+  protected Boolean slowdownBackup = false;
+>>>>>>> refs/remotes/apache/trunk
 
   protected EventQueueBackingStore(int capacity, String name) {
     this.capacity = capacity;
@@ -36,6 +41,10 @@ abstract class EventQueueBackingStore {
   }
 
 
+<<<<<<< HEAD
+=======
+  abstract void beginCheckpoint() throws IOException;
+>>>>>>> refs/remotes/apache/trunk
   abstract void checkpoint() throws IOException;
   abstract void incrementFileID(int fileID);
   abstract void decrementFileID(int fileID);

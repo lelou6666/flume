@@ -21,7 +21,6 @@ package org.apache.flume.sink.hdfs;
 import java.io.IOException;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
-import org.apache.flume.sink.FlumeFormatter;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
 
@@ -64,17 +63,29 @@ public class MockHDFSWriter implements HDFSWriter {
     // no-op
   }
 
+<<<<<<< HEAD
   public void open(String filePath, FlumeFormatter fmt) throws IOException {
+=======
+  public void open(String filePath) throws IOException {
+>>>>>>> refs/remotes/apache/trunk
     this.filePath = filePath;
     filesOpened++;
   }
 
+<<<<<<< HEAD
   public void open(String filePath, CompressionCodec codec, CompressionType cType, FlumeFormatter fmt) throws IOException {
+=======
+  public void open(String filePath, CompressionCodec codec, CompressionType cType) throws IOException {
+>>>>>>> refs/remotes/apache/trunk
     this.filePath = filePath;
     filesOpened++;
   }
 
+<<<<<<< HEAD
   public void append(Event e, FlumeFormatter fmt) throws IOException {
+=======
+  public void append(Event e) throws IOException {
+>>>>>>> refs/remotes/apache/trunk
     eventsWritten++;
     bytesWritten += e.getBody().length;
   }
@@ -85,6 +96,11 @@ public class MockHDFSWriter implements HDFSWriter {
 
   public void close() throws IOException {
     filesClosed++;
+  }
+
+  @Override
+  public boolean isUnderReplicated() {
+    return false;
   }
 
 }

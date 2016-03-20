@@ -18,6 +18,19 @@
  */
 package org.apache.flume.channel.file;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
+import org.apache.commons.collections.MultiMap;
+import org.apache.commons.collections.map.MultiValueMap;
+import org.apache.flume.channel.file.encryption.KeyProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nullable;
 import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
@@ -27,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
+<<<<<<< HEAD
 
 import javax.annotation.Nullable;
 
@@ -41,6 +55,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
+=======
+>>>>>>> refs/remotes/apache/trunk
 
 /**
  * Processes a set of data logs, replaying said logs into the queue.
@@ -53,6 +69,10 @@ class ReplayHandler {
   private final Map<Integer, LogFile.SequentialReader> readers;
   private final PriorityQueue<LogRecord> logRecordBuffer;
   private final KeyProvider encryptionKeyProvider;
+<<<<<<< HEAD
+=======
+  private final boolean fsyncPerTransaction;
+>>>>>>> refs/remotes/apache/trunk
   /**
    * This data structure stores takes for which we found a commit in the log
    * files before we found a commit for the put. This can happen if the channel
@@ -69,15 +89,52 @@ class ReplayHandler {
    * finding the put and commit in logdir2.
    */
   private final List<Long> pendingTakes;
+  int readCount = 0;
+  int putCount = 0;
+  int takeCount = 0;
+  int rollbackCount = 0;
+  int commitCount = 0;
+  int skipCount = 0;
+
+  @VisibleForTesting
+  public int getReadCount() {
+    return readCount;
+  }
+  @VisibleForTesting
+  public int getPutCount() {
+    return putCount;
+  }
+  @VisibleForTesting
+  public int getTakeCount() {
+    return takeCount;
+  }
+  @VisibleForTesting
+  public int getCommitCount() {
+    return commitCount;
+  }
+
+  @VisibleForTesting
+  public int getRollbackCount() {
+    return rollbackCount;
+  }
 
   ReplayHandler(FlumeEventQueue queue,
+<<<<<<< HEAD
       @Nullable KeyProvider encryptionKeyProvider) {
+=======
+    @Nullable KeyProvider encryptionKeyProvider,
+    boolean fsyncPerTransaction) {
+>>>>>>> refs/remotes/apache/trunk
     this.queue = queue;
     this.lastCheckpoint = queue.getLogWriteOrderID();
     pendingTakes = Lists.newArrayList();
     readers = Maps.newHashMap();
     logRecordBuffer = new PriorityQueue<LogRecord>();
     this.encryptionKeyProvider = encryptionKeyProvider;
+<<<<<<< HEAD
+=======
+    this.fsyncPerTransaction = fsyncPerTransaction;
+>>>>>>> refs/remotes/apache/trunk
   }
   /**
    * Replay logic from Flume1.2 which can be activated if the v2 logic
@@ -103,19 +160,19 @@ class ReplayHandler {
       LOG.info("Replaying " + log);
       LogFile.SequentialReader reader = null;
       try {
+<<<<<<< HEAD
         reader = LogFileFactory.getSequentialReader(log, encryptionKeyProvider);
+=======
+        reader = LogFileFactory.getSequentialReader(log,
+          encryptionKeyProvider, fsyncPerTransaction);
+>>>>>>> refs/remotes/apache/trunk
         reader.skipToLastCheckpointPosition(queue.getLogWriteOrderID());
         LogRecord entry;
         FlumeEventPointer ptr;
         // for puts the fileId is the fileID of the file they exist in
         // for takes the fileId and offset are pointers to a put
         int fileId = reader.getLogFileID();
-        int readCount = 0;
-        int putCount = 0;
-        int takeCount = 0;
-        int rollbackCount = 0;
-        int commitCount = 0;
-        int skipCount = 0;
+
         while ((entry = reader.next()) != null) {
           int offset = entry.getOffset();
           TransactionEventRecord record = entry.getEvent();
@@ -160,7 +217,7 @@ class ReplayHandler {
               }
             } else {
               Preconditions.checkArgument(false, "Unknown record type: "
-                  + Integer.toHexString(type));
+                + Integer.toHexString(type));
             }
 
           } else {
@@ -236,7 +293,12 @@ class ReplayHandler {
         LOG.info("Replaying " + log);
         try {
           LogFile.SequentialReader reader =
+<<<<<<< HEAD
               LogFileFactory.getSequentialReader(log, encryptionKeyProvider);
+=======
+            LogFileFactory.getSequentialReader(log, encryptionKeyProvider,
+              fsyncPerTransaction);
+>>>>>>> refs/remotes/apache/trunk
           reader.skipToLastCheckpointPosition(queue.getLogWriteOrderID());
           Preconditions.checkState(!readers.containsKey(reader.getLogFileID()),
               "Readers " + readers + " already contains "
@@ -255,12 +317,6 @@ class ReplayHandler {
       }
       LogRecord entry = null;
       FlumeEventPointer ptr = null;
-      int readCount = 0;
-      int putCount = 0;
-      int takeCount = 0;
-      int rollbackCount = 0;
-      int commitCount = 0;
-      int skipCount = 0;
       while ((entry = next()) != null) {
         // for puts the fileId is the fileID of the file they exist in
         // for takes the fileId and offset are pointers to a put
@@ -273,6 +329,11 @@ class ReplayHandler {
         writeOrderIDSeed = Math.max(writeOrderIDSeed,
             record.getLogWriteOrderID());
         readCount++;
+        if(readCount % 10000 == 0 && readCount > 0) {
+          LOG.info("read: " + readCount + ", put: " + putCount + ", take: "
+              + takeCount + ", rollback: " + rollbackCount + ", commit: "
+              + commitCount + ", skip: " + skipCount + ", eventCount:" + count);
+        }
         if (record.getLogWriteOrderID() > lastCheckpoint) {
           if (type == TransactionEventRecord.Type.PUT.get()) {
             putCount++;
@@ -320,6 +381,7 @@ class ReplayHandler {
       LOG.info("read: " + readCount + ", put: " + putCount + ", take: "
           + takeCount + ", rollback: " + rollbackCount + ", commit: "
           + commitCount + ", skip: " + skipCount + ", eventCount:" + count);
+      queue.replayComplete();
     } finally {
       TransactionIDOracle.setSeed(transactionIDSeed);
       WriteOrderOracle.setSeed(writeOrderIDSeed);
@@ -344,18 +406,12 @@ class ReplayHandler {
     count += uncommittedTakes;
     int pendingTakesSize = pendingTakes.size();
     if (pendingTakesSize > 0) {
-      String msg = "Pending takes " + pendingTakesSize
-          + " exist after the end of replay";
-      if (LOG.isDebugEnabled()) {
-        for (Long pointer : pendingTakes) {
-          LOG.debug("Pending take " + FlumeEventPointer.fromLong(pointer));
-        }
-      } else {
-        LOG.error(msg + ". Duplicate messages will exist in destination.");
-      }
+      LOG.info("Pending takes " + pendingTakesSize + " exist after the" +
+          " end of replay. Duplicate messages will exist in" +
+          " destination.");
     }
   }
-  private LogRecord next() throws IOException {
+  private LogRecord next() throws IOException, CorruptEventException {
     LogRecord resultLogRecord = logRecordBuffer.poll();
     if(resultLogRecord != null) {
       // there is more log records to read
