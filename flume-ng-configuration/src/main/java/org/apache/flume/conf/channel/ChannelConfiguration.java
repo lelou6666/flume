@@ -44,7 +44,16 @@ public class ChannelConfiguration extends ComponentConfiguration {
     /**
      * JDBC channel provided by org.apache.flume.channel.jdbc.JdbcChannel
      */
+<<<<<<< HEAD
     JDBC("org.apache.flume.conf.channel.JdbcChannelConfiguration");
+=======
+    JDBC("org.apache.flume.conf.channel.JdbcChannelConfiguration"),
+
+    /**
+     * Spillable Memory channel
+     */
+    SPILLABLEMEMORY("org.apache.flume.conf.channel.SpillableMemoryChannelConfiguration");
+>>>>>>> refs/remotes/apache/trunk
 
     private String channelConfigurationType;
 

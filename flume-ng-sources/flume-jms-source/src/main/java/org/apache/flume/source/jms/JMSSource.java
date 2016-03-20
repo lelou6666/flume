@@ -20,6 +20,10 @@ package org.apache.flume.source.jms;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+<<<<<<< HEAD
+=======
+import java.util.Locale;
+>>>>>>> refs/remotes/apache/trunk
 import java.util.Properties;
 
 import javax.jms.ConnectionFactory;
@@ -64,6 +68,10 @@ public class JMSSource extends AbstractPollableSource {
   private String providerUrl;
   private String destinationName;
   private JMSDestinationType destinationType;
+<<<<<<< HEAD
+=======
+  private JMSDestinationLocator destinationLocator;
+>>>>>>> refs/remotes/apache/trunk
   private String messageSelector;
   private Optional<String> userName;
   private Optional<String> password;
@@ -72,6 +80,10 @@ public class JMSSource extends AbstractPollableSource {
   private long pollTimeout;
 
   private int jmsExceptionCounter;
+<<<<<<< HEAD
+=======
+  private InitialContext initialContext;
+>>>>>>> refs/remotes/apache/trunk
 
 
   public JMSSource() {
@@ -99,7 +111,15 @@ public class JMSSource extends AbstractPollableSource {
         DESTINATION_NAME, "").trim();
 
     String destinationTypeName = context.getString(JMSSourceConfiguration.
+<<<<<<< HEAD
         DESTINATION_TYPE, "").trim().toUpperCase();
+=======
+        DESTINATION_TYPE, "").trim().toUpperCase(Locale.ENGLISH);
+
+    String destinationLocatorName = context.getString(JMSSourceConfiguration.
+        DESTINATION_LOCATOR, JMSSourceConfiguration.DESTINATION_LOCATOR_DEFAULT)
+      .trim().toUpperCase(Locale.ENGLISH);
+>>>>>>> refs/remotes/apache/trunk
 
     messageSelector = context.getString(JMSSourceConfiguration.
         MESSAGE_SELECTOR, "").trim();
@@ -196,11 +216,24 @@ public class JMSSource extends AbstractPollableSource {
           "invalid.", destinationTypeName), e);
     }
 
+<<<<<<< HEAD
     Preconditions.checkArgument(batchSize > 0, "Batch size must be greater " +
         "than 0");
 
     InitialContext initalContext;
 
+=======
+    try {
+      destinationLocator = JMSDestinationLocator.valueOf(destinationLocatorName);
+    } catch (IllegalArgumentException e) {
+      throw new FlumeException(String.format("Destination locator '%s' is " +
+          "invalid.", destinationLocatorName), e);
+    }
+
+    Preconditions.checkArgument(batchSize > 0, "Batch size must be greater " +
+        "than 0");
+
+>>>>>>> refs/remotes/apache/trunk
     try {
       Properties contextProperties = new Properties();
       contextProperties.setProperty(
@@ -208,7 +241,22 @@ public class JMSSource extends AbstractPollableSource {
           initialContextFactoryName);
       contextProperties.setProperty(
           javax.naming.Context.PROVIDER_URL, providerUrl);
+<<<<<<< HEAD
       initalContext = initialContextFactory.create(contextProperties);
+=======
+
+      // Provide properties for connecting via JNDI
+      if (this.userName.isPresent()) {
+        contextProperties.setProperty(
+    	    javax.naming.Context.SECURITY_PRINCIPAL, this.userName.get());
+      }
+      if (this.password.isPresent()) {
+        contextProperties.setProperty(
+    	    javax.naming.Context.SECURITY_CREDENTIALS, this.password.get());
+      }
+
+      initialContext = initialContextFactory.create(contextProperties);
+>>>>>>> refs/remotes/apache/trunk
     } catch (NamingException e) {
       throw new FlumeException(String.format(
           "Could not create initial context %s provider %s",
@@ -216,7 +264,11 @@ public class JMSSource extends AbstractPollableSource {
     }
 
     try {
+<<<<<<< HEAD
       connectionFactory = (ConnectionFactory) initalContext.
+=======
+      connectionFactory = (ConnectionFactory) initialContext.
+>>>>>>> refs/remotes/apache/trunk
           lookup(connectionFactoryName);
     } catch (NamingException e) {
       throw new FlumeException("Could not lookup ConnectionFactory", e);
@@ -302,8 +354,14 @@ public class JMSSource extends AbstractPollableSource {
   }
   private JMSMessageConsumer createConsumer() throws JMSException {
     logger.info("Creating new consumer for " + destinationName);
+<<<<<<< HEAD
     JMSMessageConsumer consumer = consumerFactory.create(connectionFactory,
         destinationName, destinationType, messageSelector, batchSize,
+=======
+    JMSMessageConsumer consumer = consumerFactory.create(initialContext,
+    connectionFactory, destinationName, destinationType, destinationLocator,
+    messageSelector, batchSize,
+>>>>>>> refs/remotes/apache/trunk
         pollTimeout, converter, userName, password);
     jmsExceptionCounter = 0;
     return consumer;

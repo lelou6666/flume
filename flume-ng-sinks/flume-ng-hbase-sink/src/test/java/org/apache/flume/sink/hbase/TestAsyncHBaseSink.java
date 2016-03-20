@@ -19,14 +19,13 @@
 
 package org.apache.flume.sink.hbase;
 
-
-import java.io.File;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.OperatingSystemMXBean;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.flume.Channel;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
@@ -37,35 +36,29 @@ import org.apache.flume.Sink.Status;
 import org.apache.flume.channel.MemoryChannel;
 import org.apache.flume.conf.Configurables;
 import org.apache.flume.event.EventBuilder;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
+import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.google.common.io.Files;
 import com.google.common.primitives.Longs;
-import java.lang.reflect.Method;
+import com.sun.management.UnixOperatingSystemMXBean;
+
+import org.junit.After;
 
 import org.junit.After;
 
 public class TestAsyncHBaseSink {
-  private static HBaseTestingUtility testUtility;
-  private static MiniZooKeeperCluster zookeeperCluster;
-  private static MiniHBaseCluster hbaseCluster;
-  private static String workDir = Files.createTempDir().getAbsolutePath();
+  private static HBaseTestingUtility testUtility = new HBaseTestingUtility();
 
   private static String tableName = "TestHbaseSink";
   private static String columnFamily = "TestColumnFamily";
@@ -74,69 +67,16 @@ public class TestAsyncHBaseSink {
   private static Context ctx = new Context();
   private static String valBase = "testing hbase sink: jham";
   private boolean deleteTable = true;
+<<<<<<< HEAD
+=======
+  private static OperatingSystemMXBean os;
+>>>>>>> refs/remotes/apache/trunk
 
 
   @BeforeClass
   public static void setUp() throws Exception {
+    testUtility.startMiniCluster();
 
-    /*
-     * Borrowed from HCatalog ManyMiniCluster.java
-     * https://svn.apache.org/repos/asf/incubator/hcatalog/trunk/
-     * storage-handlers/hbase/src/test/org/apache/hcatalog/
-     * hbase/ManyMiniCluster.java
-     *
-     */
-    String hbaseDir = new File(workDir,"hbase").getAbsolutePath();
-    String hbaseRoot = "file://" + hbaseDir;
-    Configuration hbaseConf =  HBaseConfiguration.create();
-
-    hbaseConf.set(HConstants.HBASE_DIR, hbaseRoot);
-    hbaseConf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, 2181);
-    hbaseConf.set(HConstants.ZOOKEEPER_QUORUM, "0.0.0.0");
-    hbaseConf.setInt("hbase.master.info.port", -1);
-    hbaseConf.setInt("hbase.zookeeper.property.maxClientCnxns",500);
-    String zookeeperDir = new File(workDir,"zk").getAbsolutePath();
-    int zookeeperPort = 2181;
-    zookeeperCluster = new MiniZooKeeperCluster();
-    Method m;
-    Class<?> zkParam[] = {Integer.TYPE};
-    try{
-      m = MiniZooKeeperCluster.class.getDeclaredMethod("setDefaultClientPort",
-          zkParam);
-    } catch (NoSuchMethodException e) {
-      m = MiniZooKeeperCluster.class.getDeclaredMethod("setClientPort",
-          zkParam);
-    }
-
-    m.invoke(zookeeperCluster, new Object[] {new Integer(zookeeperPort)});
-    zookeeperCluster.startup(new File(zookeeperDir));
-    hbaseCluster = new MiniHBaseCluster(hbaseConf, 1);
-    HMaster master = hbaseCluster.getMaster();
-    Object serverName = master.getServerName();
-    String hostAndPort;
-    if(serverName instanceof String) {
-      System.out.println("Server name is string, using HServerAddress.");
-      m = HMaster.class.getDeclaredMethod("getMasterAddress",
-          new Class<?>[]{});
-      Class<?> clazz = Class.forName("org.apache.hadoop.hbase.HServerAddress");
-      /*
-       * Call method to get server address
-       */
-      Object serverAddr = clazz.cast(m.invoke(master, new Object[]{}));
-      //returns the address as hostname:port
-      hostAndPort = serverAddr.toString();
-    } else {
-      System.out.println("ServerName is org.apache.hadoop.hbase.ServerName," +
-          "using getHostAndPort()");
-      Class<?> clazz = Class.forName("org.apache.hadoop.hbase.ServerName");
-      m = clazz.getDeclaredMethod("getHostAndPort", new Class<?>[] {});
-      hostAndPort = m.invoke(serverName, new Object[]{}).toString();
-    }
-
-    hbaseConf.set("hbase.master", hostAndPort);
-    testUtility = new HBaseTestingUtility(hbaseConf);
-    testUtility.setZkCluster(zookeeperCluster);
-    hbaseCluster.startMaster();
     Map<String, String> ctxMap = new HashMap<String, String>();
     ctxMap.put("table", tableName);
     ctxMap.put("columnFamily", columnFamily);
@@ -147,13 +87,58 @@ public class TestAsyncHBaseSink {
     ctxMap.put("keep-alive", "0");
     ctxMap.put("timeout", "10000");
     ctx.putAll(ctxMap);
+
+    os = ManagementFactory.getOperatingSystemMXBean();
   }
 
   @AfterClass
   public static void tearDown() throws Exception {
-    hbaseCluster.shutdown();
-    zookeeperCluster.shutdown();
-    FileUtils.deleteDirectory(new File(workDir));
+    testUtility.shutdownMiniCluster();
+  }
+
+  @After
+  public void tearDownTest() throws Exception {
+    if (deleteTable) {
+      testUtility.deleteTable(tableName.getBytes());
+    }
+  }
+
+  @Test
+  public void testOneEventWithDefaults() throws Exception {
+    Map<String,String> ctxMap = new HashMap<String,String>();
+    ctxMap.put("table", tableName);
+    ctxMap.put("columnFamily", columnFamily);
+    ctxMap.put("serializer",
+            "org.apache.flume.sink.hbase.SimpleAsyncHbaseEventSerializer");
+    ctxMap.put("keep-alive", "0");
+    ctxMap.put("timeout", "10000");
+    Context tmpctx = new Context();
+    tmpctx.putAll(ctxMap);
+
+    testUtility.createTable(tableName.getBytes(), columnFamily.getBytes());
+    deleteTable = true;
+    AsyncHBaseSink sink = new AsyncHBaseSink(testUtility.getConfiguration());
+    Configurables.configure(sink, tmpctx);
+    Channel channel = new MemoryChannel();
+    Configurables.configure(channel, tmpctx);
+    sink.setChannel(channel);
+    sink.start();
+    Transaction tx = channel.getTransaction();
+    tx.begin();
+    Event e = EventBuilder.withBody(
+            Bytes.toBytes(valBase));
+    channel.put(e);
+    tx.commit();
+    tx.close();
+    Assert.assertFalse(sink.isConfNull());
+    sink.process();
+    sink.stop();
+    HTable table = new HTable(testUtility.getConfiguration(), tableName);
+    byte[][] results = getResults(table, 1);
+    byte[] out = results[0];
+    Assert.assertArrayEquals(e.getBody(), out);
+    out = results[1];
+    Assert.assertArrayEquals(Longs.toByteArray(1), out);
   }
 
   @After
@@ -275,11 +260,19 @@ public class TestAsyncHBaseSink {
     testUtility.createTable(tableName.getBytes(), columnFamily.getBytes());
     deleteTable = true;
     AsyncHBaseSink sink = new AsyncHBaseSink(testUtility.getConfiguration(),
+<<<<<<< HEAD
       true);
+=======
+      true, false);
+>>>>>>> refs/remotes/apache/trunk
     Configurables.configure(sink, ctx);
     Channel channel = new MemoryChannel();
     Configurables.configure(channel, ctx);
     sink.setChannel(channel);
+<<<<<<< HEAD
+=======
+    channel.start();
+>>>>>>> refs/remotes/apache/trunk
     sink.start();
     Transaction tx = channel.getTransaction();
     tx.begin();
@@ -342,12 +335,99 @@ public class TestAsyncHBaseSink {
   }
 
   @Test
+<<<<<<< HEAD
+=======
+  public void testMultipleBatchesBatchIncrementsWithCoalescing()
+    throws Exception {
+    doTestMultipleBatchesBatchIncrements(true);
+  }
+
+  @Test
+  public void testMultipleBatchesBatchIncrementsNoCoalescing()
+    throws Exception {
+    doTestMultipleBatchesBatchIncrements(false);
+  }
+
+  public void doTestMultipleBatchesBatchIncrements(boolean coalesce) throws
+    Exception {
+    testUtility.createTable(tableName.getBytes(), columnFamily.getBytes());
+    deleteTable = true;
+    AsyncHBaseSink sink = new AsyncHBaseSink(testUtility.getConfiguration(),
+      false, true);
+    if (coalesce) {
+      ctx.put(HBaseSinkConfigurationConstants.CONFIG_COALESCE_INCREMENTS,
+        "true");
+    }
+    ctx.put("batchSize", "2");
+    ctx.put("serializer", IncrementAsyncHBaseSerializer.class.getName());
+    ctx.put("serializer.column", "test");
+    Configurables.configure(sink, ctx);
+    //Reset the context to a higher batchSize
+    ctx.put("batchSize", "100");
+    // Restore the original serializer
+    ctx.put("serializer", SimpleAsyncHbaseEventSerializer.class.getName());
+    //Restore the no coalescing behavior
+    ctx.put(HBaseSinkConfigurationConstants.CONFIG_COALESCE_INCREMENTS,
+      "false");
+    Channel channel = new MemoryChannel();
+    Configurables.configure(channel, ctx);
+    sink.setChannel(channel);
+    sink.start();
+    Transaction tx = channel.getTransaction();
+    tx.begin();
+    for (int i = 0; i < 4; i++) {
+      for (int j = 0; j < 3; j++) {
+        Event e = EventBuilder.withBody(Bytes.toBytes(valBase + "-" + i));
+        channel.put(e);
+      }
+    }
+    tx.commit();
+    tx.close();
+    int count = 0;
+    Status status = Status.READY;
+    while (status != Status.BACKOFF) {
+      count++;
+      status = sink.process();
+    }
+    Assert.assertFalse(sink.isConfNull());
+    sink.stop();
+    Assert.assertEquals(7, count);
+    HTable table = new HTable(testUtility.getConfiguration(), tableName);
+    Scan scan = new Scan();
+    scan.addColumn(columnFamily.getBytes(),"test".getBytes());
+    scan.setStartRow(Bytes.toBytes(valBase));
+    ResultScanner rs = table.getScanner(scan);
+    int i = 0;
+    try {
+      for (Result r = rs.next(); r != null; r = rs.next()) {
+        byte[] out = r.getValue(columnFamily.getBytes(), "test".getBytes());
+        Assert.assertArrayEquals(Longs.toByteArray(3), out);
+        Assert.assertTrue(new String(r.getRow()).startsWith(valBase));
+        i++;
+      }
+    } finally {
+      rs.close();
+    }
+    Assert.assertEquals(4, i);
+    if (coalesce) {
+      Assert.assertEquals(8, sink.getTotalCallbacksReceived());
+    } else {
+      Assert.assertEquals(12, sink.getTotalCallbacksReceived());
+    }
+  }
+
+  @Test
+>>>>>>> refs/remotes/apache/trunk
   public void testWithoutConfigurationObject() throws Exception{
     testUtility.createTable(tableName.getBytes(), columnFamily.getBytes());
     deleteTable = true;
     ctx.put("batchSize", "2");
     ctx.put(HBaseSinkConfigurationConstants.ZK_QUORUM,
+<<<<<<< HEAD
         testUtility.getConfiguration().get(HConstants.ZOOKEEPER_QUORUM));
+=======
+            ZKConfig.getZKQuorumServersString(testUtility.getConfiguration()) );
+>>>>>>> refs/remotes/apache/trunk
     ctx.put(HBaseSinkConfigurationConstants.ZK_ZNODE_PARENT,
       testUtility.getConfiguration().get(HConstants.ZOOKEEPER_ZNODE_PARENT));
     AsyncHBaseSink sink = new AsyncHBaseSink();
@@ -438,6 +518,66 @@ public class TestAsyncHBaseSink {
     sink.process();
     sink.stop();
   }
+
+  // We only have support for getting File Descriptor count for Unix from the JDK
+  private long getOpenFileDescriptorCount() {
+    if(os instanceof UnixOperatingSystemMXBean){
+      return ((UnixOperatingSystemMXBean) os).getOpenFileDescriptorCount();
+    } else {
+      return -1;
+    }
+  }
+
+  /*
+   * Before the fix for FLUME-2738, consistently File Descriptors were leaked with at least
+   * > 10 FDs being leaked for every single shutdown-reinitialize routine
+   * If there is a leak, then the increase in FDs should be way higher than
+   * 50 and if there is no leak, there should not be any substantial increase in
+   * FDs. This is over a set of 10 shutdown-reinitialize runs
+   * This test makes sure that there is no File Descriptor leak, by continuously
+   * failing transactions and shutting down and reinitializing the client every time
+   * and this test will fail if a leak is detected
+   */
+  @Test
+  public void testFDLeakOnShutdown() throws Exception {
+    if(getOpenFileDescriptorCount() < 0) {
+      return;
+    }
+    testUtility.createTable(tableName.getBytes(), columnFamily.getBytes());
+    deleteTable = true;
+    AsyncHBaseSink sink = new AsyncHBaseSink(testUtility.getConfiguration(),
+            true, false);
+    ctx.put("maxConsecutiveFails", "1");
+    Configurables.configure(sink, ctx);
+    Channel channel = new MemoryChannel();
+    Configurables.configure(channel, ctx);
+    sink.setChannel(channel);
+    channel.start();
+    sink.start();
+    Transaction tx = channel.getTransaction();
+    tx.begin();
+    for(int i = 0; i < 3; i++){
+      Event e = EventBuilder.withBody(Bytes.toBytes(valBase + "-" + i));
+      channel.put(e);
+    }
+    tx.commit();
+    tx.close();
+    Assert.assertFalse(sink.isConfNull());
+    long initialFDCount = getOpenFileDescriptorCount();
+
+    // Since the isTimeOutTest is set to true, transaction will fail
+    // with EventDeliveryException
+    for(int i = 0; i < 10; i ++) {
+      try {
+        sink.process();
+      } catch (EventDeliveryException ex) {
+      }
+    }
+    long increaseInFD = getOpenFileDescriptorCount() - initialFDCount;
+    Assert.assertTrue("File Descriptor leak detected. FDs have increased by " +
+      increaseInFD + " from an initial FD count of " + initialFDCount,  increaseInFD < 50);
+  }
+
   /**
    * This test must run last - it shuts down the minicluster :D
    * @throws Exception
@@ -485,7 +625,7 @@ public class TestAsyncHBaseSink {
     Assert.assertEquals(2, found);
     out = results[2];
     Assert.assertArrayEquals(Longs.toByteArray(2), out);
-    hbaseCluster.shutdown();
+    testUtility.shutdownMiniCluster();
     sink.process();
     sink.stop();
   }

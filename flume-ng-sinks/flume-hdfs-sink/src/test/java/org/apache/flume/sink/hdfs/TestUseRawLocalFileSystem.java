@@ -19,6 +19,7 @@
 package org.apache.flume.sink.hdfs;
 
 import java.io.File;
+<<<<<<< HEAD
 import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -39,6 +40,17 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+=======
+import org.apache.commons.io.FileUtils;
+import org.apache.flume.Context;
+import org.apache.flume.Event;
+import org.apache.flume.event.EventBuilder;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.io.compress.GzipCodec;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+>>>>>>> refs/remotes/apache/trunk
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,4 +114,8 @@ public class TestUseRawLocalFileSystem {
     stream.sync();
     Assert.assertTrue(testFile.length() > 0);
   }
+<<<<<<< HEAD
+=======
+
+>>>>>>> refs/remotes/apache/trunk
 }

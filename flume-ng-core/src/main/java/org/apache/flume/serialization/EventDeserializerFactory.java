@@ -26,6 +26,11 @@ import org.apache.flume.annotations.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+<<<<<<< HEAD
+=======
+import java.util.Locale;
+
+>>>>>>> refs/remotes/apache/trunk
 @InterfaceAudience.Private
 @InterfaceStability.Stable
 public class EventDeserializerFactory {
@@ -42,7 +47,11 @@ public class EventDeserializerFactory {
     // try to find builder class in enum of known output serializers
     EventDeserializerType type;
     try {
+<<<<<<< HEAD
       type = EventDeserializerType.valueOf(deserializerType.toUpperCase());
+=======
+      type = EventDeserializerType.valueOf(deserializerType.toUpperCase(Locale.ENGLISH));
+>>>>>>> refs/remotes/apache/trunk
     } catch (IllegalArgumentException e) {
       logger.debug("Not in enum, loading builder class: {}", deserializerType);
       type = EventDeserializerType.OTHER;

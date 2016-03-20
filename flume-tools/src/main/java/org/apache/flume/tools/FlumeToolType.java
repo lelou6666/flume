@@ -18,6 +18,11 @@
  */
 package org.apache.flume.tools;
 
+<<<<<<< HEAD
+=======
+import java.util.Locale;
+
+>>>>>>> refs/remotes/apache/trunk
 public enum FlumeToolType {
   FCINTEGRITYTOOL(FileChannelIntegrityTool.class);
 
@@ -33,7 +38,11 @@ public enum FlumeToolType {
   public static String getNames() {
     StringBuilder builder = new StringBuilder();
     for(FlumeToolType type: values()) {
+<<<<<<< HEAD
       builder.append(type.name().toLowerCase() + "\n");
+=======
+      builder.append(type.name().toLowerCase(Locale.ENGLISH) + "\n");
+>>>>>>> refs/remotes/apache/trunk
     }
     return builder.toString();
   }

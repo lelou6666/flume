@@ -29,7 +29,11 @@ import org.apache.flume.sink.AbstractSink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+<<<<<<< HEAD
 import com.cloudera.cdk.morphline.api.Command;
+=======
+import org.kitesdk.morphline.api.Command;
+>>>>>>> refs/remotes/apache/trunk
 
 /**
  * Flume sink that extracts search documents from Flume events and processes them using a morphline
@@ -134,8 +138,14 @@ public class MorphlineSink extends AbstractSink implements Configurable {
         if (event == null) {
           break;
         }
+<<<<<<< HEAD
         numEventsTaken++;
         LOGGER.debug("Flume event: {}", event);      
+=======
+        sinkCounter.incrementEventDrainAttemptCount();
+        numEventsTaken++;
+        LOGGER.debug("Flume event: {}", event);
+>>>>>>> refs/remotes/apache/trunk
         //StreamEvent streamEvent = createStreamEvent(event);
         handler.process(event);
         if (System.currentTimeMillis() >= batchEndTime) {
@@ -152,12 +162,19 @@ public class MorphlineSink extends AbstractSink implements Configurable {
       } else {
         sinkCounter.incrementBatchCompleteCount();
       }
+<<<<<<< HEAD
       sinkCounter.addToEventDrainAttemptCount(numEventsTaken);
       sinkCounter.addToEventDrainSuccessCount(numEventsTaken);
 
       handler.commitTransaction();
       isMorphlineTransactionCommitted = true;
       txn.commit();
+=======
+      handler.commitTransaction();
+      isMorphlineTransactionCommitted = true;
+      txn.commit();
+      sinkCounter.addToEventDrainSuccessCount(numEventsTaken);
+>>>>>>> refs/remotes/apache/trunk
       return numEventsTaken == 0 ? Status.BACKOFF : Status.READY;
     } catch (Throwable t) {
       // Ooops - need to rollback and back off

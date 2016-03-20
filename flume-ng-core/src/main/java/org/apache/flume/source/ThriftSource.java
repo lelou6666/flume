@@ -26,6 +26,11 @@ import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.EventDrivenSource;
 import org.apache.flume.FlumeException;
+<<<<<<< HEAD
+=======
+import org.apache.flume.auth.FlumeAuthenticationUtil;
+import org.apache.flume.auth.FlumeAuthenticator;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.event.EventBuilder;
 import org.apache.flume.instrumentation.SourceCounter;
@@ -34,23 +39,61 @@ import org.apache.flume.thrift.ThriftSourceProtocol;
 import org.apache.flume.thrift.ThriftFlumeEvent;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TCompactProtocol;
+<<<<<<< HEAD
 import org.apache.thrift.server.TNonblockingServer;
 import org.apache.thrift.server.TServer;
+=======
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TProtocolFactory;
+import org.apache.thrift.server.TNonblockingServer;
+import org.apache.thrift.server.TServer;
+import org.apache.thrift.server.TThreadPoolServer;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.thrift.transport.TFastFramedTransport;
 import org.apache.thrift.transport.TNonblockingServerSocket;
 import org.apache.thrift.transport.TNonblockingServerTransport;
 import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TServerTransport;
+<<<<<<< HEAD
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.List;
+=======
+import org.apache.thrift.transport.TSSLTransportFactory;
+import org.apache.thrift.transport.TTransportFactory;
+import org.apache.thrift.transport.TSaslServerTransport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLServerSocket;
+import javax.security.sasl.Sasl;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.security.KeyStore;
+import java.security.Security;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+>>>>>>> refs/remotes/apache/trunk
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+<<<<<<< HEAD
+=======
+import java.security.PrivilegedAction;
+>>>>>>> refs/remotes/apache/trunk
 
 public class ThriftSource extends AbstractSource implements Configurable,
   EventDrivenSource {
@@ -70,13 +113,46 @@ public class ThriftSource extends AbstractSource implements Configurable,
    * Config param for the port to listen on.
    */
   public static final String CONFIG_PORT = "port";
+<<<<<<< HEAD
+=======
+  /**
+   * Config param for the thrift protocol to use.
+   */
+  public static final String CONFIG_PROTOCOL = "protocol";
+  public static final String BINARY_PROTOCOL = "binary";
+  public static final String COMPACT_PROTOCOL = "compact";
+
+  private static final String SSL_KEY = "ssl";
+  private static final String KEYSTORE_KEY = "keystore";
+  private static final String KEYSTORE_PASSWORD_KEY = "keystore-password";
+  private static final String KEYSTORE_TYPE_KEY = "keystore-type";
+  private static final String EXCLUDE_PROTOCOLS = "exclude-protocols";
+
+  private static final String KERBEROS_KEY = "kerberos";
+  private static final String AGENT_PRINCIPAL = "agent-principal";
+  private static final String AGENT_KEYTAB = "agent-keytab";
+
+>>>>>>> refs/remotes/apache/trunk
   private Integer port;
   private String bindAddress;
   private int maxThreads = 0;
   private SourceCounter sourceCounter;
   private TServer server;
+<<<<<<< HEAD
   private TServerTransport serverTransport;
   private ExecutorService servingExecutor;
+=======
+  private ExecutorService servingExecutor;
+  private String protocol;
+  private String keystore;
+  private String keystorePassword;
+  private String keystoreType;
+  private final List<String> excludeProtocols = new LinkedList<String>();
+  private boolean enableSsl = false;
+  private boolean enableKerberos = false;
+  private String principal;
+  private FlumeAuthenticator flumeAuth;
+>>>>>>> refs/remotes/apache/trunk
 
   @Override
   public void configure(Context context) {
@@ -90,6 +166,10 @@ public class ThriftSource extends AbstractSource implements Configurable,
 
     try {
       maxThreads = context.getInteger(CONFIG_THREADS, 0);
+<<<<<<< HEAD
+=======
+      maxThreads = (maxThreads <= 0) ? Integer.MAX_VALUE : maxThreads;
+>>>>>>> refs/remotes/apache/trunk
     } catch (NumberFormatException e) {
       logger.warn("Thrift source\'s \"threads\" property must specify an " +
         "integer value: " + context.getString(CONFIG_THREADS));
@@ -98,6 +178,7 @@ public class ThriftSource extends AbstractSource implements Configurable,
     if (sourceCounter == null) {
       sourceCounter = new SourceCounter(getName());
     }
+<<<<<<< HEAD
   }
 
   @Override
@@ -187,6 +268,71 @@ public class ThriftSource extends AbstractSource implements Configurable,
       throw new FlumeException("Cannot start Thrift Source.", ex);
     }
 
+=======
+
+    protocol = context.getString(CONFIG_PROTOCOL);
+    if (protocol == null) {
+      // default is to use the compact protocol.
+      protocol = COMPACT_PROTOCOL;
+    }
+    Preconditions.checkArgument(
+        (protocol.equalsIgnoreCase(BINARY_PROTOCOL) ||
+                protocol.equalsIgnoreCase(COMPACT_PROTOCOL)),
+        "binary or compact are the only valid Thrift protocol types to " +
+                "choose from.");
+
+    enableSsl = context.getBoolean(SSL_KEY, false);
+    if (enableSsl) {
+      keystore = context.getString(KEYSTORE_KEY);
+      keystorePassword = context.getString(KEYSTORE_PASSWORD_KEY);
+      keystoreType = context.getString(KEYSTORE_TYPE_KEY, "JKS");
+      String excludeProtocolsStr = context.getString(EXCLUDE_PROTOCOLS);
+      if (excludeProtocolsStr == null) {
+        excludeProtocols.add("SSLv3");
+      } else {
+        excludeProtocols.addAll(Arrays.asList(excludeProtocolsStr.split(" ")));
+        if (!excludeProtocols.contains("SSLv3")) {
+          excludeProtocols.add("SSLv3");
+        }
+      }
+      Preconditions.checkNotNull(keystore,
+              KEYSTORE_KEY + " must be specified when SSL is enabled");
+      Preconditions.checkNotNull(keystorePassword,
+              KEYSTORE_PASSWORD_KEY + " must be specified when SSL is enabled");
+      try {
+        KeyStore ks = KeyStore.getInstance(keystoreType);
+        ks.load(new FileInputStream(keystore), keystorePassword.toCharArray());
+      } catch (Exception ex) {
+        throw new FlumeException(
+                "Thrift source configured with invalid keystore: " + keystore, ex);
+      }
+    }
+
+    principal = context.getString(AGENT_PRINCIPAL);
+    String keytab = context.getString(AGENT_KEYTAB);
+    enableKerberos = context.getBoolean(KERBEROS_KEY, false);
+    this.flumeAuth = FlumeAuthenticationUtil.getAuthenticator(principal, keytab);
+    if(enableKerberos) {
+      if(!flumeAuth.isAuthenticated()) {
+        throw new FlumeException("Authentication failed in Kerberos mode for " +
+                "principal " + principal + " keytab " + keytab);
+      }
+      flumeAuth.startCredentialRefresher();
+    }
+  }
+
+  @Override
+  public void start() {
+    logger.info("Starting thrift source");
+
+    // create the server
+    server = getTThreadedSelectorServer();
+
+    // if in ssl mode or if SelectorServer is unavailable
+    if (server == null) {
+      server = getTThreadPoolServer();
+    }
+>>>>>>> refs/remotes/apache/trunk
 
     servingExecutor = Executors.newSingleThreadExecutor(new
       ThreadFactoryBuilder().setNameFormat("Flume Thrift Source I/O Boss")
@@ -198,7 +344,19 @@ public class ThriftSource extends AbstractSource implements Configurable,
     servingExecutor.submit(new Runnable() {
       @Override
       public void run() {
+<<<<<<< HEAD
         server.serve();
+=======
+        flumeAuth.execute(
+          new PrivilegedAction<Object>() {
+            @Override
+            public Object run() {
+              server.serve();
+              return null;
+            }
+          }
+        );
+>>>>>>> refs/remotes/apache/trunk
       }
     });
 
@@ -220,6 +378,159 @@ public class ThriftSource extends AbstractSource implements Configurable,
     super.start();
   }
 
+<<<<<<< HEAD
+=======
+  private String getkeyManagerAlgorithm() {
+    String algorithm = Security.getProperty(
+            "ssl.KeyManagerFactory.algorithm");
+    return (algorithm != null) ?
+            algorithm : KeyManagerFactory.getDefaultAlgorithm();
+  }
+
+  private TServerTransport getSSLServerTransport() {
+    try {
+      TServerTransport transport;
+      TSSLTransportFactory.TSSLTransportParameters params =
+              new TSSLTransportFactory.TSSLTransportParameters();
+
+      params.setKeyStore(keystore, keystorePassword, getkeyManagerAlgorithm(), keystoreType);
+      transport = TSSLTransportFactory.getServerSocket(
+              port, 120000, InetAddress.getByName(bindAddress), params);
+
+      ServerSocket serverSock = ((TServerSocket) transport).getServerSocket();
+      if (serverSock instanceof SSLServerSocket) {
+        SSLServerSocket sslServerSock = (SSLServerSocket) serverSock;
+        List<String> enabledProtocols = new ArrayList<String>();
+        for (String protocol : sslServerSock.getEnabledProtocols()) {
+          if (!excludeProtocols.contains(protocol)) {
+            enabledProtocols.add(protocol);
+          }
+        }
+        sslServerSock.setEnabledProtocols(enabledProtocols.toArray(new String[0]));
+      }
+      return transport;
+    } catch (Throwable throwable) {
+      throw new FlumeException("Cannot start Thrift source.", throwable);
+    }
+  }
+
+  private TServerTransport getTServerTransport() {
+    try {
+      return new TServerSocket(new InetSocketAddress
+              (bindAddress, port));
+    } catch (Throwable throwable) {
+      throw new FlumeException("Cannot start Thrift source.", throwable);
+    }
+  }
+
+  private TProtocolFactory getProtocolFactory() {
+    if (protocol.equals(BINARY_PROTOCOL)) {
+      logger.info("Using TBinaryProtocol");
+      return new TBinaryProtocol.Factory();
+    } else {
+      logger.info("Using TCompactProtocol");
+      return new TCompactProtocol.Factory();
+    }
+  }
+
+  private TServer getTThreadedSelectorServer() {
+    if(enableSsl || enableKerberos) {
+      return null;
+    }
+    Class<?> serverClass;
+    Class<?> argsClass;
+    TServer.AbstractServerArgs args;
+    try {
+      serverClass = Class.forName("org.apache.thrift" +
+              ".server.TThreadedSelectorServer");
+      argsClass = Class.forName("org.apache.thrift" +
+              ".server.TThreadedSelectorServer$Args");
+
+      TServerTransport serverTransport = new TNonblockingServerSocket(
+              new InetSocketAddress(bindAddress, port));
+
+      ExecutorService sourceService;
+      ThreadFactory threadFactory = new ThreadFactoryBuilder().setNameFormat(
+              "Flume Thrift IPC Thread %d").build();
+      if (maxThreads == 0) {
+        sourceService = Executors.newCachedThreadPool(threadFactory);
+      } else {
+        sourceService = Executors.newFixedThreadPool(maxThreads, threadFactory);
+      }
+      args = (TNonblockingServer.AbstractNonblockingServerArgs) argsClass
+              .getConstructor(TNonblockingServerTransport.class)
+              .newInstance(serverTransport);
+      Method m = argsClass.getDeclaredMethod("executorService",
+              ExecutorService.class);
+      m.invoke(args, sourceService);
+
+      populateServerParams(args);
+
+      /*
+       * Both THsHaServer and TThreadedSelectorServer allows us to pass in
+       * the executor service to use - unfortunately the "executorService"
+       * method does not exist in the parent abstract Args class,
+       * so use reflection to pass the executor in.
+       *
+       */
+      server = (TServer) serverClass.getConstructor(argsClass).newInstance(args);
+    } catch(ClassNotFoundException e) {
+      return null;
+    } catch (Throwable ex) {
+      throw new FlumeException("Cannot start Thrift Source.", ex);
+    }
+    return server;
+  }
+
+  private TServer getTThreadPoolServer() {
+    TServerTransport serverTransport;
+    if (enableSsl) {
+      serverTransport = getSSLServerTransport();
+    } else {
+      serverTransport = getTServerTransport();
+    }
+    TThreadPoolServer.Args serverArgs = new TThreadPoolServer.Args(serverTransport);
+    serverArgs.maxWorkerThreads(maxThreads);
+    populateServerParams(serverArgs);
+    return new TThreadPoolServer(serverArgs);
+  }
+
+  private void populateServerParams(TServer.AbstractServerArgs args) {
+    //populate the ProtocolFactory
+    args.protocolFactory(getProtocolFactory());
+
+    //populate the transportFactory
+    if(enableKerberos) {
+      args.transportFactory(getSASLTransportFactory());
+    } else {
+      args.transportFactory(new TFastFramedTransport.Factory());
+    }
+
+    // populate the  Processor
+    args.processor(new ThriftSourceProtocol
+            .Processor<ThriftSourceHandler>(new ThriftSourceHandler()));
+  }
+
+  private TTransportFactory getSASLTransportFactory() {
+    String[] names;
+    try {
+      names = FlumeAuthenticationUtil.splitKerberosName(principal);
+    } catch (IOException e) {
+      throw new FlumeException(
+              "Error while trying to resolve Principal name - " + principal, e);
+    }
+    Map<String, String> saslProperties = new HashMap<String, String>();
+    saslProperties.put(Sasl.QOP, "auth");
+    TSaslServerTransport.Factory saslTransportFactory =
+            new TSaslServerTransport.Factory();
+    saslTransportFactory.addServerDefinition(
+            "GSSAPI", names[0], names[1], saslProperties,
+            FlumeAuthenticationUtil.getSaslGssCallbackHandler());
+    return saslTransportFactory;
+  }
+
+  @Override
+>>>>>>> refs/remotes/apache/trunk
   public void stop() {
     if(server != null && server.isServing()) {
       server.stop();
@@ -285,5 +596,8 @@ public class ThriftSource extends AbstractSource implements Configurable,
       return Status.OK;
     }
   }
+<<<<<<< HEAD
 
+=======
+>>>>>>> refs/remotes/apache/trunk
 }

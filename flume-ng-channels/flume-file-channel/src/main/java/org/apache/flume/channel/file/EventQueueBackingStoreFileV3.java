@@ -40,13 +40,24 @@ final class EventQueueBackingStoreFileV3 extends EventQueueBackingStoreFile {
 
   EventQueueBackingStoreFileV3(File checkpointFile, int capacity,
       String name) throws IOException, BadCheckpointException {
+<<<<<<< HEAD
     this(checkpointFile, capacity, name, null, false);
+=======
+    this(checkpointFile, capacity, name, null, false, false);
+>>>>>>> refs/remotes/apache/trunk
   }
 
   EventQueueBackingStoreFileV3(File checkpointFile, int capacity,
       String name, File checkpointBackupDir,
+<<<<<<< HEAD
       boolean backupCheckpoint) throws IOException, BadCheckpointException {
     super(capacity, name, checkpointFile, checkpointBackupDir, backupCheckpoint);
+=======
+      boolean backupCheckpoint, boolean compressBackup)
+      throws IOException, BadCheckpointException {
+    super(capacity, name, checkpointFile, checkpointBackupDir, backupCheckpoint,
+      compressBackup);
+>>>>>>> refs/remotes/apache/trunk
     Preconditions.checkArgument(capacity > 0,
         "capacity must be greater than 0 " + capacity);
     metaDataFile = Serialization.getMetaDataFile(checkpointFile);

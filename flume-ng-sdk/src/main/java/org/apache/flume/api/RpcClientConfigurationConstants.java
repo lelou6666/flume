@@ -143,6 +143,18 @@ public final class RpcClientConfigurationConstants {
   public static final String CONFIG_TRUSTSTORE = "truststore";
   public static final String CONFIG_TRUSTSTORE_PASSWORD = "truststore-password";
   public static final String CONFIG_TRUSTSTORE_TYPE = "truststore-type";
+<<<<<<< HEAD
+=======
+  public static final String CONFIG_EXCLUDE_PROTOCOLS = "exclude-protocols";
+
+  public static final String KERBEROS_KEY = "kerberos";
+
+  /**
+   * Configuration constants for the NettyAvroRpcClient
+   * NioClientSocketChannelFactory
+   */
+  public static final String MAX_IO_WORKERS = "maxIoWorkers";
+>>>>>>> refs/remotes/apache/trunk
 
   private RpcClientConfigurationConstants() {
     // disable explicit object creation

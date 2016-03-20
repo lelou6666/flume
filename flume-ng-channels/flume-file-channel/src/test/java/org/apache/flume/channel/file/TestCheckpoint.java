@@ -32,11 +32,19 @@ public class TestCheckpoint {
   File file;
   File inflightPuts;
   File inflightTakes;
+<<<<<<< HEAD
+=======
+  File queueSet;
+>>>>>>> refs/remotes/apache/trunk
   @Before
   public void setup() throws IOException {
     file = File.createTempFile("Checkpoint", "");
     inflightPuts = File.createTempFile("inflightPuts", "");
     inflightTakes = File.createTempFile("inflightTakes", "");
+<<<<<<< HEAD
+=======
+    queueSet = File.createTempFile("queueset", "");
+>>>>>>> refs/remotes/apache/trunk
     Assert.assertTrue(file.isFile());
     Assert.assertTrue(file.canWrite());
   }
@@ -50,6 +58,7 @@ public class TestCheckpoint {
         new EventQueueBackingStoreFileV2(file, 1, "test");
     FlumeEventPointer ptrIn = new FlumeEventPointer(10, 20);
     FlumeEventQueue queueIn = new FlumeEventQueue(backingStore,
+<<<<<<< HEAD
         inflightTakes, inflightPuts);
     queueIn.addHead(ptrIn);
     FlumeEventQueue queueOut = new FlumeEventQueue(backingStore,
@@ -58,6 +67,16 @@ public class TestCheckpoint {
     queueIn.checkpoint(false);
     FlumeEventQueue queueOut2 = new FlumeEventQueue(backingStore,
         inflightTakes, inflightPuts);
+=======
+        inflightTakes, inflightPuts, queueSet);
+    queueIn.addHead(ptrIn);
+    FlumeEventQueue queueOut = new FlumeEventQueue(backingStore,
+        inflightTakes, inflightPuts, queueSet);
+    Assert.assertEquals(0, queueOut.getLogWriteOrderID());
+    queueIn.checkpoint(false);
+    FlumeEventQueue queueOut2 = new FlumeEventQueue(backingStore,
+        inflightTakes, inflightPuts, queueSet);
+>>>>>>> refs/remotes/apache/trunk
     FlumeEventPointer ptrOut = queueOut2.removeHead(0L);
     Assert.assertEquals(ptrIn, ptrOut);
     Assert.assertTrue(queueOut2.getLogWriteOrderID() > 0);

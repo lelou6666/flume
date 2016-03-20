@@ -25,6 +25,11 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
+<<<<<<< HEAD
+=======
+import java.util.ArrayList;
+import java.util.Arrays;
+>>>>>>> refs/remotes/apache/trunk
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -51,10 +56,17 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
+
 import org.apache.avro.ipc.CallFuture;
 import org.apache.avro.ipc.NettyTransceiver;
 import org.apache.avro.ipc.Transceiver;
 import org.apache.avro.ipc.specific.SpecificRequestor;
+import org.apache.commons.lang.StringUtils;
 import org.apache.flume.Event;
 import org.apache.flume.EventDeliveryException;
 import org.apache.flume.FlumeException;
@@ -92,6 +104,10 @@ implements RpcClient {
   private String truststore;
   private String truststorePassword;
   private String truststoreType;
+<<<<<<< HEAD
+=======
+  private final List<String> excludeProtocols = new LinkedList<String>();
+>>>>>>> refs/remotes/apache/trunk
 
   private Transceiver transceiver;
   private AvroSourceProtocol.Callback avroClient;
@@ -99,6 +115,10 @@ implements RpcClient {
       .getLogger(NettyAvroRpcClient.class);
   private boolean enableDeflateCompression;
   private int compressionLevel;
+<<<<<<< HEAD
+=======
+  private int maxIoWorkers;
+>>>>>>> refs/remotes/apache/trunk
 
   /**
    * This constructor is intended to be called from {@link RpcClientFactory}.
@@ -128,6 +148,7 @@ implements RpcClient {
 
     try {
 
+<<<<<<< HEAD
       if (enableDeflateCompression || enableSsl) {
         socketChannelFactory = new SSLCompressionChannelFactory(
             Executors.newCachedThreadPool(new TransceiverThreadFactory(
@@ -142,6 +163,37 @@ implements RpcClient {
                 "Avro " + NettyTransceiver.class.getSimpleName() + " Boss")),
             Executors.newCachedThreadPool(new TransceiverThreadFactory(
                 "Avro " + NettyTransceiver.class.getSimpleName() + " I/O Worker")));
+=======
+      ExecutorService bossExecutor =
+        Executors.newCachedThreadPool(new TransceiverThreadFactory(
+          "Avro " + NettyTransceiver.class.getSimpleName() + " Boss"));
+      ExecutorService workerExecutor =
+        Executors.newCachedThreadPool(new TransceiverThreadFactory(
+          "Avro " + NettyTransceiver.class.getSimpleName() + " I/O Worker"));
+
+      if (enableDeflateCompression || enableSsl) {
+        if (maxIoWorkers >= 1) {
+          socketChannelFactory = new SSLCompressionChannelFactory(
+            bossExecutor, workerExecutor,
+            enableDeflateCompression, enableSsl, trustAllCerts,
+            compressionLevel, truststore, truststorePassword, truststoreType,
+            excludeProtocols, maxIoWorkers);
+        } else {
+          socketChannelFactory = new SSLCompressionChannelFactory(
+            bossExecutor, workerExecutor,
+            enableDeflateCompression, enableSsl, trustAllCerts,
+            compressionLevel, truststore, truststorePassword, truststoreType,
+            excludeProtocols);
+        }
+      } else {
+        if (maxIoWorkers >= 1) {
+          socketChannelFactory = new NioClientSocketChannelFactory(
+              bossExecutor, workerExecutor, maxIoWorkers);
+        } else {
+          socketChannelFactory = new NioClientSocketChannelFactory(
+              bossExecutor, workerExecutor);
+        }
+>>>>>>> refs/remotes/apache/trunk
       }
 
       transceiver = new NettyTransceiver(this.address,
@@ -586,6 +638,36 @@ implements RpcClient {
         RpcClientConfigurationConstants.CONFIG_TRUSTSTORE_PASSWORD);
     truststoreType = properties.getProperty(
         RpcClientConfigurationConstants.CONFIG_TRUSTSTORE_TYPE, "JKS");
+<<<<<<< HEAD
+=======
+    String excludeProtocolsStr = properties.getProperty(
+      RpcClientConfigurationConstants.CONFIG_EXCLUDE_PROTOCOLS);
+    if (excludeProtocolsStr == null) {
+      excludeProtocols.add("SSLv3");
+    } else {
+      excludeProtocols.addAll(Arrays.asList(excludeProtocolsStr.split(" ")));
+      if (!excludeProtocols.contains("SSLv3")) {
+        excludeProtocols.add("SSLv3");
+      }
+    }
+
+    String maxIoWorkersStr = properties.getProperty(
+      RpcClientConfigurationConstants.MAX_IO_WORKERS);
+    if (!StringUtils.isEmpty(maxIoWorkersStr)) {
+      try {
+        maxIoWorkers = Integer.parseInt(maxIoWorkersStr);
+      } catch (NumberFormatException ex) {
+        logger.warn ("Invalid maxIOWorkers:" + maxIoWorkersStr + " Using " +
+          "default maxIOWorkers.");
+        maxIoWorkers = -1;
+      }
+    }
+
+    if (maxIoWorkers < 1) {
+      logger.warn("Using default maxIOWorkers");
+      maxIoWorkers = -1;
+    }
+>>>>>>> refs/remotes/apache/trunk
 
     this.connect();
   }
@@ -628,6 +710,7 @@ implements RpcClient {
    */
   private static class SSLCompressionChannelFactory extends NioClientSocketChannelFactory {
 
+<<<<<<< HEAD
     private boolean enableCompression;
     private int compressionLevel;
     private boolean enableSsl;
@@ -635,11 +718,25 @@ implements RpcClient {
     private String truststore;
     private String truststorePassword;
     private String truststoreType;
+=======
+    private final boolean enableCompression;
+    private final int compressionLevel;
+    private final boolean enableSsl;
+    private final boolean trustAllCerts;
+    private final String truststore;
+    private final String truststorePassword;
+    private final String truststoreType;
+    private final List<String> excludeProtocols;
+>>>>>>> refs/remotes/apache/trunk
 
     public SSLCompressionChannelFactory(Executor bossExecutor, Executor workerExecutor,
         boolean enableCompression, boolean enableSsl, boolean trustAllCerts,
         int compressionLevel, String truststore, String truststorePassword,
+<<<<<<< HEAD
         String truststoreType) {
+=======
+        String truststoreType, List<String> excludeProtocols) {
+>>>>>>> refs/remotes/apache/trunk
       super(bossExecutor, workerExecutor);
       this.enableCompression = enableCompression;
       this.enableSsl = enableSsl;
@@ -648,6 +745,25 @@ implements RpcClient {
       this.truststore = truststore;
       this.truststorePassword = truststorePassword;
       this.truststoreType = truststoreType;
+<<<<<<< HEAD
+=======
+      this.excludeProtocols = excludeProtocols;
+    }
+
+    public SSLCompressionChannelFactory(Executor bossExecutor, Executor workerExecutor,
+        boolean enableCompression, boolean enableSsl, boolean trustAllCerts,
+        int compressionLevel, String truststore, String truststorePassword,
+        String truststoreType, List<String> excludeProtocols, int maxIOWorkers) {
+      super(bossExecutor, workerExecutor, maxIOWorkers);
+      this.enableCompression = enableCompression;
+      this.enableSsl = enableSsl;
+      this.compressionLevel = compressionLevel;
+      this.trustAllCerts = trustAllCerts;
+      this.truststore = truststore;
+      this.truststorePassword = truststorePassword;
+      this.truststoreType = truststoreType;
+      this.excludeProtocols = excludeProtocols;
+>>>>>>> refs/remotes/apache/trunk
     }
 
     @Override
@@ -687,6 +803,18 @@ implements RpcClient {
           sslContext.init(null, managers, null);
           SSLEngine sslEngine = sslContext.createSSLEngine();
           sslEngine.setUseClientMode(true);
+<<<<<<< HEAD
+=======
+          List<String> enabledProtocols = new ArrayList<String>();
+          for (String protocol : sslEngine.getEnabledProtocols()) {
+            if (!excludeProtocols.contains(protocol)) {
+              enabledProtocols.add(protocol);
+            }
+          }
+          sslEngine.setEnabledProtocols(enabledProtocols.toArray(new String[0]));
+          logger.info("SSLEngine protocols enabled: " +
+              Arrays.asList(sslEngine.getEnabledProtocols()));
+>>>>>>> refs/remotes/apache/trunk
           // addFirst() will make SSL handling the first stage of decoding
           // and the last stage of encoding this must be added after
           // adding compression handling above

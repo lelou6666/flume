@@ -32,6 +32,10 @@ import javax.jms.Queue;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 import javax.jms.Topic;
+<<<<<<< HEAD
+=======
+import javax.naming.InitialContext;
+>>>>>>> refs/remotes/apache/trunk
 
 import org.apache.flume.Context;
 import org.apache.flume.Event;
@@ -47,12 +51,20 @@ public abstract class JMSMessageConsumerTestBase {
   static final String DESTINATION_NAME = "destinationName";
   static final String SELECTOR = "selector";
   static final String TEXT = "text";
+<<<<<<< HEAD
+=======
+  static final InitialContext WONT_USE = null;
+>>>>>>> refs/remotes/apache/trunk
 
   Context context;
   JMSMessageConsumer consumer;
   ConnectionFactory connectionFactory;
   String destinationName;
   JMSDestinationType destinationType;
+<<<<<<< HEAD
+=======
+  JMSDestinationLocator destinationLocator;
+>>>>>>> refs/remotes/apache/trunk
   String messageSelector;
   int batchSize;
   long pollTimeout;
@@ -100,6 +112,10 @@ public abstract class JMSMessageConsumerTestBase {
     when(messageConsumer.receive(anyLong())).thenReturn(message);
     destinationName = DESTINATION_NAME;
     destinationType = JMSDestinationType.QUEUE;
+<<<<<<< HEAD
+=======
+    destinationLocator = JMSDestinationLocator.CDI;
+>>>>>>> refs/remotes/apache/trunk
     messageSelector = SELECTOR;
     batchSize = 10;
     pollTimeout = 500L;
@@ -129,9 +145,15 @@ public abstract class JMSMessageConsumerTestBase {
   }
 
   JMSMessageConsumer create() {
+<<<<<<< HEAD
     return new JMSMessageConsumer(connectionFactory, destinationName,
         destinationType, messageSelector, batchSize, pollTimeout, converter,
         userName, password);
+=======
+    return new JMSMessageConsumer(WONT_USE, connectionFactory, destinationName,
+        destinationLocator, destinationType, messageSelector, batchSize,
+        pollTimeout, converter, userName, password);
+>>>>>>> refs/remotes/apache/trunk
   }
   @After
   public void tearDown() throws Exception {

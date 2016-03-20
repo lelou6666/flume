@@ -26,7 +26,10 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.io.FileUtils;
+<<<<<<< HEAD
 import org.apache.flume.ChannelException;
+=======
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.Event;
 import org.apache.flume.annotations.InterfaceAudience;
 import org.apache.flume.annotations.InterfaceStability;
@@ -66,8 +69,13 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
  * the on disk write ahead log with the last checkpoint of the queue.
  *
  * Before calling any of commitPut/commitTake/get/put/rollback/take
+<<<<<<< HEAD
  * Log.tryLockShared should be called and the above operations
  * should only be called if tryLockShared returns true. After
+=======
+ * {@linkplain org.apache.flume.channel.file.Log#lockShared()}
+ * should be called. After
+>>>>>>> refs/remotes/apache/trunk
  * the operation and any additional modifications of the
  * FlumeEventQueue, the Log.unlockShared method should be called.
  */
@@ -78,6 +86,10 @@ public class Log {
   private static final Logger LOGGER = LoggerFactory.getLogger(Log.class);
   private static final int MIN_NUM_LOGS = 2;
   public static final String FILE_LOCK = "in_use.lock";
+<<<<<<< HEAD
+=======
+  public static final String QUEUE_SET = "queueset";
+>>>>>>> refs/remotes/apache/trunk
   // for reader
   private final Map<Integer, LogFile.RandomReader> idLogFileMap = Collections
       .synchronizedMap(new HashMap<Integer, LogFile.RandomReader>());
@@ -103,7 +115,12 @@ public class Log {
   /**
    * Set of files that should be excluded from backup and restores.
    */
+<<<<<<< HEAD
   public static final Set<String> EXCLUDES = Sets.newHashSet(FILE_LOCK);
+=======
+  public static final Set<String> EXCLUDES = Sets.newHashSet(FILE_LOCK,
+      QUEUE_SET);
+>>>>>>> refs/remotes/apache/trunk
   /**
    * Shared lock
    */
@@ -112,9 +129,11 @@ public class Log {
    * Exclusive lock
    */
   private final WriteLock checkpointWriterLock = checkpointLock.writeLock();
+<<<<<<< HEAD
   private int logWriteTimeout;
+=======
+>>>>>>> refs/remotes/apache/trunk
   private final String channelNameDescriptor;
-  private int checkpointWriteTimeout;
   private boolean useLogReplayV1;
   private KeyProvider encryptionKeyProvider;
   private String encryptionCipherProvider;
@@ -124,8 +143,18 @@ public class Log {
   private boolean didFastReplay = false;
   private boolean didFullReplayDueToBadCheckpointException = false;
   private final boolean useDualCheckpoints;
+<<<<<<< HEAD
   private volatile boolean backupRestored = false;
 
+=======
+  private final boolean compressBackupCheckpoint;
+  private volatile boolean backupRestored = false;
+
+  private final boolean fsyncPerTransaction;
+  private final int fsyncInterval;
+  private final boolean checkpointOnClose;
+
+>>>>>>> refs/remotes/apache/trunk
   private int readCount;
   private int putCount;
   private int takeCount;
@@ -141,11 +170,7 @@ public class Log {
     private int bQueueCapacity;
     private File bCheckpointDir;
     private File[] bLogDirs;
-    private int bLogWriteTimeout =
-        FileChannelConfiguration.DEFAULT_WRITE_TIMEOUT;
     private String bName;
-    private int bCheckpointWriteTimeout =
-        FileChannelConfiguration.DEFAULT_CHECKPOINT_WRITE_TIMEOUT;
     private boolean useLogReplayV1;
     private boolean useFastReplay;
     private KeyProvider bEncryptionKeyProvider;
@@ -153,8 +178,35 @@ public class Log {
     private String bEncryptionCipherProvider;
     private long bUsableSpaceRefreshInterval = 15L * 1000L;
     private boolean bUseDualCheckpoints = false;
+<<<<<<< HEAD
     private File bBackupCheckpointDir = null;
 
+=======
+    private boolean bCompressBackupCheckpoint = false;
+    private File bBackupCheckpointDir = null;
+
+    private boolean fsyncPerTransaction = true;
+    private int fsyncInterval;
+
+    private boolean checkpointOnClose = true;
+
+    boolean isFsyncPerTransaction() {
+      return fsyncPerTransaction;
+    }
+
+    void setFsyncPerTransaction(boolean fsyncPerTransaction) {
+      this.fsyncPerTransaction = fsyncPerTransaction;
+    }
+
+    int getFsyncInterval() {
+      return fsyncInterval;
+    }
+
+    void setFsyncInterval(int fsyncInterval) {
+      this.fsyncInterval = fsyncInterval;
+    }
+
+>>>>>>> refs/remotes/apache/trunk
     Builder setUsableSpaceRefreshInterval(long usableSpaceRefreshInterval) {
       bUsableSpaceRefreshInterval = usableSpaceRefreshInterval;
       return this;
@@ -185,11 +237,6 @@ public class Log {
       return this;
     }
 
-    Builder setLogWriteTimeout(int timeout) {
-      bLogWriteTimeout = timeout;
-      return this;
-    }
-
     Builder setChannelName(String name) {
       bName = name;
       return this;
@@ -197,11 +244,14 @@ public class Log {
 
     Builder setMinimumRequiredSpace(long minimumRequiredSpace) {
       bMinimumRequiredSpace = minimumRequiredSpace;
+<<<<<<< HEAD
       return this;
     }
 
     Builder setCheckpointWriteTimeout(int checkpointTimeout){
       bCheckpointWriteTimeout = checkpointTimeout;
+=======
+>>>>>>> refs/remotes/apache/trunk
       return this;
     }
 
@@ -235,11 +285,20 @@ public class Log {
       return this;
     }
 
+<<<<<<< HEAD
+=======
+    Builder setCompressBackupCheckpoint(boolean compressBackupCheckpoint) {
+      this.bCompressBackupCheckpoint = compressBackupCheckpoint;
+      return this;
+    }
+
+>>>>>>> refs/remotes/apache/trunk
     Builder setBackupCheckpointDir(File backupCheckpointDir) {
       this.bBackupCheckpointDir = backupCheckpointDir;
       return this;
     }
 
+<<<<<<< HEAD
     Log build() throws IOException {
       return new Log(bCheckpointInterval, bMaxFileSize, bQueueCapacity,
           bLogWriteTimeout, bCheckpointWriteTimeout, bUseDualCheckpoints,
@@ -248,10 +307,25 @@ public class Log {
           bEncryptionKeyProvider, bEncryptionKeyAlias,
           bEncryptionCipherProvider, bUsableSpaceRefreshInterval,
           bLogDirs);
+=======
+    Builder setCheckpointOnClose(boolean enableCheckpointOnClose) {
+      this.checkpointOnClose = enableCheckpointOnClose;
+      return this;
+    }
+
+    Log build() throws IOException {
+      return new Log(bCheckpointInterval, bMaxFileSize, bQueueCapacity,
+        bUseDualCheckpoints, bCompressBackupCheckpoint,bCheckpointDir,
+        bBackupCheckpointDir, bName, useLogReplayV1, useFastReplay,
+        bMinimumRequiredSpace, bEncryptionKeyProvider, bEncryptionKeyAlias,
+        bEncryptionCipherProvider, bUsableSpaceRefreshInterval,
+        fsyncPerTransaction, fsyncInterval, checkpointOnClose, bLogDirs);
+>>>>>>> refs/remotes/apache/trunk
     }
   }
 
   private Log(long checkpointInterval, long maxFileSize, int queueCapacity,
+<<<<<<< HEAD
       int logWriteTimeout, int checkpointWriteTimeout,
       boolean useDualCheckpoints, File checkpointDir, File backupCheckpointDir,
       String name, boolean useLogReplayV1, boolean useFastReplay,
@@ -259,6 +333,16 @@ public class Log {
       @Nullable String encryptionKeyAlias,
       @Nullable String encryptionCipherProvider,
       long usableSpaceRefreshInterval, File... logDirs)
+=======
+    boolean useDualCheckpoints, boolean compressBackupCheckpoint,
+    File checkpointDir, File backupCheckpointDir,
+    String name, boolean useLogReplayV1, boolean useFastReplay,
+    long minimumRequiredSpace, @Nullable KeyProvider encryptionKeyProvider,
+    @Nullable String encryptionKeyAlias,
+    @Nullable String encryptionCipherProvider,
+    long usableSpaceRefreshInterval, boolean fsyncPerTransaction,
+    int fsyncInterval, boolean checkpointOnClose, File... logDirs)
+>>>>>>> refs/remotes/apache/trunk
           throws IOException {
     Preconditions.checkArgument(checkpointInterval > 0,
       "checkpointInterval <= 0");
@@ -332,11 +416,17 @@ public class Log {
     this.maxFileSize = maxFileSize;
     this.queueCapacity = queueCapacity;
     this.useDualCheckpoints = useDualCheckpoints;
+<<<<<<< HEAD
+=======
+    this.compressBackupCheckpoint = compressBackupCheckpoint;
+>>>>>>> refs/remotes/apache/trunk
     this.checkpointDir = checkpointDir;
     this.backupCheckpointDir = backupCheckpointDir;
     this.logDirs = logDirs;
-    this.logWriteTimeout = logWriteTimeout;
-    this.checkpointWriteTimeout = checkpointWriteTimeout;
+    this.fsyncPerTransaction = fsyncPerTransaction;
+    this.fsyncInterval = fsyncInterval;
+    this.checkpointOnClose = checkpointOnClose;
+
     logFiles = new AtomicReferenceArray<LogFile.Writer>(this.logDirs.length);
     workerExecutor = Executors.newSingleThreadScheduledExecutor(new
       ThreadFactoryBuilder().setNameFormat("Log-BackgroundWorker-" + name)
@@ -354,9 +444,13 @@ public class Log {
   void replay() throws IOException {
     Preconditions.checkState(!open, "Cannot replay after Log has been opened");
 
+<<<<<<< HEAD
     Preconditions.checkState(tryLockExclusive(), "Cannot obtain lock on "
         + channelNameDescriptor);
 
+=======
+    lockExclusive();
+>>>>>>> refs/remotes/apache/trunk
     try {
       /*
        * First we are going to look through the data directories
@@ -375,7 +469,11 @@ public class Log {
           dataFiles.add(file);
           nextFileID.set(Math.max(nextFileID.get(), id));
           idLogFileMap.put(id, LogFileFactory.getRandomReader(new File(logDir,
+<<<<<<< HEAD
               PREFIX + id), encryptionKeyProvider));
+=======
+              PREFIX + id), encryptionKeyProvider, fsyncPerTransaction));
+>>>>>>> refs/remotes/apache/trunk
         }
       }
       LOGGER.info("Found NextFileID " + nextFileID +
@@ -405,16 +503,29 @@ public class Log {
       }
       File inflightTakesFile = new File(checkpointDir, "inflighttakes");
       File inflightPutsFile = new File(checkpointDir, "inflightputs");
+<<<<<<< HEAD
+=======
+      File queueSetDir = new File(checkpointDir, QUEUE_SET);
+>>>>>>> refs/remotes/apache/trunk
       EventQueueBackingStore backingStore = null;
 
 
       try {
         backingStore =
+<<<<<<< HEAD
             EventQueueBackingStoreFactory.get(checkpointFile,
                 backupCheckpointDir, queueCapacity, channelNameDescriptor,
                 true, this.useDualCheckpoints);
         queue = new FlumeEventQueue(backingStore, inflightTakesFile,
                 inflightPutsFile);
+=======
+          EventQueueBackingStoreFactory.get(checkpointFile,
+            backupCheckpointDir, queueCapacity, channelNameDescriptor,
+            true, this.useDualCheckpoints,
+            this.compressBackupCheckpoint);
+        queue = new FlumeEventQueue(backingStore, inflightTakesFile,
+                inflightPutsFile, queueSetDir);
+>>>>>>> refs/remotes/apache/trunk
         LOGGER.info("Last Checkpoint " + new Date(checkpointFile.lastModified())
                 + ", queue depth = " + queue.getSize());
 
@@ -446,11 +557,20 @@ public class Log {
                 "directory to recover from a corrupt or incomplete checkpoint");
           }
         }
+<<<<<<< HEAD
         backingStore = EventQueueBackingStoreFactory.get(checkpointFile,
             backupCheckpointDir,
             queueCapacity, channelNameDescriptor, true, useDualCheckpoints);
         queue = new FlumeEventQueue(backingStore, inflightTakesFile,
                 inflightPutsFile);
+=======
+        backingStore = EventQueueBackingStoreFactory.get(
+          checkpointFile, backupCheckpointDir, queueCapacity,
+          channelNameDescriptor, true, useDualCheckpoints,
+          compressBackupCheckpoint);
+        queue = new FlumeEventQueue(backingStore, inflightTakesFile,
+                inflightPutsFile, queueSetDir);
+>>>>>>> refs/remotes/apache/trunk
         // If the checkpoint was deleted due to BadCheckpointException, then
         // trigger fast replay if the channel is configured to.
         shouldFastReplay = this.useFastReplay;
@@ -488,13 +608,21 @@ public class Log {
                         KeyProvider encryptionKeyProvider,
                         boolean useFastReplay) throws Exception {
     CheckpointRebuilder rebuilder = new CheckpointRebuilder(dataFiles,
+<<<<<<< HEAD
             queue);
+=======
+            queue, fsyncPerTransaction);
+>>>>>>> refs/remotes/apache/trunk
     if (useFastReplay && rebuilder.rebuild()) {
       didFastReplay = true;
       LOGGER.info("Fast replay successful.");
     } else {
       ReplayHandler replayHandler = new ReplayHandler(queue,
+<<<<<<< HEAD
               encryptionKeyProvider);
+=======
+              encryptionKeyProvider, fsyncPerTransaction);
+>>>>>>> refs/remotes/apache/trunk
       if (useLogReplayV1) {
         LOGGER.info("Replaying logs with v1 replay logic");
         replayHandler.replayLogv1(dataFiles);
@@ -571,7 +699,11 @@ public class Log {
    * @throws InterruptedException
    */
   FlumeEvent get(FlumeEventPointer pointer) throws IOException,
+<<<<<<< HEAD
     InterruptedException, NoopRecordException {
+=======
+    InterruptedException, NoopRecordException, CorruptEventException {
+>>>>>>> refs/remotes/apache/trunk
     Preconditions.checkState(open, "Log is closed");
     int id = pointer.getFileID();
     LogFile.RandomReader logFile = idLogFileMap.get(id);
@@ -579,9 +711,18 @@ public class Log {
     try {
       return logFile.get(pointer.getOffset());
     } catch (CorruptEventException ex) {
+<<<<<<< HEAD
       open = false;
       throw new IOException("Corrupt event found. Please run File Channel " +
         "Integrity tool.", ex);
+=======
+      if (fsyncPerTransaction) {
+        open = false;
+        throw new IOException("Corrupt event found. Please run File Channel " +
+          "Integrity tool.", ex);
+      }
+      throw ex;
+>>>>>>> refs/remotes/apache/trunk
     }
   }
 
@@ -605,7 +746,11 @@ public class Log {
     long usableSpace = logFiles.get(logFileIndex).getUsableSpace();
     long requiredSpace = minimumRequiredSpace + buffer.limit();
     if(usableSpace <= requiredSpace) {
+<<<<<<< HEAD
       throw new IOException("Usable space exhaused, only " + usableSpace +
+=======
+      throw new IOException("Usable space exhausted, only " + usableSpace +
+>>>>>>> refs/remotes/apache/trunk
           " bytes remaining, required " + requiredSpace + " bytes");
     }
     boolean error = true;
@@ -648,7 +793,11 @@ public class Log {
     long usableSpace = logFiles.get(logFileIndex).getUsableSpace();
     long requiredSpace = minimumRequiredSpace + buffer.limit();
     if(usableSpace <= requiredSpace) {
+<<<<<<< HEAD
       throw new IOException("Usable space exhaused, only " + usableSpace +
+=======
+      throw new IOException("Usable space exhausted, only " + usableSpace +
+>>>>>>> refs/remotes/apache/trunk
           " bytes remaining, required " + requiredSpace + " bytes");
     }
     boolean error = true;
@@ -690,7 +839,11 @@ public class Log {
     long usableSpace = logFiles.get(logFileIndex).getUsableSpace();
     long requiredSpace = minimumRequiredSpace + buffer.limit();
     if(usableSpace <= requiredSpace) {
+<<<<<<< HEAD
       throw new IOException("Usable space exhaused, only " + usableSpace +
+=======
+      throw new IOException("Usable space exhausted, only " + usableSpace +
+>>>>>>> refs/remotes/apache/trunk
           " bytes remaining, required " + requiredSpace + " bytes");
     }
     boolean error = true;
@@ -748,6 +901,7 @@ public class Log {
   }
 
 
+<<<<<<< HEAD
   private boolean tryLockExclusive() {
     try {
       return checkpointWriterLock.tryLock(checkpointWriteTimeout,
@@ -758,10 +912,13 @@ public class Log {
     }
     return false;
   }
+=======
+>>>>>>> refs/remotes/apache/trunk
   private void unlockExclusive()  {
     checkpointWriterLock.unlock();
   }
 
+<<<<<<< HEAD
   boolean tryLockShared() {
     try {
       return checkpointReadLock.tryLock(logWriteTimeout, TimeUnit.SECONDS);
@@ -770,6 +927,10 @@ public class Log {
       Thread.currentThread().interrupt();
     }
     return false;
+=======
+  void lockShared() {
+    checkpointReadLock.lock();
+>>>>>>> refs/remotes/apache/trunk
   }
 
   void unlockShared()  {
@@ -788,6 +949,7 @@ public class Log {
     lockExclusive();
     try {
       open = false;
+<<<<<<< HEAD
       shutdownWorker();
       if (logFiles != null) {
         for (int index = 0; index < logFiles.length(); index++) {
@@ -805,6 +967,33 @@ public class Log {
           }
         }
       }
+=======
+      try {
+        if(checkpointOnClose) {
+          writeCheckpoint(true); // do this before acquiring exclusive lock
+        }
+      } catch (Exception err) {
+        LOGGER.warn("Failed creating checkpoint on close of channel " + channelNameDescriptor +
+                "Replay will take longer next time channel is started.", err);
+      }
+      shutdownWorker();
+      if (logFiles != null) {
+        for (int index = 0; index < logFiles.length(); index++) {
+          LogFile.Writer writer = logFiles.get(index);
+          if(writer != null) {
+            writer.close();
+          }
+        }
+      }
+      synchronized (idLogFileMap) {
+        for (Integer logId : idLogFileMap.keySet()) {
+          LogFile.RandomReader reader = idLogFileMap.get(logId);
+          if (reader != null) {
+            reader.close();
+          }
+        }
+      }
+>>>>>>> refs/remotes/apache/trunk
       queue.close();
       try {
         unlock(checkpointDir);
@@ -817,6 +1006,7 @@ public class Log {
         } catch (IOException ex) {
           LOGGER.warn("Error unlocking " + checkpointDir, ex);
         }
+<<<<<<< HEAD
       }
       for (File logDir : logDirs) {
         try {
@@ -825,6 +1015,16 @@ public class Log {
           LOGGER.warn("Error unlocking " + logDir, ex);
         }
       }
+=======
+      }
+      for (File logDir : logDirs) {
+        try {
+          unlock(logDir);
+        } catch (IOException ex) {
+          LOGGER.warn("Error unlocking " + logDir, ex);
+        }
+      }
+>>>>>>> refs/remotes/apache/trunk
     } finally {
       unlockExclusive();
     }
@@ -863,7 +1063,11 @@ public class Log {
     long usableSpace = logFiles.get(logFileIndex).getUsableSpace();
     long requiredSpace = minimumRequiredSpace + buffer.limit();
     if(usableSpace <= requiredSpace) {
+<<<<<<< HEAD
       throw new IOException("Usable space exhaused, only " + usableSpace +
+=======
+      throw new IOException("Usable space exhausted, only " + usableSpace +
+>>>>>>> refs/remotes/apache/trunk
           " bytes remaining, required " + requiredSpace + " bytes");
     }
     boolean error = true;
@@ -926,6 +1130,7 @@ public class Log {
    * @param index
    * @throws IOException
    */
+<<<<<<< HEAD
     private synchronized void roll(int index, ByteBuffer buffer)
       throws IOException {
     if (!tryLockShared()) {
@@ -933,22 +1138,35 @@ public class Log {
           + "log. Try increasing the log write timeout value. " +
           channelNameDescriptor);
     }
+=======
+  private synchronized void roll(int index, ByteBuffer buffer)
+    throws IOException {
+    lockShared();
+>>>>>>> refs/remotes/apache/trunk
 
     try {
       LogFile.Writer oldLogFile = logFiles.get(index);
       // check to make sure a roll is actually required due to
       // the possibility of multiple writes waiting on lock
-      if(oldLogFile == null || buffer == null ||
-          oldLogFile.isRollRequired(buffer)) {
+      if (oldLogFile == null || buffer == null ||
+        oldLogFile.isRollRequired(buffer)) {
         try {
           LOGGER.info("Roll start " + logDirs[index]);
           int fileID = nextFileID.incrementAndGet();
           File file = new File(logDirs[index], PREFIX + fileID);
           LogFile.Writer writer = LogFileFactory.getWriter(file, fileID,
+<<<<<<< HEAD
               maxFileSize, encryptionKey, encryptionKeyAlias,
               encryptionCipherProvider, usableSpaceRefreshInterval);
           idLogFileMap.put(fileID, LogFileFactory.getRandomReader(file,
               encryptionKeyProvider));
+=======
+            maxFileSize, encryptionKey, encryptionKeyAlias,
+            encryptionCipherProvider, usableSpaceRefreshInterval,
+            fsyncPerTransaction, fsyncInterval);
+          idLogFileMap.put(fileID, LogFileFactory.getRandomReader(file,
+            encryptionKeyProvider, fsyncPerTransaction));
+>>>>>>> refs/remotes/apache/trunk
           // writer from this point on will get new reference
           logFiles.set(index, writer);
           // close out old log
@@ -982,6 +1200,7 @@ public class Log {
     boolean checkpointCompleted = false;
     long usableSpace = checkpointDir.getUsableSpace();
     if(usableSpace <= minimumRequiredSpace) {
+<<<<<<< HEAD
       throw new IOException("Usable space exhaused, only " + usableSpace +
           " bytes remaining, required " + minimumRequiredSpace + " bytes");
     }
@@ -989,6 +1208,12 @@ public class Log {
     if(!lockAcquired) {
       return false;
     }
+=======
+      throw new IOException("Usable space exhausted, only " + usableSpace +
+          " bytes remaining, required " + minimumRequiredSpace + " bytes");
+    }
+    lockExclusive();
+>>>>>>> refs/remotes/apache/trunk
     SortedSet<Integer> logFileRefCountsAll = null, logFileRefCountsActive = null;
     try {
       if (queue.checkpoint(force)) {
@@ -1032,10 +1257,19 @@ public class Log {
           try {
             writer.markCheckpoint(logWriteOrderID);
           } finally {
+<<<<<<< HEAD
             writer.close();
           }
           reader = LogFileFactory.getRandomReader(file, encryptionKeyProvider);
           idLogFileMap.put(id, reader);
+=======
+            reader = LogFileFactory.getRandomReader(file,
+                    encryptionKeyProvider, fsyncPerTransaction);
+            idLogFileMap.put(id, reader);
+            writer.close();
+          }
+
+>>>>>>> refs/remotes/apache/trunk
           LOGGER.debug("Updated checkpoint for file: " + file
               + "logWriteOrderID " + logWriteOrderID);
           idIterator.remove();

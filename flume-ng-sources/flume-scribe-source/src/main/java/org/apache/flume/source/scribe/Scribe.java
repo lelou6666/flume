@@ -168,15 +168,31 @@ public class Scribe {
         super("Log");
       }
 
+<<<<<<< HEAD
       protected Log_args getEmptyArgsInstance() {
         return new Log_args();
       }
 
       protected Log_result getResult(I iface, Log_args args) throws org.apache.thrift.TException {
+=======
+      public Log_args getEmptyArgsInstance() {
+        return new Log_args();
+      }
+
+      public Log_result getResult(I iface, Log_args args) throws org.apache
+          .thrift.TException {
+>>>>>>> refs/remotes/apache/trunk
         Log_result result = new Log_result();
         result.success = iface.Log(args.messages);
         return result;
       }
+<<<<<<< HEAD
+=======
+
+      public boolean isOneway() {
+        return false;
+      }
+>>>>>>> refs/remotes/apache/trunk
     }
 
   }

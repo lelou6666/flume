@@ -26,6 +26,11 @@ import org.apache.flume.conf.Configurable;
 import org.apache.flume.lifecycle.LifecycleAware;
 import org.apache.flume.lifecycle.LifecycleState;
 
+<<<<<<< HEAD
+=======
+import java.util.Map;
+
+>>>>>>> refs/remotes/apache/trunk
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class AbstractChannel

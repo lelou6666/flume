@@ -15,7 +15,11 @@
 
 
 ======================================
+<<<<<<< HEAD
 Flume 1.4.0 Developer Guide
+=======
+Flume 1.7.0-SNAPSHOT Developer Guide
+>>>>>>> refs/remotes/apache/trunk
 ======================================
 
 Introduction
@@ -166,7 +170,11 @@ RPC clients - Avro and Thrift
 As of Flume 1.4.0, Avro is the default RPC protocol.  The
 ``NettyAvroRpcClient`` and ``ThriftRpcClient`` implement the ``RpcClient``
 interface. The client needs to create this object with the host and port of
+<<<<<<< HEAD
 the target Flume agent, and canthen use the ``RpcClient`` to send data into
+=======
+the target Flume agent, and can then use the ``RpcClient`` to send data into
+>>>>>>> refs/remotes/apache/trunk
 the agent. The following example shows how to use the Flume Client SDK API
 within a user's data-generating application:
 
@@ -208,6 +216,36 @@ within a user's data-generating application:
       this.client = RpcClientFactory.getDefaultInstance(hostname, port);
       // Use the following method to create a thrift client (instead of the above line):
       // this.client = RpcClientFactory.getThriftInstance(hostname, port);
+<<<<<<< HEAD
+    }
+
+    public void sendDataToFlume(String data) {
+      // Create a Flume Event object that encapsulates the sample data
+      Event event = EventBuilder.withBody(data, Charset.forName("UTF-8"));
+
+      // Send the event
+      try {
+        client.append(event);
+      } catch (EventDeliveryException e) {
+        // clean up and recreate the client
+        client.close();
+        client = null;
+        client = RpcClientFactory.getDefaultInstance(hostname, port);
+        // Use the following method to create a thrift client (instead of the above line):
+        // this.client = RpcClientFactory.getThriftInstance(hostname, port);
+      }
+    }
+
+    public void cleanUp() {
+      // Close the RPC connection
+      client.close();
+    }
+
+  }
+
+The remote Flume agent needs to have an ``AvroSource`` (or a
+``ThriftSource`` if you are using a Thrift client) listening on some port.
+=======
     }
 
     public void sendDataToFlume(String data) {
@@ -277,6 +315,149 @@ properties:
 
   request-timeout = 20000              # Must be >=1000 (default: 20000)
 
+Secure RPC client - Thrift
+''''''''''''''''''''''''''
+
+As of Flume 1.6.0, Thrift source and sink supports kerberos based authentication.
+The client needs to use the getThriftInstance method of ``SecureRpcClientFactory``
+to get hold of a ``SecureThriftRpcClient``. ``SecureThriftRpcClient`` extends
+``ThriftRpcClient`` which implements the ``RpcClient`` interface. The kerberos
+authentication module resides in flume-ng-auth module which is
+required in classpath, when using the ``SecureRpcClientFactory``. Both the client
+principal and the client keytab should be passed in as parameters through the
+properties and they reflect the credentials of the client to authenticate
+against the kerberos KDC. In addition, the server principal of the destination
+Thrift source to which this client is connecting to, should also be provided.
+The following example shows how to use the ``SecureRpcClientFactory``
+within a user's data-generating application:
+
+.. code-block:: java
+
+  import org.apache.flume.Event;
+  import org.apache.flume.EventDeliveryException;
+  import org.apache.flume.event.EventBuilder;
+  import org.apache.flume.api.SecureRpcClientFactory;
+  import org.apache.flume.api.RpcClientConfigurationConstants;
+  import org.apache.flume.api.RpcClient;
+  import java.nio.charset.Charset;
+  import java.util.Properties;
+
+  public class MyApp {
+    public static void main(String[] args) {
+      MySecureRpcClientFacade client = new MySecureRpcClientFacade();
+      // Initialize client with the remote Flume agent's host, port
+      Properties props = new Properties();
+      props.setProperty(RpcClientConfigurationConstants.CONFIG_CLIENT_TYPE, "thrift");
+      props.setProperty("hosts", "h1");
+      props.setProperty("hosts.h1", "client.example.org"+":"+ String.valueOf(41414));
+
+      // Initialize client with the kerberos authentication related properties
+      props.setProperty("kerberos", "true");
+      props.setProperty("client-principal", "flumeclient/client.example.org@EXAMPLE.ORG");
+      props.setProperty("client-keytab", "/tmp/flumeclient.keytab");
+      props.setProperty("server-principal", "flume/server.example.org@EXAMPLE.ORG");
+      client.init(props);
+
+      // Send 10 events to the remote Flume agent. That agent should be
+      // configured to listen with an AvroSource.
+      String sampleData = "Hello Flume!";
+      for (int i = 0; i < 10; i++) {
+        client.sendDataToFlume(sampleData);
+      }
+
+      client.cleanUp();
+    }
+  }
+
+  class MySecureRpcClientFacade {
+    private RpcClient client;
+    private Properties properties;
+
+    public void init(Properties properties) {
+      // Setup the RPC connection
+      this.properties = properties;
+      // Create the ThriftSecureRpcClient instance by using SecureRpcClientFactory
+      this.client = SecureRpcClientFactory.getThriftInstance(properties);
+    }
+
+    public void sendDataToFlume(String data) {
+      // Create a Flume Event object that encapsulates the sample data
+      Event event = EventBuilder.withBody(data, Charset.forName("UTF-8"));
+
+      // Send the event
+      try {
+        client.append(event);
+      } catch (EventDeliveryException e) {
+        // clean up and recreate the client
+        client.close();
+        client = null;
+        client = SecureRpcClientFactory.getThriftInstance(properties);
+      }
+    }
+
+    public void cleanUp() {
+      // Close the RPC connection
+      client.close();
+    }
+  }
+
+The remote ``ThriftSource`` should be started in kerberos mode.
+>>>>>>> refs/remotes/apache/trunk
+Below is an example Flume agent configuration that's waiting for a connection
+from MyApp:
+
+.. code-block:: properties
+
+  a1.channels = c1
+  a1.sources = r1
+  a1.sinks = k1
+
+  a1.channels.c1.type = memory
+
+  a1.sources.r1.channels = c1
+<<<<<<< HEAD
+  a1.sources.r1.type = avro
+  # For using a thrift source set the following instead of the above line.
+  # a1.source.r1.type = thrift
+  a1.sources.r1.bind = 0.0.0.0
+  a1.sources.r1.port = 41414
+
+  a1.sinks.k1.channel = c1
+  a1.sinks.k1.type = logger
+
+For more flexibility, the default Flume client implementations
+(``NettyAvroRpcClient`` and ``ThriftRpcClient``) can be configured with these
+properties:
+
+.. code-block:: properties
+
+  client.type = default (for avro) or thrift (for thrift)
+
+  hosts = h1                           # default client accepts only 1 host
+                                       # (additional hosts will be ignored)
+
+  hosts.h1 = host1.example.org:41414   # host and port must both be specified
+                                       # (neither has a default)
+
+  batch-size = 100                     # Must be >=1 (default: 100)
+
+  connect-timeout = 20000              # Must be >=1000 (default: 20000)
+
+  request-timeout = 20000              # Must be >=1000 (default: 20000)
+
+=======
+  a1.sources.r1.type = thrift
+  a1.sources.r1.bind = 0.0.0.0
+  a1.sources.r1.port = 41414
+  a1.sources.r1.kerberos = true
+  a1.sources.r1.agent-principal = flume/server.example.org@EXAMPLE.ORG
+  a1.sources.r1.agent-keytab = /tmp/flume.keytab
+
+
+  a1.sinks.k1.channel = c1
+  a1.sinks.k1.type = logger
+
+>>>>>>> refs/remotes/apache/trunk
 Failover Client
 '''''''''''''''
 
@@ -450,7 +631,11 @@ sources, sinks, and channels are allowed. Specifically the source used
 is a special embedded source and events should be send to the source
 via the put, putAll methods on the EmbeddedAgent object. Only File Channel
 and Memory Channel are allowed as channels while Avro Sink is the only
+<<<<<<< HEAD
 supported sink.
+=======
+supported sink. Interceptors are also supported by the embedded agent.
+>>>>>>> refs/remotes/apache/trunk
 
 Note: The embedded agent has a dependency on hadoop-core.jar.
 
@@ -459,6 +644,7 @@ full Agent. The following is an exhaustive list of configration options:
 
 Required properties are in **bold**.
 
+<<<<<<< HEAD
 ====================  ================  ==============================================
 Property Name         Default           Description
 ====================  ================  ==============================================
@@ -471,6 +657,31 @@ sink.*                --                Configuration options for the sink. See 
 **processor.type**    --                Either ``failover`` or ``load_balance`` which correspond to FailoverSinksProcessor and LoadBalancingSinkProcessor respectively.
 processor.*           --                Configuration options for the sink processor selected. See FailoverSinksProcessor and LoadBalancingSinkProcessor user guide for an exhaustive list.
 ====================  ================  ==============================================
+=======
+=====================  ================  ======================================================================
+Property Name          Default           Description
+=====================  ================  ======================================================================
+source.type            embedded          The only available source is the embedded source.
+**channel.type**       --                Either ``memory`` or ``file`` which correspond 
+		         		 to MemoryChannel and FileChannel respectively.
+channel.*              --                Configuration options for the channel type requested,
+					 see MemoryChannel or FileChannel user guide for an exhaustive list.
+**sinks**              --                List of sink names
+**sink.type**          --                Property name must match a name in the list of sinks. 
+					 Value must be ``avro``
+sink.*                 --                Configuration options for the sink. 
+					 See AvroSink user guide for an exhaustive list,
+					 however note AvroSink requires at least hostname and port.
+**processor.type**     --                Either ``failover`` or ``load_balance`` which correspond
+		            		 to FailoverSinksProcessor and LoadBalancingSinkProcessor respectively.
+processor.*            --                Configuration options for the sink processor selected.
+					 See FailoverSinksProcessor and LoadBalancingSinkProcessor 
+					 user guide for an exhaustive list.
+source.interceptors    --                Space-separated list of interceptors
+source.interceptors.*  --                Configuration options for individual interceptors 
+					 specified in the source.interceptors property
+=====================  ================  ======================================================================
+>>>>>>> refs/remotes/apache/trunk
 
 Below is an example of how to use the agent:
 
@@ -487,6 +698,13 @@ Below is an example of how to use the agent:
     properties.put("sink2.hostname", "collector2.apache.org");
     properties.put("sink2.port",  "5565");
     properties.put("processor.type", "load_balance");
+<<<<<<< HEAD
+=======
+    properties.put("source.interceptors", "i1");
+    properties.put("source.interceptors.i1.type", "static");
+    properties.put("source.interceptors.i1.key", "key1");
+    properties.put("source.interceptors.i1.value", "value1");
+>>>>>>> refs/remotes/apache/trunk
 
     EmbeddedAgent agent = new EmbeddedAgent("myagent");
 
@@ -519,9 +737,16 @@ Flume ``Transaction``.
    :alt: Transaction sequence diagram
 
 A ``Transaction`` is implemented within a ``Channel`` implementation. Each
+<<<<<<< HEAD
 ``Source`` and ``Sink`` that is connected to ``Channel`` must obtain a
 ``Transaction`` object. The ``Source``\ s actually use a ``ChannelSelector``
 interface to encapsulate the ``Transaction``. The operation to stage an
+=======
+``Source`` and ``Sink`` that is connected to a ``Channel`` must obtain a
+``Transaction`` object. The ``Source``\ s use a ``ChannelProcessor``
+to manage the ``Transaction``\ s, the ``Sink``\ s manage them explicitly via
+their configured ``Channel``. The operation to stage an
+>>>>>>> refs/remotes/apache/trunk
 ``Event`` (put it into a ``Channel``) or extract an ``Event`` (take it out of a
 ``Channel``) is done inside an active ``Transaction``. For example:
 
@@ -634,8 +859,11 @@ processing its own configuration settings. For example:
         if (t instanceof Error) {
           throw (Error)t;
         }
+<<<<<<< HEAD
       } finally {
         txn.close();
+=======
+>>>>>>> refs/remotes/apache/trunk
       }
       return status;
     }
@@ -645,6 +873,7 @@ Source
 ~~~~~~
 
 The purpose of a ``Source`` is to receive data from an external client and store
+<<<<<<< HEAD
 it into the ``Channel``. A ``Source`` can get an instance of its own
 ``ChannelProcessor`` to process an ``Event``. The ``ChannelProcessor`` in turn
 can get an instance of its own ``ChannelSelector`` that's used to get the
@@ -652,6 +881,14 @@ can get an instance of its own ``ChannelSelector`` that's used to get the
 properties file. A ``Transaction`` can then be retrieved from each associated
 ``Channel`` so that the ``Source`` can place ``Event``\ s into the ``Channel``
 reliably, within a ``Transaction``.
+=======
+it into the configured ``Channel``\ s. A ``Source`` can get an instance of its own
+``ChannelProcessor`` to process an ``Event``, commited within a ``Channel``
+local transaction, in serial. In the case of an exception, required
+``Channel``\ s will propagate the exception, all ``Channel``\ s will rollback their
+transaction, but events processed previously on other ``Channel``\ s will remain
+committed.
+>>>>>>> refs/remotes/apache/trunk
 
 Similar to the ``SinkRunner.PollingRunner`` ``Runnable``, there’s
 a ``PollingRunner`` ``Runnable`` that executes on a thread created when the
@@ -701,17 +938,23 @@ mechanism that captures the new data and stores it into the ``Channel``. The
     public Status process() throws EventDeliveryException {
       Status status = null;
 
+<<<<<<< HEAD
       // Start transaction
       Channel ch = getChannel();
       Transaction txn = ch.getTransaction();
       txn.begin();
       try {
         // This try clause includes whatever Channel operations you want to do
+=======
+      try {
+        // This try clause includes whatever Channel/Event operations you want to do
+>>>>>>> refs/remotes/apache/trunk
 
         // Receive new data
         Event e = getSomeData();
 
         // Store the Event into this Source's associated Channel(s)
+<<<<<<< HEAD
         getChannelProcessor().processEvent(e)
 
         txn.commit();
@@ -719,6 +962,12 @@ mechanism that captures the new data and stores it into the ``Channel``. The
       } catch (Throwable t) {
         txn.rollback();
 
+=======
+        getChannelProcessor().processEvent(e);
+
+        status = Status.READY;
+      } catch (Throwable t) {
+>>>>>>> refs/remotes/apache/trunk
         // Log exception, handle individual exceptions as needed
 
         status = Status.BACKOFF;

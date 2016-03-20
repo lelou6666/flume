@@ -27,6 +27,10 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Collections;
+<<<<<<< HEAD
+=======
+import java.util.HashMap;
+>>>>>>> refs/remotes/apache/trunk
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -401,6 +405,7 @@ public class TestFileChannel extends TestFileChannelBase {
     fileChannel.start();
     Assert.assertTrue(!fileChannel.isOpen());
   }
+<<<<<<< HEAD
 
 
   /**
@@ -586,6 +591,210 @@ public class TestFileChannel extends TestFileChannelBase {
           }
           return false;
         }
+=======
+
+
+  /**
+   * Test contributed by Brock Noland during code review.
+   * @throws Exception
+   */
+  @Test
+  public void testTakeTransactionCrossingCheckpoint() throws Exception {
+    Map<String, String> overrides = Maps.newHashMap();
+    overrides.put(FileChannelConfiguration.CHECKPOINT_INTERVAL, "10000");
+    channel = createFileChannel(overrides);
+    channel.start();
+    Assert.assertTrue(channel.isOpen());
+    Set<String> in = fillChannel(channel, "restart");
+    Set<String> out = Sets.newHashSet();
+    // now take one item off the channel
+    Transaction tx = channel.getTransaction();
+    out.addAll(takeWithoutCommit(channel, tx, 1));
+    // sleep so a checkpoint occurs. take is before
+    // and commit is after the checkpoint
+    forceCheckpoint(channel);
+    tx.commit();
+    tx.close();
+    channel.stop();
+    channel = createFileChannel(overrides);
+    channel.start();
+    Assert.assertTrue(channel.isOpen());
+    // we should not geet the item we took of the queue above
+    Set<String> out2 = takeEvents(channel, 1, Integer.MAX_VALUE);
+    channel.stop();
+    in.removeAll(out);
+    compareInputAndOut(in, out2);
+  }
+
+  @Test
+  public void testPutForceCheckpointCommitReplay() throws Exception{
+    Map<String, String> overrides = Maps.newHashMap();
+    overrides.put(FileChannelConfiguration.CAPACITY, String.valueOf(2));
+    overrides.put(FileChannelConfiguration.TRANSACTION_CAPACITY,
+        String.valueOf(2));
+    overrides.put(FileChannelConfiguration.CHECKPOINT_INTERVAL, "10000");
+    FileChannel channel = createFileChannel(overrides);
+    channel.start();
+    //Force a checkpoint by committing a transaction
+    Transaction tx = channel.getTransaction();
+    Set<String> in = putWithoutCommit(channel, tx, "putWithoutCommit", 1);
+    forceCheckpoint(channel);
+    tx.commit();
+    tx.close();
+    channel.stop();
+
+    channel = createFileChannel(overrides);
+    channel.start();
+    Assert.assertTrue(channel.isOpen());
+    Set<String> out = takeEvents(channel, 1);
+    compareInputAndOut(in, out);
+    channel.stop();
+
+  }
+
+  @Test
+  public void testPutCheckpointCommitCheckpointReplay() throws Exception {
+    Map<String, String> overrides = Maps.newHashMap();
+    overrides.put(FileChannelConfiguration.CAPACITY, String.valueOf(2));
+    overrides.put(FileChannelConfiguration.TRANSACTION_CAPACITY,
+        String.valueOf(2));
+    overrides.put(FileChannelConfiguration.CHECKPOINT_INTERVAL, "10000");
+    FileChannel channel = createFileChannel(overrides);
+    channel.start();
+    //Force a checkpoint by committing a transaction
+    Transaction tx = channel.getTransaction();
+    Set<String> in = putWithoutCommit(channel, tx, "doubleCheckpoint", 1);
+    forceCheckpoint(channel);
+    tx.commit();
+    tx.close();
+    forceCheckpoint(channel);
+    channel.stop();
+
+    channel = createFileChannel(overrides);
+    channel.start();
+    Assert.assertTrue(channel.isOpen());
+    Set<String> out = takeEvents(channel, 5);
+    compareInputAndOut(in, out);
+    channel.stop();
+  }
+
+  @Test
+  public void testReferenceCounts() throws Exception {
+    Map<String, String> overrides = Maps.newHashMap();
+    overrides.put(FileChannelConfiguration.CHECKPOINT_INTERVAL, "10000");
+    overrides.put(FileChannelConfiguration.MAX_FILE_SIZE, "150");
+    final FileChannel channel = createFileChannel(overrides);
+    channel.start();
+    putEvents(channel, "testing-reference-counting", 1, 15);
+    Transaction tx = channel.getTransaction();
+    takeWithoutCommit(channel, tx, 10);
+    forceCheckpoint(channel);
+    tx.rollback();
+    //Since we did not commit the original transaction. now we should get 15
+    //events back.
+    final Set<String> takenEvents = Sets.newHashSet();
+    Executors.newSingleThreadExecutor().submit(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          takenEvents.addAll(takeEvents(channel, 15));
+        } catch (Exception ex) {
+          Throwables.propagate(ex);
+        }
+      }
+    }).get();
+    Assert.assertEquals(15, takenEvents.size());
+  }
+
+  // This test will fail without FLUME-1606.
+  @Test
+  public void testRollbackIncompleteTransaction() throws Exception {
+    Map<String, String> overrides = Maps.newHashMap();
+    overrides.put(FileChannelConfiguration.CHECKPOINT_INTERVAL,
+            String.valueOf(Integer.MAX_VALUE));
+    final FileChannel channel = createFileChannel(overrides);
+    channel.start();
+    FileBackedTransaction tx = (FileBackedTransaction) channel.getTransaction();
+
+    InflightEventWrapper inflightPuts =
+            field("inflightPuts").ofType(InflightEventWrapper.class).in(
+            field("queue").ofType(FlumeEventQueue.class).in(tx).get()).get();
+
+    tx.begin();
+
+    for (int i = 0; i < 100; i++) {
+      channel.put(EventBuilder.withBody("TestEvent".getBytes()));
+    }
+
+    Assert.assertFalse(inflightPuts.getFileIDs().isEmpty());
+    Assert.assertFalse(inflightPuts.getInFlightPointers().isEmpty());
+
+    tx.rollback();
+    tx.close();
+
+    Assert.assertTrue(inflightPuts.getFileIDs().isEmpty());
+    Assert.assertTrue(inflightPuts.getInFlightPointers().isEmpty());
+    Assert.assertTrue(channel.getDepth() == 0);
+
+    Set<String> in = putEvents(channel, "testing-rollbacks", 100, 100);
+
+    tx = (FileBackedTransaction) channel.getTransaction();
+
+    InflightEventWrapper inflightTakes =
+            field("inflightTakes").ofType(InflightEventWrapper.class).in(
+            field("queue").ofType(FlumeEventQueue.class).in(tx).get()).get();
+
+    tx.begin();
+
+    for (int i = 0; i < 100; i++) {
+      channel.take();
+    }
+
+    Assert.assertFalse(inflightTakes.getFileIDs().isEmpty());
+    Assert.assertFalse(inflightTakes.getInFlightPointers().isEmpty());
+
+    tx.rollback();
+    tx.close();
+
+
+    Assert.assertTrue(inflightTakes.getFileIDs().isEmpty());
+    Assert.assertTrue(inflightTakes.getInFlightPointers().isEmpty());
+    Assert.assertTrue(channel.getDepth() == in.size());
+
+  }
+
+  @Test (expected = IllegalStateException.class)
+  public void testChannelDiesOnCorruptEventFsync() throws Exception {
+    testChannelDiesOnCorruptEvent(true);
+  }
+
+
+  @Test
+  public void testChannelDiesOnCorruptEventNoFsync() throws
+    Exception {
+    testChannelDiesOnCorruptEvent(false);
+  }
+
+
+
+  private void testChannelDiesOnCorruptEvent(boolean fsyncPerTxn)
+    throws Exception {
+    Map<String, String> overrides = new HashMap<String, String>();
+    overrides.put(FileChannelConfiguration.FSYNC_PER_TXN,
+      String.valueOf(fsyncPerTxn));
+    final FileChannel channel = createFileChannel(overrides);
+    channel.start();
+    putEvents(channel,"test-corrupt-event",100,100);
+    for(File dataDir : dataDirs) {
+      File[] files = dataDir.listFiles(new FilenameFilter() {
+        @Override
+        public boolean accept(File dir, String name) {
+          if(!name.endsWith("meta") && !name.contains("lock")){
+            return true;
+          }
+          return false;
+        }
+>>>>>>> refs/remotes/apache/trunk
       });
       if (files != null && files.length > 0) {
         for (int j = 0; j < files.length; j++) {
@@ -596,8 +805,14 @@ public class TestFileChannel extends TestFileChannelBase {
         }
       }
     }
+<<<<<<< HEAD
     try {
       consumeChannel(channel, true);
+=======
+    Set<String> events;
+    try {
+      events = consumeChannel(channel, true);
+>>>>>>> refs/remotes/apache/trunk
     } catch (IllegalStateException ex) {
       // The rollback call in takeEvents() in TestUtils will cause an
       // IllegalArgumentException - and this should be tested to verify the
@@ -605,9 +820,19 @@ public class TestFileChannel extends TestFileChannelBase {
       Assert.assertTrue(ex.getMessage().contains("Log is closed"));
       throw ex;
     }
+<<<<<<< HEAD
     Assert.fail();
 
 
+=======
+    if(fsyncPerTxn) {
+      Assert.fail();
+    } else {
+      // The corrupt event must be missing, the rest should be
+      // returned
+      Assert.assertEquals(99, events.size());
+    }
+>>>>>>> refs/remotes/apache/trunk
   }
 
 }

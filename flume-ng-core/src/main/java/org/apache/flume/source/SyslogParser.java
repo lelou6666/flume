@@ -30,9 +30,18 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.collect.Maps;
 import java.nio.charset.Charset;
 import java.util.Map;
+<<<<<<< HEAD
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 import org.apache.flume.Event;
+=======
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.regex.Pattern;
+import org.apache.flume.Event;
+import org.apache.flume.annotations.InterfaceAudience;
+import org.apache.flume.annotations.InterfaceStability;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.event.EventBuilder;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
@@ -40,6 +49,11 @@ import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+<<<<<<< HEAD
+=======
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
+>>>>>>> refs/remotes/apache/trunk
 public class SyslogParser {
 
   private static final Logger logger =
@@ -53,7 +67,10 @@ public class SyslogParser {
   private static final String timePat = "yyyy-MM-dd'T'HH:mm:ss";
   private static final int RFC3164_LEN = 15;
   private static final int RFC5424_PREFIX_LEN = 19;
+<<<<<<< HEAD
 
+=======
+>>>>>>> refs/remotes/apache/trunk
   private final DateTimeFormatter timeParser;
 
   private Cache<String, Long> timestampCache;
@@ -76,7 +93,11 @@ public class SyslogParser {
    * @return Parsed Flume Event
    * @throws IllegalArgumentException if unable to successfully parse message
    */
+<<<<<<< HEAD
   public Event parseMessage(String msg, Charset charset) {
+=======
+  public Event parseMessage(String msg, Charset charset, Set<String> keepFields) {
+>>>>>>> refs/remotes/apache/trunk
     Map<String, String> headers = Maps.newHashMap();
 
     int msgLen = msg.length();
@@ -95,6 +116,12 @@ public class SyslogParser {
     int facility = pri / 8;
     int severity = pri % 8;
 
+<<<<<<< HEAD
+=======
+    // Remember priority
+    headers.put(SyslogUtils.SYSLOG_PRIORITY, priority);
+
+>>>>>>> refs/remotes/apache/trunk
     // put fac / sev into header
     headers.put(SyslogUtils.SYSLOG_FACILITY, String.valueOf(facility));
     headers.put(SyslogUtils.SYSLOG_SEVERITY, String.valueOf(severity));
@@ -105,20 +132,36 @@ public class SyslogParser {
     // update parsing position
     curPos = endBracketPos + 1;
 
+<<<<<<< HEAD
     // ignore version string
     if (msgLen > curPos + 2 && "1 ".equals(msg.substring(curPos, curPos + 2))) {
+=======
+    // remember version string
+    String version = null;
+    if (msgLen > curPos + 2 && "1 ".equals(msg.substring(curPos, curPos + 2))) {
+      version = msg.substring(curPos, curPos+1);
+      headers.put(SyslogUtils.SYSLOG_VERSION, version);
+>>>>>>> refs/remotes/apache/trunk
       curPos += 2;
     }
 
     // now parse timestamp (handle different varieties)
 
     long ts;
+<<<<<<< HEAD
+=======
+    String tsString;
+>>>>>>> refs/remotes/apache/trunk
     char dateStartChar = msg.charAt(curPos);
 
     try {
 
       // no timestamp specified; use relay current time
       if (dateStartChar == '-') {
+<<<<<<< HEAD
+=======
+        tsString = Character.toString(dateStartChar);
+>>>>>>> refs/remotes/apache/trunk
         ts = System.currentTimeMillis();
         if (msgLen <= curPos + 2) {
           throw new IllegalArgumentException(
@@ -126,22 +169,39 @@ public class SyslogParser {
         }
         curPos += 2; // assume we skip past a space to get to the hostname
 
+<<<<<<< HEAD
         // rfc3164 imestamp
+=======
+      // rfc3164 timestamp
+>>>>>>> refs/remotes/apache/trunk
       } else if (dateStartChar >= 'A' && dateStartChar <= 'Z') {
         if (msgLen <= curPos + RFC3164_LEN) {
           throw new IllegalArgumentException("bad timestamp format");
         }
+<<<<<<< HEAD
         ts = parseRfc3164Time(
             msg.substring(curPos, curPos + RFC3164_LEN));
         curPos += RFC3164_LEN + 1;
 
         // rfc 5424 timestamp
+=======
+        tsString = msg.substring(curPos, curPos + RFC3164_LEN);
+        ts = parseRfc3164Time(tsString);
+        curPos += RFC3164_LEN + 1;
+
+      // rfc 5424 timestamp
+>>>>>>> refs/remotes/apache/trunk
       } else {
         int nextSpace = msg.indexOf(' ', curPos);
         if (nextSpace == -1) {
           throw new IllegalArgumentException("bad timestamp format");
         }
+<<<<<<< HEAD
         ts = parseRfc5424Date(msg.substring(curPos, nextSpace));
+=======
+        tsString = msg.substring(curPos, nextSpace);
+        ts = parseRfc5424Date(tsString);
+>>>>>>> refs/remotes/apache/trunk
         curPos = nextSpace + 1;
       }
 
@@ -164,9 +224,18 @@ public class SyslogParser {
 
     // EventBuilder will do a copy of its own, so no defensive copy of the body
     String data = "";
+<<<<<<< HEAD
     if (msgLen > nextSpace + 1) {
       curPos = nextSpace + 1;
       data = msg.substring(curPos);
+=======
+    if (msgLen > nextSpace + 1 && !SyslogUtils.keepAllFields(keepFields)) {
+      curPos = nextSpace + 1;
+      data = msg.substring(curPos);
+      data = SyslogUtils.addFieldsToBody(keepFields, data, priority, version, tsString, hostname);
+    } else {
+      data = msg;
+>>>>>>> refs/remotes/apache/trunk
     }
 
     Event event = EventBuilder.withBody(data, charset, headers);
@@ -221,9 +290,20 @@ public class SyslogParser {
       }
 
       // if they had a valid fractional second, append it rounded to millis
+<<<<<<< HEAD
       if (endMillisPos - (curPos + 1) > 0) {
         float frac = Float.parseFloat(msg.substring(curPos, endMillisPos));
         long milliseconds = (long) (frac * 1000f);
+=======
+      final int fractionalPositions = endMillisPos - (curPos + 1);
+      if (fractionalPositions > 0) {
+        long milliseconds = Long.parseLong(msg.substring(curPos + 1, endMillisPos));
+        if (fractionalPositions > 3) {
+          milliseconds /= Math.pow(10, (fractionalPositions - 3));
+        } else if (fractionalPositions < 3) {
+          milliseconds *= Math.pow(10, (3 - fractionalPositions));
+        }
+>>>>>>> refs/remotes/apache/trunk
         ts += milliseconds;
       } else {
         throw new IllegalArgumentException(
@@ -304,10 +384,17 @@ public class SyslogParser {
 
       // flume clock is ahead or there is some latency, and the year rolled
       if (fixed.isAfter(now) && fixed.minusMonths(1).isAfter(now)) {
+<<<<<<< HEAD
         fixed = date.withYear(year - 1);
       // flume clock is behind and the year rolled
       } else if (fixed.isBefore(now) && fixed.plusMonths(1).isBefore(now)) {
         fixed = date.withYear(year + 1);
+=======
+         fixed = date.minusYears(1);
+      // flume clock is behind and the year rolled
+      } else if (fixed.isBefore(now) && fixed.plusMonths(1).isBefore(now)) {
+        fixed = date.plusYears(1);
+>>>>>>> refs/remotes/apache/trunk
       }
       date = fixed;
     }

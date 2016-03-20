@@ -21,10 +21,18 @@ package org.apache.flume.channel.file;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.GeneratedMessage;
+<<<<<<< HEAD
+=======
+import org.apache.flume.Transaction;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.annotations.InterfaceAudience;
 import org.apache.flume.annotations.InterfaceStability;
 import org.apache.flume.channel.file.encryption.CipherProvider;
 import org.apache.flume.channel.file.encryption.CipherProviderFactory;
+<<<<<<< HEAD
+=======
+import org.apache.flume.channel.file.encryption.DecryptionFailureException;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.channel.file.encryption.KeyProvider;
 import org.apache.flume.channel.file.proto.ProtosFactory;
 import org.slf4j.Logger;
@@ -178,11 +186,19 @@ public class LogFileV3 extends LogFile {
         @Nullable Key encryptionKey,
         @Nullable String encryptionKeyAlias,
         @Nullable String encryptionCipherProvider,
+<<<<<<< HEAD
         long usableSpaceRefreshInterval)
         throws IOException {
       super(file, logFileID, maxFileSize, CipherProviderFactory.
           getEncrypter(encryptionCipherProvider, encryptionKey),
           usableSpaceRefreshInterval);
+=======
+        long usableSpaceRefreshInterval, boolean fsyncPerTransaction,
+        int fsyncInterval) throws IOException {
+      super(file, logFileID, maxFileSize, CipherProviderFactory.
+          getEncrypter(encryptionCipherProvider, encryptionKey),
+          usableSpaceRefreshInterval, fsyncPerTransaction, fsyncInterval);
+>>>>>>> refs/remotes/apache/trunk
       ProtosFactory.LogFileMetaData.Builder metaDataBuilder =
           ProtosFactory.LogFileMetaData.newBuilder();
       if(encryptionKey != null) {
@@ -219,10 +235,18 @@ public class LogFileV3 extends LogFile {
     private volatile String cipherProvider;
     private volatile byte[] parameters;
     private BlockingQueue<CipherProvider.Decryptor> decryptors =
+<<<<<<< HEAD
         new LinkedBlockingDeque<CipherProvider.Decryptor>();
     RandomReader(File file, @Nullable KeyProvider encryptionKeyProvider)
         throws IOException {
       super(file, encryptionKeyProvider);
+=======
+      new LinkedBlockingDeque<CipherProvider.Decryptor>();
+
+    RandomReader(File file, @Nullable KeyProvider encryptionKeyProvider,
+      boolean fsyncPerTransaction) throws IOException {
+      super(file, encryptionKeyProvider, fsyncPerTransaction);
+>>>>>>> refs/remotes/apache/trunk
     }
     private void initialize() throws IOException {
       File metaDataFile = Serialization.getMetaDataFile(getFile());
@@ -281,10 +305,17 @@ public class LogFileV3 extends LogFile {
           initialize();
         }
       }
+<<<<<<< HEAD
       byte[] buffer = readDelimitedBuffer(fileHandle);
       CipherProvider.Decryptor decryptor = null;
       boolean success = false;
       try {
+=======
+      boolean success = false;
+      CipherProvider.Decryptor decryptor = null;
+      try {
+        byte[] buffer = readDelimitedBuffer(fileHandle);
+>>>>>>> refs/remotes/apache/trunk
         if(encryptionEnabled) {
           decryptor = getDecryptor();
           buffer = decryptor.decrypt(buffer);
@@ -293,6 +324,11 @@ public class LogFileV3 extends LogFile {
             fromByteArray(buffer);
         success = true;
         return event;
+<<<<<<< HEAD
+=======
+      } catch(DecryptionFailureException ex) {
+        throw new CorruptEventException("Error decrypting event", ex);
+>>>>>>> refs/remotes/apache/trunk
       } finally {
         if(success && encryptionEnabled && decryptor != null) {
           decryptors.offer(decryptor);
@@ -303,10 +339,19 @@ public class LogFileV3 extends LogFile {
 
   public static class SequentialReader extends LogFile.SequentialReader {
     private CipherProvider.Decryptor decryptor;
+<<<<<<< HEAD
 
     public SequentialReader(File file, @Nullable KeyProvider
       encryptionKeyProvider) throws EOFException, IOException {
       super(file, encryptionKeyProvider);
+=======
+    private final boolean fsyncPerTransaction;
+    public SequentialReader(File file, @Nullable KeyProvider
+      encryptionKeyProvider, boolean fsyncPerTransaction) throws EOFException,
+      IOException {
+      super(file, encryptionKeyProvider);
+      this.fsyncPerTransaction = fsyncPerTransaction;
+>>>>>>> refs/remotes/apache/trunk
       File metaDataFile = Serialization.getMetaDataFile(file);
       FileInputStream inputStream = new FileInputStream(metaDataFile);
       try {
@@ -351,6 +396,7 @@ public class LogFileV3 extends LogFile {
     }
 
     @Override
+<<<<<<< HEAD
     LogRecord doNext(int offset) throws IOException, CorruptEventException {
       byte[] buffer = readDelimitedBuffer(getFileHandle());
       if(decryptor != null) {
@@ -358,6 +404,35 @@ public class LogFileV3 extends LogFile {
       }
       TransactionEventRecord event =
           TransactionEventRecord.fromByteArray(buffer);
+=======
+    LogRecord doNext(int offset) throws IOException, CorruptEventException,
+      DecryptionFailureException {
+      byte[] buffer = null;
+      TransactionEventRecord event = null;
+      try {
+        buffer = readDelimitedBuffer(getFileHandle());
+        if (decryptor != null) {
+          buffer = decryptor.decrypt(buffer);
+        }
+        event = TransactionEventRecord.fromByteArray(buffer);
+      } catch (CorruptEventException ex) {
+        LOGGER.warn("Corrupt file found. File id: log-" + this.getLogFileID(),
+          ex);
+        // Return null so that replay handler thinks all events in this file
+        // have been taken.
+        if (!fsyncPerTransaction) {
+          return null;
+        }
+        throw ex;
+      } catch (DecryptionFailureException ex) {
+        if (!fsyncPerTransaction) {
+          LOGGER.warn("Could not decrypt even read from channel. Skipping " +
+            "event.", ex);
+          return null;
+        }
+        throw ex;
+      }
+>>>>>>> refs/remotes/apache/trunk
       return new LogRecord(getLogFileID(), offset, event);
     }
   }

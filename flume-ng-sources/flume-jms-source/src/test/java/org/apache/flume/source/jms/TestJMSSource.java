@@ -54,7 +54,11 @@ public class TestJMSSource extends JMSMessageConsumerTestBase {
 
   private JMSSource source;
   private Context context;
+<<<<<<< HEAD
   private InitialContext initialConext;
+=======
+  private InitialContext initialContext;
+>>>>>>> refs/remotes/apache/trunk
   private ChannelProcessor channelProcessor;
   private List<Event> events;
   private JMSMessageConsumerFactory consumerFactory;
@@ -67,7 +71,11 @@ public class TestJMSSource extends JMSMessageConsumerTestBase {
     baseDir = Files.createTempDir();
     passwordFile = new File(baseDir, "password");
     Assert.assertTrue(passwordFile.createNewFile());
+<<<<<<< HEAD
     initialConext = mock(InitialContext.class);
+=======
+    initialContext = mock(InitialContext.class);
+>>>>>>> refs/remotes/apache/trunk
     channelProcessor = mock(ChannelProcessor.class);
     events = Lists.newArrayList();
     doAnswer(new Answer<Void>() {
@@ -79,6 +87,7 @@ public class TestJMSSource extends JMSMessageConsumerTestBase {
     }).when(channelProcessor).processEventBatch(any(List.class));
     consumerFactory = mock(JMSMessageConsumerFactory.class);
     consumer = spy(create());
+<<<<<<< HEAD
     when(consumerFactory.create(any(ConnectionFactory.class), anyString(),
         any(JMSDestinationType.class), anyString(), anyInt(), anyLong(),
         any(JMSMessageConverter.class), any(Optional.class),
@@ -86,6 +95,15 @@ public class TestJMSSource extends JMSMessageConsumerTestBase {
     when(initialConext.lookup(anyString())).thenReturn(connectionFactory);
     contextFactory = mock(InitialContextFactory.class);
     when(contextFactory.create(any(Properties.class))).thenReturn(initialConext);
+=======
+    when(consumerFactory.create(any(InitialContext.class), any(ConnectionFactory.class), anyString(),
+        any(JMSDestinationType.class), any(JMSDestinationLocator.class), anyString(), anyInt(), anyLong(),
+        any(JMSMessageConverter.class), any(Optional.class),
+        any(Optional.class))).thenReturn(consumer);
+    when(initialContext.lookup(anyString())).thenReturn(connectionFactory);
+    contextFactory = mock(InitialContextFactory.class);
+    when(contextFactory.create(any(Properties.class))).thenReturn(initialContext);
+>>>>>>> refs/remotes/apache/trunk
     source = new JMSSource(consumerFactory, contextFactory);
     source.setName("JMSSource-" + UUID.randomUUID());
     source.setChannelProcessor(channelProcessor);
@@ -136,8 +154,13 @@ public class TestJMSSource extends JMSMessageConsumerTestBase {
   @SuppressWarnings("unchecked")
   @Test
   public void testStartConsumerCreateThrowsException() throws Exception {
+<<<<<<< HEAD
     when(consumerFactory.create(any(ConnectionFactory.class), anyString(),
         any(JMSDestinationType.class), anyString(), anyInt(), anyLong(),
+=======
+    when(consumerFactory.create(any(InitialContext.class), any(ConnectionFactory.class), anyString(),
+        any(JMSDestinationType.class), any(JMSDestinationLocator.class), anyString(), anyInt(), anyLong(),
+>>>>>>> refs/remotes/apache/trunk
         any(JMSMessageConverter.class), any(Optional.class),
         any(Optional.class))).thenThrow(new RuntimeException());
     source.configure(context);
@@ -151,7 +174,11 @@ public class TestJMSSource extends JMSMessageConsumerTestBase {
   }
   @Test(expected = FlumeException.class)
   public void testConfigureWithContextLookupThrowsException() throws Exception {
+<<<<<<< HEAD
     when(initialConext.lookup(anyString())).thenThrow(new NamingException());
+=======
+    when(initialContext.lookup(anyString())).thenThrow(new NamingException());
+>>>>>>> refs/remotes/apache/trunk
     source.configure(context);
   }
   @Test(expected = FlumeException.class)

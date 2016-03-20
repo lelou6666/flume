@@ -17,6 +17,11 @@
 
 package org.apache.flume.source;
 
+<<<<<<< HEAD
+=======
+import org.apache.flume.serialization.DecodeErrorPolicy;
+
+>>>>>>> refs/remotes/apache/trunk
 public class SpoolDirectorySourceConfigurationConstants {
   /** Directory where files are deposited. */
   public static final String SPOOL_DIRECTORY = "spoolDir";
@@ -25,6 +30,7 @@ public class SpoolDirectorySourceConfigurationConstants {
   public static final String SPOOLED_FILE_SUFFIX = "fileSuffix";
   public static final String DEFAULT_SPOOLED_FILE_SUFFIX = ".COMPLETED";
 
+<<<<<<< HEAD
   /** Header in which to put filename. */
   public static final String FILENAME_HEADER_KEY = "fileHeaderKey";
   public static final String DEFAULT_FILENAME_HEADER_KEY = "file";
@@ -33,6 +39,24 @@ public class SpoolDirectorySourceConfigurationConstants {
   public static final String FILENAME_HEADER = "fileHeader";
   public static final boolean DEFAULT_FILE_HEADER = false;
 
+=======
+  /** Header in which to put absolute path filename. */
+  public static final String FILENAME_HEADER_KEY = "fileHeaderKey";
+  public static final String DEFAULT_FILENAME_HEADER_KEY = "file";
+
+  /** Whether to include absolute path filename in a header. */
+  public static final String FILENAME_HEADER = "fileHeader";
+  public static final boolean DEFAULT_FILE_HEADER = false;
+
+  /** Header in which to put the basename of file. */
+  public static final String BASENAME_HEADER_KEY = "basenameHeaderKey";
+  public static final String DEFAULT_BASENAME_HEADER_KEY = "basename";
+
+  /** Whether to include the basename of a file in a header. */
+  public static final String BASENAME_HEADER = "basenameHeader";
+  public static final boolean DEFAULT_BASENAME_HEADER = false;
+
+>>>>>>> refs/remotes/apache/trunk
   /** What size to batch with before sending to ChannelProcessor. */
   public static final String BATCH_SIZE = "batchSize";
   public static final int DEFAULT_BATCH_SIZE = 100;
@@ -64,6 +88,32 @@ public class SpoolDirectorySourceConfigurationConstants {
   public static final String DELETE_POLICY = "deletePolicy";
   public static final String DEFAULT_DELETE_POLICY = "never";
 
+<<<<<<< HEAD
   public static final String INPUT_CHARSET = "inputCharset";
   public static final String DEFAULT_INPUT_CHARSET = "UTF-8";
+=======
+  /** Character set used when reading the input. */
+  public static final String INPUT_CHARSET = "inputCharset";
+  public static final String DEFAULT_INPUT_CHARSET = "UTF-8";
+
+  /** What to do when there is a character set decoding error. */
+  public static final String DECODE_ERROR_POLICY = "decodeErrorPolicy";
+  public static final String DEFAULT_DECODE_ERROR_POLICY =
+      DecodeErrorPolicy.FAIL.name();
+
+  public static final String MAX_BACKOFF = "maxBackoff";
+
+  public static final Integer DEFAULT_MAX_BACKOFF = 4000;
+  
+  /** Consume order. */
+  public enum ConsumeOrder {
+    OLDEST, YOUNGEST, RANDOM
+  }
+  public static final String CONSUME_ORDER = "consumeOrder";
+  public static final ConsumeOrder DEFAULT_CONSUME_ORDER = ConsumeOrder.OLDEST;    
+  
+  /** Delay(in milliseconds) used when polling for new files. The default is 500ms */
+  public static final String POLL_DELAY = "pollDelay";
+  public static final int DEFAULT_POLL_DELAY = 500;
+>>>>>>> refs/remotes/apache/trunk
 }

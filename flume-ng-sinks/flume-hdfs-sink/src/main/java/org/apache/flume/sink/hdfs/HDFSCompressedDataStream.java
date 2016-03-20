@@ -29,8 +29,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
+import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +50,10 @@ public class HDFSCompressedDataStream extends AbstractHDFSWriter {
   private Context serializerContext;
   private EventSerializer serializer;
   private boolean useRawLocalFileSystem;
+<<<<<<< HEAD
+=======
+  private Compressor compressor;
+>>>>>>> refs/remotes/apache/trunk
 
   @Override
   public void configure(Context context) {
@@ -83,7 +89,10 @@ public class HDFSCompressedDataStream extends AbstractHDFSWriter {
             "is not of type LocalFileSystem: " + hdfs.getClass().getName());
       }
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> refs/remotes/apache/trunk
     boolean appending = false;
     if (conf.getBoolean("hdfs.append.support", false) == true && hdfs.isFile
     (dstPath)) {
@@ -92,7 +101,14 @@ public class HDFSCompressedDataStream extends AbstractHDFSWriter {
     } else {
       fsOut = hdfs.create(dstPath);
     }
+<<<<<<< HEAD
     cmpOut = codec.createOutputStream(fsOut);
+=======
+    if(compressor == null) {
+      compressor = CodecPool.getCompressor(codec, conf);
+    }
+    cmpOut = codec.createOutputStream(fsOut, compressor);
+>>>>>>> refs/remotes/apache/trunk
     serializer = EventSerializerFactory.getInstance(serializerType,
         serializerContext, cmpOut);
     if (appending && !serializer.supportsReopen()) {
@@ -134,7 +150,7 @@ public class HDFSCompressedDataStream extends AbstractHDFSWriter {
       isFinished = true;
     }
     fsOut.flush();
-    fsOut.sync();
+    hflushOrSync(this.fsOut);
   }
 
   @Override
@@ -146,9 +162,18 @@ public class HDFSCompressedDataStream extends AbstractHDFSWriter {
       isFinished = true;
     }
     fsOut.flush();
+<<<<<<< HEAD
     fsOut.sync();
     cmpOut.close();
 
+=======
+    hflushOrSync(fsOut);
+    cmpOut.close();
+    if (compressor != null) {
+      CodecPool.returnCompressor(compressor);
+      compressor = null;
+    }
+>>>>>>> refs/remotes/apache/trunk
     unregisterCurrentStream();
   }
 

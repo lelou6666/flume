@@ -44,6 +44,7 @@ import java.io.RandomAccessFile;
 public class TestFlumeEventQueue {
   FlumeEventPointer pointer1 = new FlumeEventPointer(1, 1);
   FlumeEventPointer pointer2 = new FlumeEventPointer(2, 2);
+  FlumeEventPointer pointer3 = new FlumeEventPointer(3, 3);
   FlumeEventQueue queue;
   EventQueueBackingStoreSupplier backingStoreSupplier;
   EventQueueBackingStore backingStore;
@@ -53,11 +54,19 @@ public class TestFlumeEventQueue {
     File checkpoint;
     File inflightTakes;
     File inflightPuts;
+<<<<<<< HEAD
+=======
+    File queueSetDir;
+>>>>>>> refs/remotes/apache/trunk
     EventQueueBackingStoreSupplier() {
       baseDir = Files.createTempDir();
       checkpoint = new File(baseDir, "checkpoint");
       inflightTakes = new File(baseDir, "inflightputs");
       inflightPuts =  new File(baseDir, "inflighttakes");
+<<<<<<< HEAD
+=======
+      queueSetDir =  new File(baseDir, "queueset");
+>>>>>>> refs/remotes/apache/trunk
     }
     File getCheckpoint() {
       return checkpoint;
@@ -68,6 +77,12 @@ public class TestFlumeEventQueue {
     File getInflightTakes() {
       return inflightTakes;
     }
+<<<<<<< HEAD
+=======
+    File getQueueSetDir() {
+      return queueSetDir;
+    }
+>>>>>>> refs/remotes/apache/trunk
     void delete() {
       FileUtils.deleteQuietly(baseDir);
     }
@@ -120,7 +135,12 @@ public class TestFlumeEventQueue {
     backingStore = new EventQueueBackingStoreFileV2(checkpoint, 1, "test");
     queue = new FlumeEventQueue(backingStore,
         backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
         backingStoreSupplier.getInflightPuts());
+=======
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+>>>>>>> refs/remotes/apache/trunk
     Assert.assertTrue(queue.addTail(pointer1));
     Assert.assertFalse(queue.addTail(pointer2));
   }
@@ -132,7 +152,12 @@ public class TestFlumeEventQueue {
     backingStore = new EventQueueBackingStoreFileV2(checkpoint, 0, "test");
     queue = new FlumeEventQueue(backingStore,
         backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
         backingStoreSupplier.getInflightPuts());
+=======
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+>>>>>>> refs/remotes/apache/trunk
   }
   @Test(expected=IllegalArgumentException.class)
   public void testInvalidCapacityNegative() throws Exception {
@@ -142,20 +167,35 @@ public class TestFlumeEventQueue {
     backingStore = new EventQueueBackingStoreFileV2(checkpoint, -1, "test");
     queue = new FlumeEventQueue(backingStore,
         backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
         backingStoreSupplier.getInflightPuts());
+=======
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+>>>>>>> refs/remotes/apache/trunk
   }
   @Test
   public void testQueueIsEmptyAfterCreation() throws Exception {
     queue = new FlumeEventQueue(backingStore,
         backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
         backingStoreSupplier.getInflightPuts());
+=======
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+>>>>>>> refs/remotes/apache/trunk
     Assert.assertNull(queue.removeHead(0L));
   }
   @Test
   public void addTail1() throws Exception {
     queue = new FlumeEventQueue(backingStore,
         backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
         backingStoreSupplier.getInflightPuts());
+=======
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+>>>>>>> refs/remotes/apache/trunk
     Assert.assertTrue(queue.addTail(pointer1));
     Assert.assertEquals(pointer1, queue.removeHead(0));
     Assert.assertEquals(Sets.newHashSet(), queue.getFileIDs());
@@ -164,7 +204,12 @@ public class TestFlumeEventQueue {
   public void addTail2() throws Exception {
     queue = new FlumeEventQueue(backingStore,
         backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
         backingStoreSupplier.getInflightPuts());
+=======
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+>>>>>>> refs/remotes/apache/trunk
     Assert.assertTrue(queue.addTail(pointer1));
     Assert.assertTrue(queue.addTail(pointer2));
     Assert.assertEquals(Sets.newHashSet(1, 2), queue.getFileIDs());
@@ -175,7 +220,12 @@ public class TestFlumeEventQueue {
   public void addTailLarge() throws Exception {
     queue = new FlumeEventQueue(backingStore,
         backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
         backingStoreSupplier.getInflightPuts());
+=======
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+>>>>>>> refs/remotes/apache/trunk
     int size = 500;
     Set<Integer> fileIDs = Sets.newHashSet();
     for (int i = 1; i <= size; i++) {
@@ -194,7 +244,12 @@ public class TestFlumeEventQueue {
   public void addHead1() throws Exception {
     queue = new FlumeEventQueue(backingStore,
         backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
         backingStoreSupplier.getInflightPuts());
+=======
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+>>>>>>> refs/remotes/apache/trunk
     Assert.assertTrue(queue.addHead(pointer1));
     Assert.assertEquals(Sets.newHashSet(1), queue.getFileIDs());
     Assert.assertEquals(pointer1, queue.removeHead(0));
@@ -204,7 +259,13 @@ public class TestFlumeEventQueue {
   public void addHead2() throws Exception {
     queue = new FlumeEventQueue(backingStore,
         backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
         backingStoreSupplier.getInflightPuts());
+=======
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+    queue.replayComplete();
+>>>>>>> refs/remotes/apache/trunk
     Assert.assertTrue(queue.addHead(pointer1));
     Assert.assertTrue(queue.addHead(pointer2));
     Assert.assertEquals(Sets.newHashSet(1, 2), queue.getFileIDs());
@@ -215,7 +276,13 @@ public class TestFlumeEventQueue {
   public void addHeadLarge() throws Exception {
     queue = new FlumeEventQueue(backingStore,
         backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
         backingStoreSupplier.getInflightPuts());
+=======
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+    queue.replayComplete();
+>>>>>>> refs/remotes/apache/trunk
     int size = 500;
     Set<Integer> fileIDs = Sets.newHashSet();
     for (int i = 1; i <= size; i++) {
@@ -234,10 +301,16 @@ public class TestFlumeEventQueue {
   public void addTailRemove1() throws Exception {
     queue = new FlumeEventQueue(backingStore,
         backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
         backingStoreSupplier.getInflightPuts());
+=======
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+>>>>>>> refs/remotes/apache/trunk
     Assert.assertTrue(queue.addTail(pointer1));
     Assert.assertEquals(Sets.newHashSet(1), queue.getFileIDs());
     Assert.assertTrue(queue.remove(pointer1));
+    queue.replayComplete();
     Assert.assertEquals(Sets.newHashSet(), queue.getFileIDs());
     Assert.assertNull(queue.removeHead(0));
     Assert.assertEquals(Sets.newHashSet(), queue.getFileIDs());
@@ -247,10 +320,19 @@ public class TestFlumeEventQueue {
   public void addTailRemove2() throws Exception {
     queue = new FlumeEventQueue(backingStore,
         backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
         backingStoreSupplier.getInflightPuts());
     Assert.assertTrue(queue.addTail(pointer1));
     Assert.assertTrue(queue.addTail(pointer2));
     Assert.assertTrue(queue.remove(pointer1));
+=======
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+    Assert.assertTrue(queue.addTail(pointer1));
+    Assert.assertTrue(queue.addTail(pointer2));
+    Assert.assertTrue(queue.remove(pointer1));
+    queue.replayComplete();
+>>>>>>> refs/remotes/apache/trunk
     Assert.assertEquals(pointer2, queue.removeHead(0));
   }
 
@@ -258,7 +340,12 @@ public class TestFlumeEventQueue {
   public void addHeadRemove1() throws Exception {
     queue = new FlumeEventQueue(backingStore,
         backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
         backingStoreSupplier.getInflightPuts());
+=======
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+>>>>>>> refs/remotes/apache/trunk
     queue.addHead(pointer1);
     Assert.assertTrue(queue.remove(pointer1));
     Assert.assertNull(queue.removeHead(0));
@@ -267,17 +354,55 @@ public class TestFlumeEventQueue {
   public void addHeadRemove2() throws Exception {
     queue = new FlumeEventQueue(backingStore,
         backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
         backingStoreSupplier.getInflightPuts());
     Assert.assertTrue(queue.addHead(pointer1));
     Assert.assertTrue(queue.addHead(pointer2));
     Assert.assertTrue(queue.remove(pointer1));
     Assert.assertEquals(pointer2, queue.removeHead(0));
+=======
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+    Assert.assertTrue(queue.addHead(pointer1));
+    Assert.assertTrue(queue.addHead(pointer2));
+    Assert.assertTrue(queue.remove(pointer1));
+    queue.replayComplete();
+    Assert.assertEquals(pointer2, queue.removeHead(0));
+  }
+  @Test
+  public void testUnknownPointerDoesNotCauseSearch() throws Exception {
+    queue = new FlumeEventQueue(backingStore,
+        backingStoreSupplier.getInflightTakes(),
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+    Assert.assertTrue(queue.addHead(pointer1));
+    Assert.assertTrue(queue.addHead(pointer2));
+    Assert.assertFalse(queue.remove(pointer3)); // does search
+    Assert.assertTrue(queue.remove(pointer1));
+    Assert.assertTrue(queue.remove(pointer2));
+    queue.replayComplete();
+    Assert.assertEquals(2, queue.getSearchCount());
+  }
+  @Test(expected=IllegalStateException.class)
+  public void testRemoveAfterReplayComplete() throws Exception {
+    queue = new FlumeEventQueue(backingStore,
+        backingStoreSupplier.getInflightTakes(),
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+    queue.replayComplete();
+    queue.remove(pointer1);
+>>>>>>> refs/remotes/apache/trunk
   }
   @Test
   public void testWrappingCorrectly() throws Exception {
     queue = new FlumeEventQueue(backingStore,
         backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
         backingStoreSupplier.getInflightPuts());
+=======
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+>>>>>>> refs/remotes/apache/trunk
     int size = Integer.MAX_VALUE;
     for (int i = 1; i <= size; i++) {
       if(!queue.addHead(new FlumeEventPointer(i, i))) {
@@ -299,7 +424,12 @@ public class TestFlumeEventQueue {
   public void testInflightPuts() throws Exception{
     queue = new FlumeEventQueue(backingStore,
         backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
         backingStoreSupplier.getInflightPuts());
+=======
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+>>>>>>> refs/remotes/apache/trunk
     long txnID1 = new Random().nextInt(Integer.MAX_VALUE - 1);
     long txnID2 = txnID1 + 1;
     queue.addWithoutCommit(new FlumeEventPointer(1, 1), txnID1);
@@ -309,7 +439,12 @@ public class TestFlumeEventQueue {
     TimeUnit.SECONDS.sleep(3L);
     queue = new FlumeEventQueue(backingStore,
         backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
         backingStoreSupplier.getInflightPuts());
+=======
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+>>>>>>> refs/remotes/apache/trunk
     SetMultimap<Long, Long> deserializedMap = queue.deserializeInflightPuts();
     Assert.assertTrue(deserializedMap.get(
             txnID1).contains(new FlumeEventPointer(1, 1).toLong()));
@@ -323,7 +458,12 @@ public class TestFlumeEventQueue {
   public void testInflightTakes() throws Exception {
     queue = new FlumeEventQueue(backingStore,
         backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
         backingStoreSupplier.getInflightPuts());
+=======
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+>>>>>>> refs/remotes/apache/trunk
     long txnID1 = new Random().nextInt(Integer.MAX_VALUE - 1);
     long txnID2 = txnID1 + 1;
     queue.addTail(new FlumeEventPointer(1, 1));
@@ -336,7 +476,12 @@ public class TestFlumeEventQueue {
     TimeUnit.SECONDS.sleep(3L);
     queue = new FlumeEventQueue(backingStore,
         backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
         backingStoreSupplier.getInflightPuts());
+=======
+        backingStoreSupplier.getInflightPuts(),
+        backingStoreSupplier.getQueueSetDir());
+>>>>>>> refs/remotes/apache/trunk
     SetMultimap<Long, Long> deserializedMap = queue.deserializeInflightTakes();
     Assert.assertTrue(deserializedMap.get(
             txnID1).contains(new FlumeEventPointer(1, 1).toLong()));
@@ -353,7 +498,12 @@ public class TestFlumeEventQueue {
     try {
       queue = new FlumeEventQueue(backingStore,
               backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
               backingStoreSupplier.getInflightPuts());
+=======
+              backingStoreSupplier.getInflightPuts(),
+              backingStoreSupplier.getQueueSetDir());
+>>>>>>> refs/remotes/apache/trunk
       long txnID1 = new Random().nextInt(Integer.MAX_VALUE - 1);
       long txnID2 = txnID1 + 1;
       queue.addWithoutCommit(new FlumeEventPointer(1, 1), txnID1);
@@ -367,7 +517,12 @@ public class TestFlumeEventQueue {
       inflight.writeInt(new Random().nextInt());
       queue = new FlumeEventQueue(backingStore,
               backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
               backingStoreSupplier.getInflightPuts());
+=======
+              backingStoreSupplier.getInflightPuts(),
+              backingStoreSupplier.getQueueSetDir());
+>>>>>>> refs/remotes/apache/trunk
       SetMultimap<Long, Long> deserializedMap = queue.deserializeInflightPuts();
       Assert.assertTrue(deserializedMap.get(
               txnID1).contains(new FlumeEventPointer(1, 1).toLong()));
@@ -386,7 +541,12 @@ public class TestFlumeEventQueue {
     try {
       queue = new FlumeEventQueue(backingStore,
               backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
               backingStoreSupplier.getInflightPuts());
+=======
+              backingStoreSupplier.getInflightPuts(),
+              backingStoreSupplier.getQueueSetDir());
+>>>>>>> refs/remotes/apache/trunk
       long txnID1 = new Random().nextInt(Integer.MAX_VALUE - 1);
       long txnID2 = txnID1 + 1;
       queue.addWithoutCommit(new FlumeEventPointer(1, 1), txnID1);
@@ -400,7 +560,12 @@ public class TestFlumeEventQueue {
       inflight.writeInt(new Random().nextInt());
       queue = new FlumeEventQueue(backingStore,
               backingStoreSupplier.getInflightTakes(),
+<<<<<<< HEAD
               backingStoreSupplier.getInflightPuts());
+=======
+              backingStoreSupplier.getInflightPuts(),
+              backingStoreSupplier.getQueueSetDir());
+>>>>>>> refs/remotes/apache/trunk
       SetMultimap<Long, Long> deserializedMap = queue.deserializeInflightTakes();
       Assert.assertTrue(deserializedMap.get(
               txnID1).contains(new FlumeEventPointer(1, 1).toLong()));

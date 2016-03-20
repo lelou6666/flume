@@ -21,17 +21,24 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+<<<<<<< HEAD
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
+=======
+import java.util.HashMap;
+>>>>>>> refs/remotes/apache/trunk
 import java.util.Properties;
 
 import org.apache.flume.conf.FlumeConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+<<<<<<< HEAD
 import com.google.common.collect.Maps;
 
+=======
+>>>>>>> refs/remotes/apache/trunk
 /**
  * <p>
  * A configuration provider that uses properties file for specifying
@@ -206,6 +213,7 @@ public class PropertiesFileConfigurationProvider extends
     }
     return new FlumeConfiguration(new HashMap<String, String>());
   }
+<<<<<<< HEAD
 
   private Map<String, String> toMap(Properties properties) {
     Map<String, String> result = Maps.newHashMap();
@@ -217,4 +225,6 @@ public class PropertiesFileConfigurationProvider extends
     }
     return result;
   }
+=======
+>>>>>>> refs/remotes/apache/trunk
 }

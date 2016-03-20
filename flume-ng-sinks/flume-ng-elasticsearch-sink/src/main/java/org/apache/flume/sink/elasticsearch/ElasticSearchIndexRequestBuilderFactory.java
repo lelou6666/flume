@@ -18,9 +18,12 @@
  */
 package org.apache.flume.sink.elasticsearch;
 
+<<<<<<< HEAD
 import java.io.IOException;
 import java.util.TimeZone;
 
+=======
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.commons.lang.time.FastDateFormat;
 import org.apache.flume.Event;
 import org.apache.flume.conf.Configurable;
@@ -28,10 +31,20 @@ import org.apache.flume.conf.ConfigurableComponent;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.client.Client;
 
+<<<<<<< HEAD
 /**
  * Interface for creating ElasticSearch {@link IndexRequestBuilder}
  * instances from serialized flume events. This is configurable, so any config
  * params required should be taken through this.
+=======
+import java.io.IOException;
+import java.util.TimeZone;
+
+/**
+ * Interface for creating ElasticSearch {@link IndexRequestBuilder} instances
+ * from serialized flume events. This is configurable, so any config params
+ * required should be taken through this.
+>>>>>>> refs/remotes/apache/trunk
  */
 public interface ElasticSearchIndexRequestBuilderFactory extends Configurable,
     ConfigurableComponent {
@@ -43,6 +56,7 @@ public interface ElasticSearchIndexRequestBuilderFactory extends Configurable,
    * @return prepared ElasticSearch {@link IndexRequestBuilder} instance
    * @param client
    *          ElasticSearch {@link Client} to prepare index from
+<<<<<<< HEAD
  * @param indexPrefix
    *          Prefix of index name to use -- as configured on the sink
  * @param indexType
@@ -54,5 +68,20 @@ public interface ElasticSearchIndexRequestBuilderFactory extends Configurable,
   */
   IndexRequestBuilder createIndexRequest(Client client,
       String indexPrefix, String indexType, Event event) throws IOException;
+=======
+   * @param indexPrefix
+   *          Prefix of index name to use -- as configured on the sink
+   * @param indexType
+   *          Index type to use -- as configured on the sink
+   * @param event
+   *          Flume event to serialize and add to index request
+   * @throws IOException
+   *           If an error occurs e.g. during serialization
+   */
+  IndexRequestBuilder createIndexRequest(Client client, String indexPrefix,
+      String indexType, Event event) throws IOException;
+
+
+>>>>>>> refs/remotes/apache/trunk
 
 }

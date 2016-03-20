@@ -30,7 +30,10 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
+<<<<<<< HEAD
 import java.util.concurrent.atomic.AtomicBoolean;
+=======
+>>>>>>> refs/remotes/apache/trunk
 
 /**
  * A deserializer that parses text lines from a file.

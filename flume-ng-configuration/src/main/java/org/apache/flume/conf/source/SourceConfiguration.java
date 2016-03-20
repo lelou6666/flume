@@ -18,6 +18,7 @@ package org.apache.flume.conf.source;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -93,7 +94,7 @@ public class SourceConfiguration extends ComponentConfiguration {
           config = "OTHER";
         }
       } else {
-        config = selectorType.toString().toUpperCase();
+        config = selectorType.toString().toUpperCase(Locale.ENGLISH);
       }
 
       this.selectorConf =
@@ -186,6 +187,8 @@ public class SourceConfiguration extends ComponentConfiguration {
      * @see org.apache.flume.source.SpoolDirectorySource
      */
     SPOOLDIR("org.apache.flume.conf.source.SpoolDirectorySourceConfiguration"),
+<<<<<<< HEAD
+=======
 
     /**
      * HTTP Source
@@ -193,10 +196,21 @@ public class SourceConfiguration extends ComponentConfiguration {
      * @see org.apache.flume.source.http.HTTPSource
      */
     HTTP("org.apache.flume.source.http.HTTPSourceConfiguration"),
+>>>>>>> refs/remotes/apache/trunk
 
     /**
      * HTTP Source
      *
+<<<<<<< HEAD
+     * @see org.apache.flume.source.http.HTTPSource
+     */
+    HTTP("org.apache.flume.source.http.HTTPSourceConfiguration"),
+
+    /**
+     * HTTP Source
+     *
+=======
+>>>>>>> refs/remotes/apache/trunk
      * @see org.apache.flume.source.ThriftSource
      */
     THRIFT("org.apache.flume.source.http.ThriftSourceConfiguration"),
@@ -206,7 +220,19 @@ public class SourceConfiguration extends ComponentConfiguration {
      *
      * @see org.apache.flume.source.jms.JMSSource
      */
+<<<<<<< HEAD
     JMS("org.apache.flume.conf.source.jms.JMSSourceConfiguration");
+=======
+    JMS("org.apache.flume.conf.source.jms.JMSSourceConfiguration"),
+
+    /**
+     * TAILDIR Source
+     *
+     * @see org.apache.flume.source.taildir.TaildirSource
+     */
+    TAILDIR("org.apache.flume.source.taildir.TaildirSourceConfiguration")
+    ;
+>>>>>>> refs/remotes/apache/trunk
 
     private String srcConfigurationName;
 

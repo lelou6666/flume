@@ -16,27 +16,23 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.flume.channel.file.encryption;
 
-package org.apache.flume.sink.hdfs;
+import org.apache.flume.FlumeException;
 
-import java.io.IOException;
+/**
+ * Exception that is thrown when the channel is unable to decrypt an even
+ * read from the channel.
+ */
+public class DecryptionFailureException extends FlumeException {
+  private static final long serialVersionUID = 6646810195384793646L;
 
-import org.apache.flume.sink.hdfs.HDFSBadSeqWriter;
-import org.apache.flume.sink.hdfs.HDFSBadDataStream;
 
-public class HDFSBadWriterFactory extends HDFSWriterFactory {
-  static final String BadSequenceFileType = "SequenceFile";
-  static final String BadDataStreamType = "DataStream";
-  static final String BadCompStreamType = "CompressedStream";
+  public DecryptionFailureException(String msg) {
+    super(msg);
+  }
 
-  @Override
-  public HDFSWriter getWriter(String fileType) throws IOException {
-    if (fileType == BadSequenceFileType) {
-      return new HDFSBadSeqWriter();
-    } else if (fileType == BadDataStreamType) {
-      return new HDFSBadDataStream();
-    } else {
-      throw new IOException("File type " + fileType + " not supported");
-    }
+  public DecryptionFailureException(String msg, Throwable th) {
+    super(msg, th);
   }
 }

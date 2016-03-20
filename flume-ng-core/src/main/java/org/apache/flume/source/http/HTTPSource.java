@@ -26,21 +26,38 @@ import org.apache.flume.EventDrivenSource;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.instrumentation.SourceCounter;
 import org.apache.flume.source.AbstractSource;
+<<<<<<< HEAD
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.bio.SocketConnector;
+=======
+import org.apache.flume.tools.HTTPServerConstraintUtil;
+import org.mortbay.jetty.Connector;
+import org.mortbay.jetty.Server;
+import org.mortbay.jetty.nio.SelectChannelConnector;
+import org.mortbay.jetty.security.SslSocketConnector;
+>>>>>>> refs/remotes/apache/trunk
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+<<<<<<< HEAD
+=======
+import javax.net.ssl.SSLServerSocket;
+>>>>>>> refs/remotes/apache/trunk
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+<<<<<<< HEAD
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+=======
+import java.net.ServerSocket;
+import java.util.*;
+>>>>>>> refs/remotes/apache/trunk
 
 /**
  * A source which accepts Flume Events by HTTP POST and GET. GET should be used
@@ -88,6 +105,7 @@ public class HTTPSource extends AbstractSource implements
   private HTTPSourceHandler handler;
   private SourceCounter sourceCounter;
 
+<<<<<<< HEAD
   @Override
   public void configure(Context context) {
     try {
@@ -98,6 +116,56 @@ public class HTTPSource extends AbstractSource implements
       String handlerClassName = context.getString(
               HTTPSourceConfigurationConstants.CONFIG_HANDLER,
               HTTPSourceConfigurationConstants.DEFAULT_HANDLER).trim();
+=======
+  // SSL configuration variable
+  private volatile String keyStorePath;
+  private volatile String keyStorePassword;
+  private volatile Boolean sslEnabled;
+  private final List<String> excludedProtocols = new LinkedList<String>();
+
+
+  @Override
+  public void configure(Context context) {
+    try {
+      // SSL related config
+      sslEnabled = context.getBoolean(HTTPSourceConfigurationConstants.SSL_ENABLED, false);
+
+      port = context.getInteger(HTTPSourceConfigurationConstants.CONFIG_PORT);
+      host = context.getString(HTTPSourceConfigurationConstants.CONFIG_BIND,
+        HTTPSourceConfigurationConstants.DEFAULT_BIND);
+
+      Preconditions.checkState(host != null && !host.isEmpty(),
+                "HTTPSource hostname specified is empty");
+      Preconditions.checkNotNull(port, "HTTPSource requires a port number to be"
+        + " specified");
+
+      String handlerClassName = context.getString(
+              HTTPSourceConfigurationConstants.CONFIG_HANDLER,
+              HTTPSourceConfigurationConstants.DEFAULT_HANDLER).trim();
+
+      if(sslEnabled) {
+        LOG.debug("SSL configuration enabled");
+        keyStorePath = context.getString(HTTPSourceConfigurationConstants.SSL_KEYSTORE);
+        Preconditions.checkArgument(keyStorePath != null && !keyStorePath.isEmpty(),
+                                        "Keystore is required for SSL Conifguration" );
+        keyStorePassword = context.getString(HTTPSourceConfigurationConstants.SSL_KEYSTORE_PASSWORD);
+        Preconditions.checkArgument(keyStorePassword != null,
+          "Keystore password is required for SSL Configuration");
+        String excludeProtocolsStr = context.getString(HTTPSourceConfigurationConstants
+          .EXCLUDE_PROTOCOLS);
+        if (excludeProtocolsStr == null) {
+          excludedProtocols.add("SSLv3");
+        } else {
+          excludedProtocols.addAll(Arrays.asList(excludeProtocolsStr.split(" ")));
+          if (!excludedProtocols.contains("SSLv3")) {
+            excludedProtocols.add("SSLv3");
+          }
+        }
+      }
+
+
+
+>>>>>>> refs/remotes/apache/trunk
       @SuppressWarnings("unchecked")
       Class<? extends HTTPSourceHandler> clazz =
               (Class<? extends HTTPSourceHandler>)
@@ -132,13 +200,18 @@ public class HTTPSource extends AbstractSource implements
       + " specified");
   }
 
+<<<<<<< HEAD
     @Override
+=======
+  @Override
+>>>>>>> refs/remotes/apache/trunk
   public void start() {
     Preconditions.checkState(srv == null,
             "Running HTTP Server found in source: " + getName()
             + " before I started one."
             + "Will not attempt to start.");
     srv = new Server();
+<<<<<<< HEAD
     SocketConnector connector = new SocketConnector();
     connector.setPort(port);
     connector.setHost(host);
@@ -148,6 +221,34 @@ public class HTTPSource extends AbstractSource implements
               new org.mortbay.jetty.servlet.Context(
               srv, "/", org.mortbay.jetty.servlet.Context.SESSIONS);
       root.addServlet(new ServletHolder(new FlumeHTTPServlet()), "/");
+=======
+
+    // Connector Array
+    Connector[] connectors = new Connector[1];
+
+
+    if (sslEnabled) {
+      SslSocketConnector sslSocketConnector = new HTTPSourceSocketConnector(excludedProtocols);
+      sslSocketConnector.setKeystore(keyStorePath);
+      sslSocketConnector.setKeyPassword(keyStorePassword);
+      sslSocketConnector.setReuseAddress(true);
+      connectors[0] = sslSocketConnector;
+    } else {
+      SelectChannelConnector connector = new SelectChannelConnector();
+      connector.setReuseAddress(true);
+      connectors[0] = connector;
+    }
+
+    connectors[0].setHost(host);
+    connectors[0].setPort(port);
+    srv.setConnectors(connectors);
+    try {
+      org.mortbay.jetty.servlet.Context root =
+        new org.mortbay.jetty.servlet.Context(
+          srv, "/", org.mortbay.jetty.servlet.Context.SESSIONS);
+      root.addServlet(new ServletHolder(new FlumeHTTPServlet()), "/");
+      HTTPServerConstraintUtil.enforceConstraints(root);
+>>>>>>> refs/remotes/apache/trunk
       srv.start();
       Preconditions.checkArgument(srv.getHandler().equals(root));
     } catch (Exception ex) {
@@ -227,4 +328,32 @@ public class HTTPSource extends AbstractSource implements
       doPost(request, response);
     }
   }
+<<<<<<< HEAD
+=======
+
+  private static class HTTPSourceSocketConnector extends SslSocketConnector {
+
+    private final List<String> excludedProtocols;
+    HTTPSourceSocketConnector(List<String> excludedProtocols) {
+      this.excludedProtocols = excludedProtocols;
+    }
+
+    @Override
+    public ServerSocket newServerSocket(String host, int port,
+      int backlog) throws IOException {
+      SSLServerSocket socket = (SSLServerSocket)super.newServerSocket(host,
+        port, backlog);
+      String[] protocols = socket.getEnabledProtocols();
+      List<String> newProtocols = new ArrayList<String>(protocols.length);
+      for(String protocol: protocols) {
+        if (!excludedProtocols.contains(protocol)) {
+          newProtocols.add(protocol);
+        }
+      }
+      socket.setEnabledProtocols(
+        newProtocols.toArray(new String[newProtocols.size()]));
+      return socket;
+    }
+  }
+>>>>>>> refs/remotes/apache/trunk
 }

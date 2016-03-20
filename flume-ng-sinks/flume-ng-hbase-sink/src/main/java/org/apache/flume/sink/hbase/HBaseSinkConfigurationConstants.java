@@ -65,5 +65,16 @@ public class HBaseSinkConfigurationConstants {
 
   public static final String DEFAULT_ZK_ZNODE_PARENT =
       HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT;
+<<<<<<< HEAD
+=======
+
+  public static final String CONFIG_COALESCE_INCREMENTS = "coalesceIncrements";
+
+  public static final Boolean DEFAULT_COALESCE_INCREMENTS = false;
+
+  public static final int DEFAULT_MAX_CONSECUTIVE_FAILS = 10;
+
+  public static final String CONFIG_MAX_CONSECUTIVE_FAILS = "maxConsecutiveFails";
+>>>>>>> refs/remotes/apache/trunk
 
 }

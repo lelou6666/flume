@@ -29,6 +29,10 @@ import java.io.OutputStream;
 import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
 
+<<<<<<< HEAD
+=======
+import com.google.protobuf.InvalidProtocolBufferException;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.annotations.InterfaceAudience;
 import org.apache.flume.annotations.InterfaceStability;
 import org.apache.flume.channel.file.proto.ProtosFactory;
@@ -207,6 +211,12 @@ public abstract class TransactionEventRecord implements Writable {
           ProtosFactory.TransactionEventFooter.
           parseDelimitedFrom(in), "Footer cannot be null");
       return transactionEvent;
+<<<<<<< HEAD
+=======
+    } catch (InvalidProtocolBufferException ex) {
+      throw new CorruptEventException(
+        "Could not parse event from data file.", ex);
+>>>>>>> refs/remotes/apache/trunk
     } finally {
       try {
         in.close();

@@ -368,6 +368,10 @@ public class TestHDFSEventSinkOnMiniCluster {
   /**
    * This is a very basic test that writes one event to HDFS and reads it back.
    */
+<<<<<<< HEAD
+=======
+  @Ignore("This test is flakey and causes tests to fail pretty often.")
+>>>>>>> refs/remotes/apache/trunk
   @Test
   public void maxUnderReplicationTest() throws EventDeliveryException,
       IOException {

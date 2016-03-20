@@ -18,8 +18,13 @@ package org.apache.flume.sink.solr.morphline;
 
 import org.apache.flume.Context;
 
+<<<<<<< HEAD
 import com.cloudera.cdk.morphline.api.Command;
 import com.cloudera.cdk.morphline.base.FaultTolerance;
+=======
+import org.kitesdk.morphline.api.Command;
+import org.kitesdk.morphline.base.FaultTolerance;
+>>>>>>> refs/remotes/apache/trunk
 
 
 /**

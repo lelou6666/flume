@@ -25,7 +25,12 @@ public enum InterceptorType {
   STATIC(org.apache.flume.interceptor.StaticInterceptor.Builder.class),
   REGEX_FILTER(
       org.apache.flume.interceptor.RegexFilteringInterceptor.Builder.class),
+<<<<<<< HEAD
   REGEX_EXTRACTOR(org.apache.flume.interceptor.RegexExtractorInterceptor.Builder.class);
+=======
+  REGEX_EXTRACTOR(org.apache.flume.interceptor.RegexExtractorInterceptor.Builder.class),
+  SEARCH_REPLACE(org.apache.flume.interceptor.SearchAndReplaceInterceptor.Builder.class);
+>>>>>>> refs/remotes/apache/trunk
 
   private final Class<? extends Interceptor.Builder> builderClass;
 

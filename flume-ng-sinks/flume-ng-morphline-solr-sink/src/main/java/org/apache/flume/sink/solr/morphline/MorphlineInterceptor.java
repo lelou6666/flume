@@ -23,18 +23,30 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+<<<<<<< HEAD
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+=======
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+>>>>>>> refs/remotes/apache/trunk
 
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.FlumeException;
 import org.apache.flume.event.EventBuilder;
 import org.apache.flume.interceptor.Interceptor;
+<<<<<<< HEAD
 
 import com.cloudera.cdk.morphline.api.Command;
 import com.cloudera.cdk.morphline.api.Record;
 import com.cloudera.cdk.morphline.base.Fields;
+=======
+import org.kitesdk.morphline.api.Command;
+import org.kitesdk.morphline.api.Record;
+import org.kitesdk.morphline.base.Fields;
+
+>>>>>>> refs/remotes/apache/trunk
 import com.google.common.base.Preconditions;
 import com.google.common.io.ByteStreams;
 
@@ -47,7 +59,11 @@ import com.google.common.io.ByteStreams;
 public class MorphlineInterceptor implements Interceptor {
 
   private final Context context;
+<<<<<<< HEAD
   private final BlockingQueue<LocalMorphlineInterceptor> pool = new LinkedBlockingQueue();
+=======
+  private final Queue<LocalMorphlineInterceptor> pool = new ConcurrentLinkedQueue<LocalMorphlineInterceptor>();
+>>>>>>> refs/remotes/apache/trunk
   
   protected MorphlineInterceptor(Context context) {
     Preconditions.checkNotNull(context);
@@ -61,9 +77,14 @@ public class MorphlineInterceptor implements Interceptor {
 
   @Override
   public void close() {
+<<<<<<< HEAD
     List<LocalMorphlineInterceptor> interceptors = new ArrayList();
     pool.drainTo(interceptors);
     for (LocalMorphlineInterceptor interceptor : interceptors) {
+=======
+    LocalMorphlineInterceptor interceptor;
+    while ((interceptor = pool.poll()) != null) {
+>>>>>>> refs/remotes/apache/trunk
       interceptor.close();
     }
   }
@@ -85,11 +106,15 @@ public class MorphlineInterceptor implements Interceptor {
   }
 
   private void returnToPool(LocalMorphlineInterceptor interceptor) {
+<<<<<<< HEAD
     try {
       pool.put(interceptor);
     } catch (InterruptedException e) {
       throw new FlumeException(e);
     }
+=======
+    pool.add(interceptor);
+>>>>>>> refs/remotes/apache/trunk
   }
   
   private LocalMorphlineInterceptor borrowFromPool() {

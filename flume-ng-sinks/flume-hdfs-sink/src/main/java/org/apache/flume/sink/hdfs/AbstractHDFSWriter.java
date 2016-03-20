@@ -19,6 +19,10 @@ package org.apache.flume.sink.hdfs;
 
 import com.google.common.base.Preconditions;
 import org.apache.flume.Context;
+<<<<<<< HEAD
+=======
+import org.apache.flume.FlumeException;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.annotations.InterfaceAudience;
 import org.apache.flume.annotations.InterfaceStability;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -27,6 +31,10 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+<<<<<<< HEAD
+=======
+import java.io.IOException;
+>>>>>>> refs/remotes/apache/trunk
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -43,7 +51,14 @@ public abstract class AbstractHDFSWriter implements HDFSWriter {
   private Path destPath;
   private Method refGetNumCurrentReplicas = null;
   private Method refGetDefaultReplication = null;
+<<<<<<< HEAD
   private Integer configuredMinReplicas = null;
+=======
+  private Method refHflushOrSync = null;
+  private Integer configuredMinReplicas = null;
+  private Integer numberOfCloseRetries = null;
+  private long timeBetweenCloseRetries = Long.MAX_VALUE;
+>>>>>>> refs/remotes/apache/trunk
 
   final static Object [] NO_ARGS = new Object []{};
 
@@ -54,6 +69,20 @@ public abstract class AbstractHDFSWriter implements HDFSWriter {
       Preconditions.checkArgument(configuredMinReplicas >= 0,
           "hdfs.minBlockReplicas must be greater than or equal to 0");
     }
+<<<<<<< HEAD
+=======
+    numberOfCloseRetries = context.getInteger("hdfs.closeTries", 1) - 1;
+
+    if (numberOfCloseRetries > 1) {
+      try {
+        timeBetweenCloseRetries = context.getLong("hdfs.callTimeout", 10000l);
+      } catch (NumberFormatException e) {
+        logger.warn("hdfs.callTimeout can not be parsed to a long: " + context.getLong("hdfs.callTimeout"));
+      }
+      timeBetweenCloseRetries = Math.max(timeBetweenCloseRetries/numberOfCloseRetries, 1000);
+    }
+
+>>>>>>> refs/remotes/apache/trunk
   }
 
   /**
@@ -97,6 +126,11 @@ public abstract class AbstractHDFSWriter implements HDFSWriter {
     this.destPath = destPath;
     this.refGetNumCurrentReplicas = reflectGetNumCurrentReplicas(outputStream);
     this.refGetDefaultReplication = reflectGetDefaultReplication(fs);
+<<<<<<< HEAD
+=======
+    this.refHflushOrSync = reflectHflushOrSync(outputStream);
+
+>>>>>>> refs/remotes/apache/trunk
   }
 
   protected void unregisterCurrentStream() {
@@ -212,4 +246,53 @@ public abstract class AbstractHDFSWriter implements HDFSWriter {
     return m;
   }
 
+<<<<<<< HEAD
+=======
+  private Method reflectHflushOrSync(FSDataOutputStream os) {
+    Method m = null;
+    if(os != null) {
+      Class<?> fsDataOutputStreamClass = os.getClass();
+      try {
+        m = fsDataOutputStreamClass.getMethod("hflush");
+      } catch (NoSuchMethodException ex) {
+        logger.debug("HFlush not found. Will use sync() instead");
+        try {
+          m = fsDataOutputStreamClass.getMethod("sync");
+        } catch (Exception ex1) {
+          String msg = "Neither hflush not sync were found. That seems to be " +
+            "a problem!";
+          logger.error(msg);
+          throw new FlumeException(msg, ex1);
+        }
+      }
+    }
+    return m;
+  }
+
+  /**
+   * If hflush is available in this version of HDFS, then this method calls
+   * hflush, else it calls sync.
+   * @param os - The stream to flush/sync
+   * @throws IOException
+   */
+  protected void hflushOrSync(FSDataOutputStream os) throws IOException {
+    try {
+      // At this point the refHflushOrSync cannot be null,
+      // since register method would have thrown if it was.
+      this.refHflushOrSync.invoke(os);
+    } catch (InvocationTargetException e) {
+      String msg = "Error while trying to hflushOrSync!";
+      logger.error(msg);
+      Throwable cause = e.getCause();
+      if(cause != null && cause instanceof IOException) {
+        throw (IOException)cause;
+      }
+      throw new FlumeException(msg, e);
+    } catch (Exception e) {
+      String msg = "Error while trying to hflushOrSync!";
+      logger.error(msg);
+      throw new FlumeException(msg, e);
+    }
+  }
+>>>>>>> refs/remotes/apache/trunk
 }

@@ -18,6 +18,10 @@
  */
 package org.apache.flume.source;
 
+<<<<<<< HEAD
+=======
+import org.apache.flume.Context;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.EventDeliveryException;
 import org.apache.flume.FlumeException;
 import org.apache.flume.PollableSource;
@@ -39,6 +43,12 @@ import org.apache.flume.annotations.InterfaceStability;
 public abstract class AbstractPollableSource extends BasicSourceSemantics
   implements PollableSource {
 
+<<<<<<< HEAD
+=======
+  long backoffSleepIncrement = PollableSourceConstants.DEFAULT_BACKOFF_SLEEP_INCREMENT;
+  long maxBackoffSleep = PollableSourceConstants.DEFAULT_MAX_BACKOFF_SLEEP;
+
+>>>>>>> refs/remotes/apache/trunk
   public AbstractPollableSource() {
     super();
   }
@@ -49,10 +59,35 @@ public abstract class AbstractPollableSource extends BasicSourceSemantics
           exception);
     }
     if(!isStarted()) {
+<<<<<<< HEAD
       throw new EventDeliveryException("Source is not started");
+=======
+      throw new EventDeliveryException("Source is not started.  It is in '" + getLifecycleState() + "' state");
+>>>>>>> refs/remotes/apache/trunk
     }
     return doProcess();
   }
 
+<<<<<<< HEAD
+=======
+  @Override
+  public synchronized void configure(Context context) {
+    super.configure(context);
+    backoffSleepIncrement =
+            context.getLong(PollableSourceConstants.BACKOFF_SLEEP_INCREMENT,
+                    PollableSourceConstants.DEFAULT_BACKOFF_SLEEP_INCREMENT);
+    maxBackoffSleep = context.getLong(PollableSourceConstants.MAX_BACKOFF_SLEEP,
+            PollableSourceConstants.DEFAULT_MAX_BACKOFF_SLEEP);
+  }
+
+  public long getBackOffSleepIncrement() {
+    return backoffSleepIncrement;
+  }
+
+  public long getMaxBackOffSleepInterval() {
+    return maxBackoffSleep;
+  }
+
+>>>>>>> refs/remotes/apache/trunk
   protected abstract Status doProcess() throws EventDeliveryException;
 }

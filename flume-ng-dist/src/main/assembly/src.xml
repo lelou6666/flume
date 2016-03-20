@@ -49,6 +49,10 @@
         <include>org.apache.flume:flume-ng-clients</include>
         <include>org.apache.flume:flume-ng-embedded-agent</include>
         <include>org.apache.flume:flume-tools</include>
+<<<<<<< HEAD
+=======
+        <include>org.apache.flume:flume-ng-auth</include>
+>>>>>>> refs/remotes/apache/trunk
       </includes>
 
       <sources>
@@ -112,6 +116,7 @@
         <include>pom.xml</include>
         <include>flume-ng-doc/**</include>
         <include>flume-ng-tests/**</include>
+        <include>dev-support/**</include>
       </includes>
     </fileSet>
   </fileSets>

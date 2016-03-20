@@ -24,11 +24,16 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+<<<<<<< HEAD
+=======
+import java.util.Locale;
+>>>>>>> refs/remotes/apache/trunk
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.management.ObjectName;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,20 +100,45 @@ public abstract class MonitoredCounterGroup {
   }
 
   /**
+<<<<<<< HEAD
    * Registers the counter. This method should be used only for testing, and
    * there should be no need for any implementations to directly call this
    * method.
    */
+=======
+   * Registers the counter.
+   * This method is exposed only for testing, and there should be no need for
+   * any implementations to call this method directly.
+   */
+  @VisibleForTesting
+>>>>>>> refs/remotes/apache/trunk
   void register() {
     if (!registered) {
       try {
         ObjectName objName = new ObjectName("org.apache.flume."
+<<<<<<< HEAD
                 + type.name().toLowerCase() + ":type=" + this.name);
 
         ManagementFactory.getPlatformMBeanServer().registerMBean(this, objName);
         registered = true;
         logger.info("Monitoried counter group for type: " + type + ", name: " + name
                 + ", registered successfully.");
+=======
+                + type.name().toLowerCase(Locale.ENGLISH) + ":type=" + this.name);
+
+        if (ManagementFactory.getPlatformMBeanServer().isRegistered(objName)) {
+          logger.debug("Monitored counter group for type: " + type + ", name: "
+              + name + ": Another MBean is already registered with this name. "
+              + "Unregistering that pre-existing MBean now...");
+          ManagementFactory.getPlatformMBeanServer().unregisterMBean(objName);
+          logger.debug("Monitored counter group for type: " + type + ", name: "
+              + name + ": Successfully unregistered pre-existing MBean.");
+        }
+        ManagementFactory.getPlatformMBeanServer().registerMBean(this, objName);
+        logger.info("Monitored counter group for type: " + type + ", name: "
+            + name + ": Successfully registered new MBean.");
+        registered = true;
+>>>>>>> refs/remotes/apache/trunk
       } catch (Exception ex) {
         logger.error("Failed to register monitored counter group for type: "
                 + type + ", name: " + name, ex);
@@ -139,7 +169,11 @@ public abstract class MonitoredCounterGroup {
     logger.info("Component type: " + type + ", name: " + name + " stopped");
 
     // Retrieve the type for this counter group
+<<<<<<< HEAD
     final String typePrefix = type.name().toLowerCase();
+=======
+    final String typePrefix = type.name().toLowerCase(Locale.ENGLISH);
+>>>>>>> refs/remotes/apache/trunk
 
     // Print out the startTime for this component
     logger.info("Shutdown Metric for type: " + type + ", "

@@ -50,6 +50,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+<<<<<<< HEAD
 import com.cloudera.cdk.morphline.api.MorphlineContext;
 import com.cloudera.cdk.morphline.api.Record;
 import com.cloudera.cdk.morphline.base.FaultTolerance;
@@ -59,6 +60,17 @@ import com.cloudera.cdk.morphline.solr.SolrLocator;
 import com.cloudera.cdk.morphline.solr.SolrMorphlineContext;
 import com.cloudera.cdk.morphline.solr.SolrServerDocumentLoader;
 import com.cloudera.cdk.morphline.solr.TestEmbeddedSolrServer;
+=======
+import org.kitesdk.morphline.api.MorphlineContext;
+import org.kitesdk.morphline.api.Record;
+import org.kitesdk.morphline.base.FaultTolerance;
+import org.kitesdk.morphline.base.Fields;
+import org.kitesdk.morphline.solr.DocumentLoader;
+import org.kitesdk.morphline.solr.SolrLocator;
+import org.kitesdk.morphline.solr.SolrMorphlineContext;
+import org.kitesdk.morphline.solr.SolrServerDocumentLoader;
+import org.kitesdk.morphline.solr.TestEmbeddedSolrServer;
+>>>>>>> refs/remotes/apache/trunk
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableListMultimap;

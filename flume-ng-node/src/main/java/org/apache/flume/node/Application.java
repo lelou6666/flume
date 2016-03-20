@@ -23,6 +23,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+<<<<<<< HEAD
+=======
+import java.util.Locale;
+>>>>>>> refs/remotes/apache/trunk
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
@@ -69,6 +73,10 @@ public class Application  {
   public Application() {
     this(new ArrayList<LifecycleAware>(0));
   }
+<<<<<<< HEAD
+=======
+
+>>>>>>> refs/remotes/apache/trunk
   public Application(List<LifecycleAware> components) {
     this.components = components;
     supervisor = new LifecycleSupervisor();
@@ -81,11 +89,15 @@ public class Application  {
     }
   }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> refs/remotes/apache/trunk
   @Subscribe
   public synchronized void handleConfigurationEvent(MaterializedConfiguration conf) {
     stopAllComponents();
     startAllComponents(conf);
+<<<<<<< HEAD
   }
 
   public synchronized void stop() {
@@ -95,6 +107,16 @@ public class Application  {
     }
   }
 
+=======
+  }
+
+  public synchronized void stop() {
+    supervisor.stop();
+    if(monitorServer != null) {
+      monitorServer.stop();
+    }
+  }
+>>>>>>> refs/remotes/apache/trunk
 
   private void stopAllComponents() {
     if (this.materializedConfiguration != null) {
@@ -108,6 +130,7 @@ public class Application  {
           logger.error("Error while stopping {}", entry.getValue(), e);
         }
       }
+<<<<<<< HEAD
 
       for (Entry<String, SinkRunner> entry :
         this.materializedConfiguration.getSinkRunners().entrySet()) {
@@ -118,6 +141,47 @@ public class Application  {
           logger.error("Error while stopping {}", entry.getValue(), e);
         }
       }
+
+      for (Entry<String, Channel> entry :
+        this.materializedConfiguration.getChannels().entrySet()) {
+        try{
+          logger.info("Stopping Channel " + entry.getKey());
+=======
+
+      for (Entry<String, SinkRunner> entry :
+        this.materializedConfiguration.getSinkRunners().entrySet()) {
+        try{
+          logger.info("Stopping Sink " + entry.getKey());
+>>>>>>> refs/remotes/apache/trunk
+          supervisor.unsupervise(entry.getValue());
+        } catch (Exception e){
+          logger.error("Error while stopping {}", entry.getValue(), e);
+        }
+      }
+<<<<<<< HEAD
+    }
+    if(monitorServer != null) {
+      monitorServer.stop();
+    }
+  }
+
+  private void startAllComponents(MaterializedConfiguration materializedConfiguration) {
+    logger.info("Starting new configuration:{}", materializedConfiguration);
+
+    this.materializedConfiguration = materializedConfiguration;
+
+    for (Entry<String, Channel> entry :
+      materializedConfiguration.getChannels().entrySet()) {
+      try{
+        logger.info("Starting Channel " + entry.getKey());
+        supervisor.supervise(entry.getValue(),
+            new SupervisorPolicy.AlwaysRestartPolicy(), LifecycleState.START);
+      } catch (Exception e){
+        logger.error("Error while starting {}", entry.getValue(), e);
+      }
+    }
+
+=======
 
       for (Entry<String, Channel> entry :
         this.materializedConfiguration.getChannels().entrySet()) {
@@ -150,6 +214,7 @@ public class Application  {
       }
     }
 
+>>>>>>> refs/remotes/apache/trunk
     /*
      * Wait for all channels to start.
      */
@@ -176,6 +241,7 @@ public class Application  {
       } catch (Exception e) {
         logger.error("Error while starting {}", entry.getValue(), e);
       }
+<<<<<<< HEAD
     }
 
     for (Entry<String, SourceRunner> entry : materializedConfiguration
@@ -192,6 +258,23 @@ public class Application  {
     this.loadMonitoring();
   }
 
+=======
+    }
+
+    for (Entry<String, SourceRunner> entry : materializedConfiguration
+        .getSourceRunners().entrySet()) {
+      try{
+        logger.info("Starting Source " + entry.getKey());
+        supervisor.supervise(entry.getValue(),
+          new SupervisorPolicy.AlwaysRestartPolicy(), LifecycleState.START);
+      } catch (Exception e) {
+        logger.error("Error while starting {}", entry.getValue(), e);
+      }
+    }
+
+    this.loadMonitoring();
+  }
+>>>>>>> refs/remotes/apache/trunk
 
   @SuppressWarnings("unchecked")
   private void loadMonitoring() {
@@ -204,7 +287,11 @@ public class Application  {
         try {
           //Is it a known type?
           klass = MonitoringType.valueOf(
+<<<<<<< HEAD
                   monitorType.toUpperCase()).getMonitorClass();
+=======
+                  monitorType.toUpperCase(Locale.ENGLISH)).getMonitorClass();
+>>>>>>> refs/remotes/apache/trunk
         } catch (Exception e) {
           //Not a known type, use FQCN
           klass = (Class<? extends MonitorService>) Class.forName(monitorType);
@@ -228,6 +315,7 @@ public class Application  {
   }
 
   public static void main(String[] args) {
+<<<<<<< HEAD
 
     try {
 
@@ -292,6 +380,119 @@ public class Application  {
                 configurationFile);
         application = new Application();
         application.handleConfigurationEvent(configurationProvider.getConfiguration());
+=======
+
+    try {
+
+      boolean isZkConfigured = false;
+
+      Options options = new Options();
+
+      Option option = new Option("n", "name", true, "the name of this agent");
+      option.setRequired(true);
+      options.addOption(option);
+
+      option = new Option("f", "conf-file", true,
+          "specify a config file (required if -z missing)");
+      option.setRequired(false);
+      options.addOption(option);
+
+      option = new Option(null, "no-reload-conf", false,
+          "do not reload config file if changed");
+      options.addOption(option);
+
+      // Options for Zookeeper
+      option = new Option("z", "zkConnString", true,
+          "specify the ZooKeeper connection to use (required if -f missing)");
+      option.setRequired(false);
+      options.addOption(option);
+
+      option = new Option("p", "zkBasePath", true,
+          "specify the base path in ZooKeeper for agent configs");
+      option.setRequired(false);
+      options.addOption(option);
+
+      option = new Option("h", "help", false, "display help text");
+      options.addOption(option);
+
+      CommandLineParser parser = new GnuParser();
+      CommandLine commandLine = parser.parse(options, args);
+
+      if (commandLine.hasOption('h')) {
+        new HelpFormatter().printHelp("flume-ng agent", options, true);
+        return;
+      }
+
+      String agentName = commandLine.getOptionValue('n');
+      boolean reload = !commandLine.hasOption("no-reload-conf");
+
+      if (commandLine.hasOption('z') || commandLine.hasOption("zkConnString")) {
+        isZkConfigured = true;
+      }
+      Application application = null;
+      if (isZkConfigured) {
+        // get options
+        String zkConnectionStr = commandLine.getOptionValue('z');
+        String baseZkPath = commandLine.getOptionValue('p');
+
+        if (reload) {
+          EventBus eventBus = new EventBus(agentName + "-event-bus");
+          List<LifecycleAware> components = Lists.newArrayList();
+          PollingZooKeeperConfigurationProvider zookeeperConfigurationProvider =
+            new PollingZooKeeperConfigurationProvider(
+              agentName, zkConnectionStr, baseZkPath, eventBus);
+          components.add(zookeeperConfigurationProvider);
+          application = new Application(components);
+          eventBus.register(application);
+        } else {
+          StaticZooKeeperConfigurationProvider zookeeperConfigurationProvider =
+            new StaticZooKeeperConfigurationProvider(
+              agentName, zkConnectionStr, baseZkPath);
+          application = new Application();
+          application.handleConfigurationEvent(zookeeperConfigurationProvider
+            .getConfiguration());
+        }
+      } else {
+        File configurationFile = new File(commandLine.getOptionValue('f'));
+
+        /*
+         * The following is to ensure that by default the agent will fail on
+         * startup if the file does not exist.
+         */
+        if (!configurationFile.exists()) {
+          // If command line invocation, then need to fail fast
+          if (System.getProperty(Constants.SYSPROP_CALLED_FROM_SERVICE) ==
+            null) {
+            String path = configurationFile.getPath();
+            try {
+              path = configurationFile.getCanonicalPath();
+            } catch (IOException ex) {
+              logger.error("Failed to read canonical path for file: " + path,
+                ex);
+            }
+            throw new ParseException(
+              "The specified configuration file does not exist: " + path);
+          }
+        }
+        List<LifecycleAware> components = Lists.newArrayList();
+
+        if (reload) {
+          EventBus eventBus = new EventBus(agentName + "-event-bus");
+          PollingPropertiesFileConfigurationProvider configurationProvider =
+            new PollingPropertiesFileConfigurationProvider(
+              agentName, configurationFile, eventBus, 30);
+          components.add(configurationProvider);
+          application = new Application(components);
+          eventBus.register(application);
+        } else {
+          PropertiesFileConfigurationProvider configurationProvider =
+            new PropertiesFileConfigurationProvider(
+              agentName, configurationFile);
+          application = new Application();
+          application.handleConfigurationEvent(configurationProvider
+            .getConfiguration());
+        }
+>>>>>>> refs/remotes/apache/trunk
       }
       application.start();
 

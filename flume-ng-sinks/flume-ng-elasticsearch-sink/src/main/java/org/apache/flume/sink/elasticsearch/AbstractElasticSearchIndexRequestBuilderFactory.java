@@ -19,15 +19,20 @@
 package org.apache.flume.sink.elasticsearch;
 
 import java.io.IOException;
+<<<<<<< HEAD
 import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
+=======
+
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.commons.lang.time.FastDateFormat;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.conf.ComponentConfiguration;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.conf.ConfigurableComponent;
+<<<<<<< HEAD
 import org.apache.flume.event.SimpleEvent;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.client.Client;
@@ -35,6 +40,13 @@ import org.joda.time.DateTimeUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
+=======
+import org.apache.flume.formatter.output.BucketPath;
+import org.elasticsearch.action.index.IndexRequestBuilder;
+import org.elasticsearch.client.Client;
+
+import com.google.common.annotations.VisibleForTesting;
+>>>>>>> refs/remotes/apache/trunk
 
 /**
  * Abstract base class for custom implementations of
@@ -80,10 +92,21 @@ public abstract class AbstractElasticSearchIndexRequestBuilderFactory
   public IndexRequestBuilder createIndexRequest(Client client,
         String indexPrefix, String indexType, Event event) throws IOException {
     IndexRequestBuilder request = prepareIndex(client);
+<<<<<<< HEAD
     TimestampedEvent timestampedEvent = new TimestampedEvent(event);
     long timestamp = timestampedEvent.getTimestamp();
     String indexName = getIndexName(indexPrefix, timestamp);
     prepareIndexRequest(request, indexName, indexType, timestampedEvent);
+=======
+    String realIndexPrefix = BucketPath.escapeString(indexPrefix, event.getHeaders());
+    String realIndexType = BucketPath.escapeString(indexType, event.getHeaders());
+
+    TimestampedEvent timestampedEvent = new TimestampedEvent(event);
+    long timestamp = timestampedEvent.getTimestamp();
+
+    String indexName = getIndexName(realIndexPrefix, timestamp);
+    prepareIndexRequest(request, indexName, realIndexType, timestampedEvent);
+>>>>>>> refs/remotes/apache/trunk
     return request;
   }
 
@@ -122,6 +145,7 @@ public abstract class AbstractElasticSearchIndexRequestBuilderFactory
       IndexRequestBuilder indexRequest, String indexName,
       String indexType, Event event) throws IOException;
 
+<<<<<<< HEAD
 }
 
 /**
@@ -156,3 +180,6 @@ final class TimestampedEvent extends SimpleEvent {
         return timestamp;
     }
 }
+=======
+}
+>>>>>>> refs/remotes/apache/trunk

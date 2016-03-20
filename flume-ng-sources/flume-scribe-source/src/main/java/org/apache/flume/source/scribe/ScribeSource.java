@@ -59,17 +59,36 @@ public class ScribeSource extends AbstractSource implements
 
   public static final String SCRIBE_CATEGORY = "category";
 
+<<<<<<< HEAD
   private static final int DEFAULT_WORKERS = 5;
 
   private TServer server;
   private int port = 1499;
   private int workers;
+=======
+  private static final int DEFAULT_PORT = 1499;
+  private static final int DEFAULT_WORKERS = 5;
+  private static final int DEFAULT_MAX_READ_BUFFER_BYTES = 16384000;
+
+  private TServer server;
+  private int port;
+  private int workers;
+  private int maxReadBufferBytes;
+>>>>>>> refs/remotes/apache/trunk
 
   private SourceCounter sourceCounter;
 
   @Override
   public void configure(Context context) {
+<<<<<<< HEAD
     port = context.getInteger("port", port);
+=======
+    port = context.getInteger("port", DEFAULT_PORT);
+    maxReadBufferBytes = context.getInteger("maxReadBufferBytes", DEFAULT_MAX_READ_BUFFER_BYTES);
+    if(maxReadBufferBytes <= 0){
+      maxReadBufferBytes = DEFAULT_MAX_READ_BUFFER_BYTES;
+    }
+>>>>>>> refs/remotes/apache/trunk
 
     workers = context.getInteger("workerThreads", DEFAULT_WORKERS);
     if (workers <= 0) {
@@ -91,8 +110,14 @@ public class ScribeSource extends AbstractSource implements
 
         args.workerThreads(workers);
         args.processor(processor);
+<<<<<<< HEAD
         args.transportFactory(new TFramedTransport.Factory());
         args.protocolFactory(new TBinaryProtocol.Factory(false, false));
+=======
+        args.transportFactory(new TFramedTransport.Factory(maxReadBufferBytes));
+        args.protocolFactory(new TBinaryProtocol.Factory(false, false));
+        args.maxReadBufferBytes = maxReadBufferBytes;
+>>>>>>> refs/remotes/apache/trunk
 
         server = new THsHaServer(args);
 
@@ -149,7 +174,15 @@ public class ScribeSource extends AbstractSource implements
 
           for (LogEntry entry : list) {
             Map<String, String> headers = new HashMap<String, String>(1, 1);
+<<<<<<< HEAD
             headers.put(SCRIBE_CATEGORY, entry.getCategory());
+=======
+            String category = entry.getCategory();
+
+            if (category != null) {
+              headers.put(SCRIBE_CATEGORY, category);
+            }
+>>>>>>> refs/remotes/apache/trunk
 
             Event event = EventBuilder.withBody(entry.getMessage().getBytes(), headers);
             events.add(event);

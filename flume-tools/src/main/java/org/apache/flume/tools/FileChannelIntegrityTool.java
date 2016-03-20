@@ -22,15 +22,31 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
+<<<<<<< HEAD
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.flume.FlumeException;
 import org.apache.flume.channel.file.CorruptEventException;
+=======
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.flume.Context;
+import org.apache.flume.Event;
+import org.apache.flume.FlumeException;
+import org.apache.flume.channel.file.CorruptEventException;
+import org.apache.flume.channel.file.EventUtils;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.channel.file.Log;
 import org.apache.flume.channel.file.LogFile;
 import org.apache.flume.channel.file.LogFileV3;
 import org.apache.flume.channel.file.LogRecord;
 import org.apache.flume.channel.file.Serialization;
+<<<<<<< HEAD
+=======
+import org.apache.flume.channel.file.TransactionEventRecord;
+>>>>>>> refs/remotes/apache/trunk
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +55,11 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+<<<<<<< HEAD
+=======
+import java.util.Properties;
+import java.util.Set;
+>>>>>>> refs/remotes/apache/trunk
 
 public class FileChannelIntegrityTool implements FlumeTool {
   public static final Logger LOG = LoggerFactory.getLogger
@@ -46,6 +67,18 @@ public class FileChannelIntegrityTool implements FlumeTool {
 
   private final List<File> dataDirs = new ArrayList<File>();
 
+<<<<<<< HEAD
+=======
+  private EventValidator eventValidator = EventValidator.NOOP_VALIDATOR;
+
+  private long totalPutEvents;
+  private long invalidEvents;
+  private long eventsWithException;
+  private long corruptEvents;
+  private long validEvents;
+  private long totalChannelEvents;
+
+>>>>>>> refs/remotes/apache/trunk
   @Override
   public void run(String[] args) throws IOException, ParseException {
     boolean shouldContinue = parseCommandLineOpts(args);
@@ -70,7 +103,11 @@ public class FileChannelIntegrityTool implements FlumeTool {
         for (File dataFile : dataFiles) {
           LOG.info("Checking for corruption in " + dataFile.toString());
           LogFile.SequentialReader reader =
+<<<<<<< HEAD
             new LogFileV3.SequentialReader(dataFile, null);
+=======
+            new LogFileV3.SequentialReader(dataFile, null, true);
+>>>>>>> refs/remotes/apache/trunk
           LogFile.OperationRecordUpdater updater = new LogFile
             .OperationRecordUpdater(dataFile);
           boolean fileDone = false;
@@ -85,12 +122,47 @@ public class FileChannelIntegrityTool implements FlumeTool {
               // this will throw a CorruptEventException - so the real logic
               // is in the catch block below.
               LogRecord record = reader.next();
+<<<<<<< HEAD
               if (record != null) {
                 record.getEvent();
+=======
+              totalChannelEvents++;
+              if (record != null) {
+                TransactionEventRecord recordEvent = record.getEvent();
+                Event event = EventUtils.getEventFromTransactionEvent(recordEvent);
+                if(event != null) {
+                  totalPutEvents++;
+                  try {
+                    if (!eventValidator.validateEvent(event)) {
+                      if (!fileBackedup) {
+                        Serialization.copyFile(dataFile, new File(dataFile.getParent(),
+                                dataFile.getName() + ".bak"));
+                        fileBackedup = true;
+                      }
+                      invalidEvents++;
+                      updater.markRecordAsNoop(eventPosition);
+                    } else {
+                      validEvents++;
+                    }
+                  } catch (Exception e) {
+                    // OOPS, didn't expected an exception
+                    // considering as failure case
+                    // marking as noop
+                    System.err.println("Encountered Exception while validating event, marking as invalid");
+                    updater.markRecordAsNoop(eventPosition);
+                    eventsWithException++;
+                  }
+                }
+>>>>>>> refs/remotes/apache/trunk
               } else {
                 fileDone = true;
               }
             } catch (CorruptEventException e) {
+<<<<<<< HEAD
+=======
+              corruptEvents++;
+              totalChannelEvents++;
+>>>>>>> refs/remotes/apache/trunk
               LOG.warn("Corruption found in " + dataFile.toString() + " at "
                 + eventPosition);
               if (!fileBackedup) {
@@ -106,6 +178,10 @@ public class FileChannelIntegrityTool implements FlumeTool {
         }
       }
     }
+<<<<<<< HEAD
+=======
+    printSummary();
+>>>>>>> refs/remotes/apache/trunk
   }
 
   private boolean parseCommandLineOpts(String[] args) throws ParseException {
@@ -113,17 +189,39 @@ public class FileChannelIntegrityTool implements FlumeTool {
     options
       .addOption("l", "dataDirs", true, "Comma-separated list of data " +
         "directories which the tool must verify. This option is mandatory")
+<<<<<<< HEAD
       .addOption("h", "help", false, "Display help");
+=======
+      .addOption("h", "help", false, "Display help")
+            .addOption("e", "eventValidator", true, "Fully Qualified Name of Event Validator Implementation");;
+
+
+    Option property  = OptionBuilder.withArgName("property=value")
+            .hasArgs(2)
+            .withValueSeparator()
+            .withDescription( "custom properties" )
+            .create( "D" );
+
+    options.addOption(property);
+>>>>>>> refs/remotes/apache/trunk
 
     CommandLineParser parser = new GnuParser();
     CommandLine commandLine = parser.parse(options, args);
     if(commandLine.hasOption("help")) {
+<<<<<<< HEAD
       new HelpFormatter().printHelp("java -jar fcintegritytool ",
+=======
+      new HelpFormatter().printHelp("bin/flume-ng tool fcintegritytool ",
+>>>>>>> refs/remotes/apache/trunk
         options, true);
       return false;
     }
     if(!commandLine.hasOption("dataDirs")) {
+<<<<<<< HEAD
       new HelpFormatter().printHelp("java -jar fcintegritytool ", "",
+=======
+      new HelpFormatter().printHelp("bin/flume-ng tool fcintegritytool ", "",
+>>>>>>> refs/remotes/apache/trunk
         options, "dataDirs is required.", true);
       return false;
     } else {
@@ -137,6 +235,51 @@ public class FileChannelIntegrityTool implements FlumeTool {
         dataDirs.add(f);
       }
     }
+<<<<<<< HEAD
     return true;
   }
+=======
+
+    if(commandLine.hasOption("eventValidator")) {
+      try {
+        Class<? extends EventValidator.Builder> eventValidatorClassName =
+                (Class<? extends EventValidator.Builder>)Class.forName(
+                  commandLine.getOptionValue("eventValidator"));
+        EventValidator.Builder eventValidatorBuilder = eventValidatorClassName.newInstance();
+
+        // Pass on the configuration parameter
+        Properties systemProperties = commandLine.getOptionProperties("D");
+        Context context = new Context();
+
+        Set<String> keys = systemProperties.stringPropertyNames();
+        for (String key : keys) {
+          context.put(key, systemProperties.getProperty(key));
+        }
+        eventValidatorBuilder.configure(context);
+        eventValidator = eventValidatorBuilder.build();
+      } catch (Exception e) {
+        System.err.println(String.format("Could find class %s in lib folder",
+                commandLine.getOptionValue("eventValidator")));
+        e.printStackTrace();
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Prints the summary of run. Following information is printed
+   *
+   */
+  private void printSummary() {
+    System.out.println("---------- Summary --------------------");
+    System.out.println("Number of Events in the Channel = "+totalChannelEvents++);
+    System.out.println("Number of Put Events Processed = "+totalPutEvents);
+    System.out.println("Number of Valid Put Events = "+validEvents);
+    System.out.println("Number of Invalid Put Events = "+invalidEvents);
+    System.out.println("Number of Put Events that threw Exception during validation = "+eventsWithException);
+    System.out.println("Number of Corrupt Events = "+corruptEvents);
+    System.out.println("---------------------------------------");
+  }
+>>>>>>> refs/remotes/apache/trunk
 }

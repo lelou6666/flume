@@ -38,11 +38,20 @@ class EventQueueBackingStoreFactory {
 
   static EventQueueBackingStore get(File checkpointFile, int capacity,
       String name, boolean upgrade) throws Exception {
+<<<<<<< HEAD
     return get(checkpointFile, null, capacity, name, upgrade, false);
   }
   static EventQueueBackingStore get(File checkpointFile,
       File backupCheckpointDir, int capacity,String name,
       boolean upgrade, boolean shouldBackup) throws Exception {
+=======
+    return get(checkpointFile, null, capacity, name, upgrade, false, false);
+  }
+  static EventQueueBackingStore get(File checkpointFile,
+      File backupCheckpointDir, int capacity,String name,
+      boolean upgrade, boolean shouldBackup, boolean compressBackup)
+      throws Exception {
+>>>>>>> refs/remotes/apache/trunk
     File metaDataFile = Serialization.getMetaDataFile(checkpointFile);
     RandomAccessFile checkpointFileHandle = null;
     try {
@@ -68,19 +77,31 @@ class EventQueueBackingStoreFactory {
           throw new IOException("Cannot create " + checkpointFile);
         }
         return new EventQueueBackingStoreFileV3(checkpointFile,
+<<<<<<< HEAD
             capacity, name, backupCheckpointDir, shouldBackup);
+=======
+            capacity, name, backupCheckpointDir, shouldBackup, compressBackup);
+>>>>>>> refs/remotes/apache/trunk
       }
       // v3 due to meta file, version will be checked by backing store
       if(metaDataExists) {
         return new EventQueueBackingStoreFileV3(checkpointFile, capacity,
+<<<<<<< HEAD
           name, backupCheckpointDir, shouldBackup);
+=======
+          name, backupCheckpointDir, shouldBackup, compressBackup);
+>>>>>>> refs/remotes/apache/trunk
       }
       checkpointFileHandle = new RandomAccessFile(checkpointFile, "r");
       int version = (int)checkpointFileHandle.readLong();
       if(Serialization.VERSION_2 == version) {
         if(upgrade) {
           return upgrade(checkpointFile, capacity, name, backupCheckpointDir,
+<<<<<<< HEAD
             shouldBackup);
+=======
+            shouldBackup, compressBackup);
+>>>>>>> refs/remotes/apache/trunk
         }
         return new EventQueueBackingStoreFileV2(checkpointFile, capacity, name);
       }
@@ -101,7 +122,11 @@ class EventQueueBackingStoreFactory {
 
   private static EventQueueBackingStore upgrade(File checkpointFile,
     int capacity, String name, File backupCheckpointDir,
+<<<<<<< HEAD
     boolean shouldBackup)
+=======
+    boolean shouldBackup, boolean compressBackup)
+>>>>>>> refs/remotes/apache/trunk
           throws Exception {
     LOG.info("Attempting upgrade of " + checkpointFile + " for " + name);
     EventQueueBackingStoreFileV2 backingStoreV2 =
@@ -114,7 +139,11 @@ class EventQueueBackingStoreFactory {
     EventQueueBackingStoreFileV3.upgrade(backingStoreV2, checkpointFile,
         metaDataFile);
     return new EventQueueBackingStoreFileV3(checkpointFile, capacity, name,
+<<<<<<< HEAD
       backupCheckpointDir, shouldBackup);
+=======
+      backupCheckpointDir, shouldBackup, compressBackup);
+>>>>>>> refs/remotes/apache/trunk
   }
 
 }

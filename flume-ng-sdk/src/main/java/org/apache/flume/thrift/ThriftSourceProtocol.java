@@ -228,15 +228,31 @@ public class ThriftSourceProtocol {
         super("append");
       }
 
+<<<<<<< HEAD
       protected append_args getEmptyArgsInstance() {
         return new append_args();
       }
 
       protected append_result getResult(I iface, append_args args) throws org.apache.thrift.TException {
+=======
+      public append_args getEmptyArgsInstance() {
+        return new append_args();
+      }
+
+      public append_result getResult(I iface, append_args args) throws org
+          .apache.thrift.TException {
+>>>>>>> refs/remotes/apache/trunk
         append_result result = new append_result();
         result.success = iface.append(args.event);
         return result;
       }
+<<<<<<< HEAD
+=======
+
+      protected boolean isOneway() {
+        return false;
+      }
+>>>>>>> refs/remotes/apache/trunk
     }
 
     private static class appendBatch<I extends Iface> extends org.apache.thrift.ProcessFunction<I, appendBatch_args> {
@@ -244,15 +260,31 @@ public class ThriftSourceProtocol {
         super("appendBatch");
       }
 
+<<<<<<< HEAD
       protected appendBatch_args getEmptyArgsInstance() {
         return new appendBatch_args();
       }
 
       protected appendBatch_result getResult(I iface, appendBatch_args args) throws org.apache.thrift.TException {
+=======
+      public appendBatch_args getEmptyArgsInstance() {
+        return new appendBatch_args();
+      }
+
+      public appendBatch_result getResult(I iface, appendBatch_args args)
+          throws org.apache.thrift.TException {
+>>>>>>> refs/remotes/apache/trunk
         appendBatch_result result = new appendBatch_result();
         result.success = iface.appendBatch(args.events);
         return result;
       }
+<<<<<<< HEAD
+=======
+
+      protected boolean isOneway() {
+        return false;
+      }
+>>>>>>> refs/remotes/apache/trunk
     }
 
   }

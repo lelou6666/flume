@@ -27,7 +27,11 @@ limitations under the License.
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.flume</groupId>
   <artifactId>flume-parent</artifactId>
+<<<<<<< HEAD
   <version>1.4.0</version>
+=======
+  <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
   <packaging>pom</packaging>
 
   <name>Apache Flume</name>
@@ -46,8 +50,19 @@ limitations under the License.
     <siteUrlDeployment>file://people.apache.org/www/incubator.apache.org/flume</siteUrlDeployment>
     <stagingDirectory>${project.basedir}/target/docs</stagingDirectory>
 
+<<<<<<< HEAD
     <avro.version>1.7.3</avro.version>
     <elasticsearch.version>0.90.1</elasticsearch.version>
+=======
+    <avro.version>1.7.4</avro.version>
+    <elasticsearch.version>0.90.1</elasticsearch.version>
+    <hadoop2.version>2.4.0</hadoop2.version>
+    <thrift.version>0.7.0</thrift.version>
+    <kite.version>1.0.0</kite.version>
+    <hive.version>1.0.0</hive.version>
+    <xalan.verion>2.7.1</xalan.verion>
+    <xerces.version>2.9.1</xerces.version>
+>>>>>>> refs/remotes/apache/trunk
   </properties>
 
   <modules>
@@ -64,6 +79,10 @@ limitations under the License.
     <module>flume-ng-sdk</module>
     <module>flume-ng-tests</module>
     <module>flume-tools</module>
+<<<<<<< HEAD
+=======
+    <module>flume-ng-auth</module>
+>>>>>>> refs/remotes/apache/trunk
   </modules>
 
   <profiles>
@@ -72,11 +91,16 @@ limitations under the License.
       <id>hadoop-1.0</id>
       <activation>
         <property>
-          <name>!hadoop.profile</name>
+          <name>flume.hadoop.profile</name>
+          <value>1</value>
         </property>
       </activation>
       <properties>
+<<<<<<< HEAD
         <hadoop.version>1.0.1</hadoop.version>
+=======
+        <hadoop.version>1.2.1</hadoop.version>
+>>>>>>> refs/remotes/apache/trunk
         <hbase.version>0.92.1</hbase.version>
         <hadoop.common.artifact.id>hadoop-core</hadoop.common.artifact.id>
         <thrift.version>0.7.0</thrift.version>
@@ -93,6 +117,25 @@ limitations under the License.
             <artifactId>hadoop-test</artifactId>
             <version>${hadoop.version}</version>
           </dependency>
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase</artifactId>
+            <version>${hbase.version}</version>
+          </dependency>
+
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase</artifactId>
+            <version>${hbase.version}</version>
+            <classifier>tests</classifier>
+            <scope>test</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+            <version>3.4.5</version>
+            <scope>test</scope>
+          </dependency>
         </dependencies>
       </dependencyManagement>
     </profile>
@@ -101,15 +144,110 @@ limitations under the License.
       <id>hadoop-2</id>
       <activation>
         <property>
+<<<<<<< HEAD
           <name>hadoop.profile</name>
+=======
+          <name>flume.hadoop.profile</name>
+>>>>>>> refs/remotes/apache/trunk
           <value>2</value>
         </property>
       </activation>
       <properties>
+<<<<<<< HEAD
         <hadoop.version>2.0.0-alpha</hadoop.version>
         <hbase.version>0.94.2</hbase.version>
         <hadoop.common.artifact.id>hadoop-common</hadoop.common.artifact.id>
         <thrift.version>0.8.0</thrift.version>
+=======
+        <hadoop.version>${hadoop2.version}</hadoop.version>
+        <hbase.version>0.94.2</hbase.version>
+        <hadoop.common.artifact.id>hadoop-common</hadoop.common.artifact.id>
+        <thrift.version>0.9.0</thrift.version>
+>>>>>>> refs/remotes/apache/trunk
+      </properties>
+      <dependencyManagement>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>${hadoop.common.artifact.id}</artifactId>
+            <version>${hadoop.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-hdfs</artifactId>
+            <version>${hadoop.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-mapreduce-client-core</artifactId>
+            <version>${hadoop.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-minicluster</artifactId>
+            <version>${hadoop.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-client</artifactId>
+            <version>${hadoop.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-annotations</artifactId>
+            <version>${hadoop.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-auth</artifactId>
+            <version>${hadoop.version}</version>
+          </dependency>
+
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase</artifactId>
+            <version>${hbase.version}</version>
+          </dependency>
+
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase</artifactId>
+            <version>${hbase.version}</version>
+            <classifier>tests</classifier>
+            <scope>test</scope>
+          </dependency>
+
+          <dependency>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+            <version>3.4.5</version>
+            <scope>test</scope>
+          </dependency>
+
+          <!-- only compatible with hadoop-2 -->
+          <dependency>
+            <groupId>org.apache.flume.flume-ng-sinks</groupId>
+            <artifactId>flume-dataset-sink</artifactId>
+            <version>1.7.0-SNAPSHOT</version>
+          </dependency>
+        </dependencies>
+      </dependencyManagement>
+    </profile>
+
+    <profile>
+<<<<<<< HEAD
+=======
+      <id>hbase-1</id>
+      <activation>
+        <property>
+          <name>!flume.hadoop.profile</name>
+        </property>
+      </activation>
+      <properties>
+        <hadoop.version>${hadoop2.version}</hadoop.version>
+        <hbase.version>1.0.0</hbase.version>
+        <hadoop.common.artifact.id>hadoop-common</hadoop.common.artifact.id>
+        <thrift.version>0.9.0</thrift.version>
       </properties>
       <dependencyManagement>
         <dependencies>
@@ -143,11 +281,90 @@ limitations under the License.
             <artifactId>hadoop-auth</artifactId>
             <version>${hadoop.version}</version>
           </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-minicluster</artifactId>
+            <version>${hadoop.version}</version>
+            <scope>test</scope>
+          </dependency>
+
+          <!-- Ideally this should be optional, but making it optional causes
+          build to fail.
+          -->
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-client</artifactId>
+            <version>${hbase.version}</version>
+          </dependency>
+
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-client</artifactId>
+            <version>${hbase.version}</version>
+            <classifier>tests</classifier>
+            <scope>test</scope>
+          </dependency>
+
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-testing-util</artifactId>
+            <version>${hbase.version}</version>
+          </dependency>
+
+          <!-- There should be no need for Flume to include the following two
+           artifacts, but HBase pom has a bug which causes these to not get
+           pulled in. So we have to pull it in. Ideally this should be optional,
+           but making it optional causes build to fail.
+          -->
+
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-common</artifactId>
+            <version>${hbase.version}</version>
+          </dependency>
+
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-common</artifactId>
+            <version>${hbase.version}</version>
+            <classifier>tests</classifier>
+            <scope>test</scope>
+          </dependency>
+
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-server</artifactId>
+            <version>${hbase.version}</version>
+            <scope>test</scope>
+          </dependency>
+
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-server</artifactId>
+            <version>${hbase.version}</version>
+            <classifier>tests</classifier>
+            <scope>test</scope>
+          </dependency>
+
+          <dependency>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+            <version>3.4.5</version>
+            <scope>test</scope>
+          </dependency>
+
+          <!-- only compatible with hadoop-2 -->
+          <dependency>
+            <groupId>org.apache.flume.flume-ng-sinks</groupId>
+            <artifactId>flume-dataset-sink</artifactId>
+            <version>${project.version}</version>
+          </dependency>
         </dependencies>
       </dependencyManagement>
     </profile>
 
     <profile>
+>>>>>>> refs/remotes/apache/trunk
       <id>compileThriftLegacy</id>
       <activation>
         <activeByDefault>false</activeByDefault>
@@ -201,6 +418,7 @@ limitations under the License.
       <build>
         <plugins>
 
+<<<<<<< HEAD
           <plugin>
             <artifactId>maven-javadoc-plugin</artifactId>
             <executions>
@@ -215,6 +433,29 @@ limitations under the License.
           </plugin>
 
           <plugin>
+=======
+          <plugin>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>maven-bundle-plugin</artifactId>
+            <inherited>true</inherited>
+            <extensions>true</extensions>
+          </plugin>
+
+          <plugin>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>javadoc-jar</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>aggregate-jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+>>>>>>> refs/remotes/apache/trunk
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-site-plugin</artifactId>
             <executions>
@@ -414,6 +655,12 @@ limitations under the License.
       <email>will@apache.org</email>
       <organization>Cloudera</organization>
     </developer>
+    <developer>
+      <name>Roshan</name>
+      <id>roshannaik</id>
+      <email>roshannaik@apache.org</email>
+      <organization>Hortonworks</organization>
+    </developer>
   </developers>
 
   <organization>
@@ -538,7 +785,7 @@ limitations under the License.
               </goals>
               <configuration>
                 <excludes>
-                  <exclude>.idea/</exclude>
+                  <exclude>**/.idea/</exclude>
                   <exclude>**/*.iml</exclude>
                   <exclude>**/nb-configuration.xml</exclude>
                   <exclude>.git/</exclude>
@@ -556,6 +803,11 @@ limitations under the License.
                   <exclude>**/.classpath</exclude>
                   <exclude>**/.project</exclude>
                   <exclude>**/target/**</exclude>
+<<<<<<< HEAD
+=======
+                  <exclude>**/derby.log</exclude>
+                  <exclude>**/metastore_db/</exclude>
+>>>>>>> refs/remotes/apache/trunk
                 </excludes>
               </configuration>
             </execution>
@@ -599,7 +851,7 @@ limitations under the License.
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-site-plugin</artifactId>
-          <version>3.1</version>
+          <version>3.3</version>
           <configuration>
             <siteDirectory>${project.basedir}/flume-ng-doc</siteDirectory>
           </configuration>
@@ -666,13 +918,13 @@ limitations under the License.
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>10.0.1</version>
+        <version>11.0.2</version>
       </dependency>
 
       <dependency>
         <groupId>log4j</groupId>
         <artifactId>log4j</artifactId>
-        <version>1.2.16</version>
+        <version>1.2.17</version>
         <exclusions>
           <exclusion>
             <groupId>com.sun.jdmk</groupId>
@@ -747,7 +999,11 @@ limitations under the License.
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
         <scope>compile</scope>
+<<<<<<< HEAD
         <version>2.4.1</version>
+=======
+        <version>2.5.0</version>
+>>>>>>> refs/remotes/apache/trunk
       </dependency>
 
       <dependency>
@@ -774,6 +1030,15 @@ limitations under the License.
         <version>4.2.1</version>
       </dependency>
 
+<<<<<<< HEAD
+=======
+      <dependency>
+        <groupId>org.mapdb</groupId>
+        <artifactId>mapdb</artifactId>
+        <version>0.9.9</version>
+      </dependency>
+
+>>>>>>> refs/remotes/apache/trunk
       <!--  Gson: Java to Json conversion -->
       <dependency>
         <groupId>com.google.code.gson</groupId>
@@ -785,6 +1050,13 @@ limitations under the License.
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-common</artifactId>
         <version>${hadoop.version}</version>
+        <optional>true</optional>
+      </dependency>
+
+      <dependency>
+        <groupId>commons-codec</groupId>
+        <artifactId>commons-codec</artifactId>
+        <version>1.8</version>
       </dependency>
 
       <dependency>
@@ -808,13 +1080,13 @@ limitations under the License.
       <dependency>
         <groupId>commons-collections</groupId>
         <artifactId>commons-collections</artifactId>
-        <version>3.2.1</version>
+        <version>3.2.2</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.derby</groupId>
         <artifactId>derby</artifactId>
-        <version>10.8.2.2</version>
+        <version>10.11.1.1</version>
       </dependency>
 
       <dependency>
@@ -840,25 +1112,59 @@ limitations under the License.
         <artifactId>joda-time</artifactId>
         <version>2.1</version>
       </dependency>
+      <!-- Adding zookeeper as dependency, beacuse it was
+           pulling different version of zookeeper as transient
+           dependency from asynchbase. -->
 
       <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase</artifactId>
-        <version>${hbase.version}</version>
-      </dependency>
-
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase</artifactId>
-        <version>${hbase.version}</version>
-        <classifier>tests</classifier>
-        <scope>test</scope>
-      </dependency>
+        <groupId>org.apache.zookeeper</groupId>
+        <artifactId>zookeeper</artifactId>
+        <version>${zookeeper.version}</version>
+       </dependency>
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop</artifactId>
         <version>${hadoop.version}</version>
+      </dependency>
+
+      <dependency>
+<<<<<<< HEAD
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase</artifactId>
+        <version>${hbase.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase</artifactId>
+        <version>${hbase.version}</version>
+=======
+        <groupId>org.elasticsearch</groupId>
+        <artifactId>elasticsearch</artifactId>
+        <version>${elasticsearch.version}</version>
+        <optional>true</optional>
+      </dependency>
+
+      <dependency>
+        <groupId>org.elasticsearch</groupId>
+        <artifactId>elasticsearch</artifactId>
+        <version>${elasticsearch.version}</version>
+>>>>>>> refs/remotes/apache/trunk
+        <classifier>tests</classifier>
+        <scope>test</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>javax.jms</groupId>
+        <artifactId>jms</artifactId>
+        <version>1.1</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-core</artifactId>
+        <version>5.7.0</version>
       </dependency>
 
       <dependency>
@@ -893,35 +1199,56 @@ limitations under the License.
       <dependency>
         <groupId>org.apache.flume</groupId>
         <artifactId>flume-ng-configuration</artifactId>
+<<<<<<< HEAD
         <version>1.4.0</version>
+=======
+        <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
       </dependency>
       <dependency>
         <groupId>org.apache.flume</groupId>
         <artifactId>flume-ng-core</artifactId>
+<<<<<<< HEAD
         <version>1.4.0</version>
+=======
+        <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
       </dependency>
 
       <dependency>
         <groupId>org.apache.flume</groupId>
         <artifactId>flume-tools</artifactId>
+<<<<<<< HEAD
         <version>1.4.0</version>
+=======
+        <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
       </dependency>
 
       <dependency>
         <groupId>org.apache.flume</groupId>
         <artifactId>flume-ng-node</artifactId>
+<<<<<<< HEAD
         <version>1.4.0</version>
+=======
+        <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
       </dependency>
 
       <dependency>
         <groupId>org.apache.flume.flume-ng-channels</groupId>
         <artifactId>flume-file-channel</artifactId>
+<<<<<<< HEAD
         <version>1.4.0</version>
+=======
+        <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
       </dependency>
 
       <dependency>
         <groupId>org.apache.flume.flume-ng-channels</groupId>
         <artifactId>flume-jdbc-channel</artifactId>
+<<<<<<< HEAD
         <version>1.4.0</version>
       </dependency>
 
@@ -929,87 +1256,204 @@ limitations under the License.
         <groupId>org.apache.flume.flume-ng-sinks</groupId>
         <artifactId>flume-hdfs-sink</artifactId>
         <version>1.4.0</version>
+=======
+        <version>1.7.0-SNAPSHOT</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.flume.flume-ng-channels</groupId>
+        <artifactId>flume-kafka-channel</artifactId>
+        <version>1.7.0-SNAPSHOT</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.flume.flume-ng-channels</groupId>
+        <artifactId>flume-spillable-memory-channel</artifactId>
+        <version>1.7.0-SNAPSHOT</version>
+      </dependency>
+
+     <dependency>
+       <groupId>org.apache.flume.flume-ng-channels</groupId>
+       <artifactId>flume-recoverable-memory-channel</artifactId>
+       <version>1.7.0-SNAPSHOT</version>
+     </dependency>
+
+      <dependency>
+        <groupId>org.apache.flume.flume-ng-sinks</groupId>
+        <artifactId>flume-hdfs-sink</artifactId>
+        <version>1.7.0-SNAPSHOT</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.flume.flume-ng-sinks</groupId>
+        <artifactId>flume-hive-sink</artifactId>
+        <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
       </dependency>
 
       <dependency>
         <groupId>org.apache.flume.flume-ng-sinks</groupId>
         <artifactId>flume-irc-sink</artifactId>
+<<<<<<< HEAD
         <version>1.4.0</version>
+=======
+        <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
       </dependency>
 
       <dependency>
         <groupId>org.apache.flume.flume-ng-sinks</groupId>
         <artifactId>flume-ng-hbase-sink</artifactId>
+<<<<<<< HEAD
         <version>1.4.0</version>
+=======
+        <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
       </dependency>
 
       <dependency>
         <groupId>org.apache.flume.flume-ng-sinks</groupId>
         <artifactId>flume-ng-elasticsearch-sink</artifactId>
+<<<<<<< HEAD
         <version>1.4.0</version>
+=======
+        <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
       </dependency>
 
       <dependency>
         <groupId>org.apache.flume.flume-ng-sinks</groupId>
         <artifactId>flume-ng-morphline-solr-sink</artifactId>
+<<<<<<< HEAD
         <version>1.4.0</version>
+=======
+        <version>1.7.0-SNAPSHOT</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.flume.flume-ng-sinks</groupId>
+        <artifactId>flume-ng-kafka-sink</artifactId>
+        <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
       </dependency>
 
       <dependency>
         <groupId>org.apache.flume.flume-ng-sources</groupId>
         <artifactId>flume-scribe-source</artifactId>
+<<<<<<< HEAD
         <version>1.4.0</version>
+=======
+        <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
       </dependency>
 
       <dependency>
         <groupId>org.apache.flume.flume-ng-sources</groupId>
         <artifactId>flume-jms-source</artifactId>
+<<<<<<< HEAD
         <version>1.4.0</version>
+=======
+        <version>1.7.0-SNAPSHOT</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.flume.flume-ng-sources</groupId>
+        <artifactId>flume-twitter-source</artifactId>
+        <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
       </dependency>
 
       <dependency>
         <groupId>org.apache.flume.flume-ng-legacy-sources</groupId>
         <artifactId>flume-thrift-source</artifactId>
+<<<<<<< HEAD
         <version>1.4.0</version>
+=======
+        <version>1.7.0-SNAPSHOT</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.flume.flume-ng-sources</groupId>
+        <artifactId>flume-kafka-source</artifactId>
+        <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
       </dependency>
 
       <dependency>
         <groupId>org.apache.flume.flume-ng-legacy-sources</groupId>
         <artifactId>flume-avro-source</artifactId>
+<<<<<<< HEAD
         <version>1.4.0</version>
+=======
+        <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
       </dependency>
 
       <dependency>
         <groupId>org.apache.flume</groupId>
         <artifactId>flume-ng-sdk</artifactId>
+<<<<<<< HEAD
         <version>1.4.0</version>
+=======
+        <version>1.7.0-SNAPSHOT</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.flume.flume-ng-sources</groupId>
+        <artifactId>flume-taildir-source</artifactId>
+        <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
       </dependency>
 
       <dependency>
         <groupId>org.apache.flume</groupId>
         <artifactId>flume-ng-sdk</artifactId>
+<<<<<<< HEAD
         <version>1.4.0</version>
+=======
+        <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
         <classifier>tests</classifier>
         <scope>test</scope>
       </dependency>
 
       <dependency>
+<<<<<<< HEAD
         <groupId>org.apache.flume.flume-ng-clients</groupId>
         <artifactId>flume-ng-log4jappender</artifactId>
         <version>1.4.0</version>
+=======
+        <groupId>org.apache.flume</groupId>
+        <artifactId>flume-ng-auth</artifactId>
+        <version>1.7.0-SNAPSHOT</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.flume.flume-ng-clients</groupId>
         <artifactId>flume-ng-log4jappender</artifactId>
+        <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.flume.flume-ng-clients</groupId>
+        <artifactId>flume-ng-log4jappender</artifactId>
+<<<<<<< HEAD
         <version>1.4.0</version>
+=======
+        <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
         <classifier>jar-with-dependencies</classifier>
       </dependency>
 
       <dependency>
         <groupId>org.apache.flume</groupId>
         <artifactId>flume-ng-embedded-agent</artifactId>
+<<<<<<< HEAD
         <version>1.4.0</version>
+=======
+        <version>1.7.0-SNAPSHOT</version>
+>>>>>>> refs/remotes/apache/trunk
       </dependency>
 
       <dependency>
@@ -1029,6 +1473,7 @@ limitations under the License.
         <artifactId>mina-core</artifactId>
         <version>2.0.4</version>
       </dependency>
+<<<<<<< HEAD
 
       <dependency>
         <groupId>org.hbase</groupId>
@@ -1053,10 +1498,151 @@ limitations under the License.
       </dependency>
 
       <dependency>
+=======
+
+      <dependency>
+        <groupId>org.hbase</groupId>
+        <artifactId>asynchbase</artifactId>
+        <version>1.5.0</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>log4j-over-slf4j</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.jboss.netty</groupId>
+            <artifactId>netty</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty</artifactId>
+        <version>3.5.12.Final</version>
+      </dependency>
+
+      <dependency>
+>>>>>>> refs/remotes/apache/trunk
         <groupId>org.apache.solr</groupId>
         <artifactId>solr-cell</artifactId>
         <version>4.3.0</version>
       </dependency>
+<<<<<<< HEAD
+=======
+
+      <!-- Dependencies of the Twitter source -->
+      <dependency>
+        <groupId>org.twitter4j</groupId>
+        <artifactId>twitter4j-core</artifactId>
+        <version>3.0.3</version>
+      </dependency>
+      <dependency>
+        <groupId>org.twitter4j</groupId>
+        <artifactId>twitter4j-media-support</artifactId>
+        <version>3.0.3</version>
+      </dependency>
+      <dependency>
+        <groupId>org.twitter4j</groupId>
+        <artifactId>twitter4j-stream</artifactId>
+        <version>3.0.3</version>
+      </dependency>
+
+      <!-- Dependencies of Kafka source -->
+      <dependency>
+        <groupId>org.apache.kafka</groupId>
+        <artifactId>kafka_2.10</artifactId>
+        <version>0.8.1.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.kafka</groupId>
+        <artifactId>kafka_2.10</artifactId>
+        <version>0.8.1.1</version>
+        <classifier>test</classifier>
+        <scope>test</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>org.kitesdk</groupId>
+        <artifactId>kite-data-core</artifactId>
+        <version>${kite.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.kitesdk</groupId>
+        <artifactId>kite-data-hive</artifactId>
+        <version>${kite.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.kitesdk</groupId>
+        <artifactId>kite-data-hbase</artifactId>
+        <version>${kite.version}</version>
+      </dependency>
+
+      <!-- Dependency for kite-data-hive -->
+      <dependency>
+        <groupId>org.apache.hive</groupId>
+        <artifactId>hive-exec</artifactId>
+        <version>${hive.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hive</groupId>
+        <artifactId>hive-metastore</artifactId>
+        <version>${hive.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.xerial.snappy</groupId>
+        <artifactId>snappy-java</artifactId>
+        <version>1.1.0</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hive.hcatalog</groupId>
+        <artifactId>hive-hcatalog-streaming</artifactId>
+        <version>${hive.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hive</groupId>
+        <artifactId>hive-cli</artifactId>
+        <version>${hive.version}</version>
+      </dependency>
+
+      <!-- Dependency for Zk provider -->
+      <dependency>
+        <groupId>org.apache.curator</groupId>
+        <artifactId>curator-framework</artifactId>
+        <version>2.6.0</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.curator</groupId>
+        <artifactId>curator-recipes</artifactId>
+        <version>2.6.0</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.curator</groupId>
+        <artifactId>curator-test</artifactId>
+        <version>2.6.0</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- Dependency for Hive Sink  -->
+      <dependency>
+        <groupId>xalan</groupId>
+        <artifactId>serializer</artifactId>
+        <version>2.7.2</version>
+        <scope>runtime</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>xalan</groupId>
+        <artifactId>xalan</artifactId>
+        <scope>runtime</scope>
+        <version>2.7.2</version>
+      </dependency>
+>>>>>>> refs/remotes/apache/trunk
 
     </dependencies>
   </dependencyManagement>

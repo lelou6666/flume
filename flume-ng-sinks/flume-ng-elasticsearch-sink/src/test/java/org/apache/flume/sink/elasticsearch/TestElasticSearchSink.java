@@ -20,7 +20,10 @@ package org.apache.flume.sink.elasticsearch;
 
 import static org.apache.flume.sink.elasticsearch.ElasticSearchSinkConstants.BATCH_SIZE;
 import static org.apache.flume.sink.elasticsearch.ElasticSearchSinkConstants.CLUSTER_NAME;
+<<<<<<< HEAD
 import static org.apache.flume.sink.elasticsearch.ElasticSearchSinkConstants.DEFAULT_PORT;
+=======
+>>>>>>> refs/remotes/apache/trunk
 import static org.apache.flume.sink.elasticsearch.ElasticSearchSinkConstants.HOSTNAMES;
 import static org.apache.flume.sink.elasticsearch.ElasticSearchSinkConstants.INDEX_NAME;
 import static org.apache.flume.sink.elasticsearch.ElasticSearchSinkConstants.INDEX_TYPE;
@@ -29,12 +32,24 @@ import static org.apache.flume.sink.elasticsearch.ElasticSearchSinkConstants.TTL
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+<<<<<<< HEAD
 
 import java.io.IOException;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang.time.FastDateFormat;
+=======
+import static org.junit.Assert.assertNull;
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
+import org.apache.commons.lang.time.FastDateFormat;
+
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.Channel;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
@@ -47,7 +62,13 @@ import org.apache.flume.event.EventBuilder;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.client.Requests;
 import org.elasticsearch.common.UUID;
+<<<<<<< HEAD
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
+=======
+import org.elasticsearch.common.io.BytesStream;
+import org.elasticsearch.common.io.FastByteArrayOutputStream;
+import org.elasticsearch.index.query.QueryBuilders;
+>>>>>>> refs/remotes/apache/trunk
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -91,6 +112,72 @@ public class TestElasticSearchSink extends AbstractElasticSearchSinkTest {
   }
 
   @Test
+<<<<<<< HEAD
+=======
+  public void shouldIndexInvalidComplexJsonBody() throws Exception {
+    parameters.put(BATCH_SIZE, "3");
+    Configurables.configure(fixture, new Context(parameters));
+    Channel channel = bindAndStartChannel(fixture);
+
+    Transaction tx = channel.getTransaction();
+    tx.begin();
+    Event event1 = EventBuilder.withBody("TEST1 {test}".getBytes());
+    channel.put(event1);
+    Event event2 = EventBuilder.withBody("{test: TEST2 }".getBytes());
+    channel.put(event2);
+    Event event3 = EventBuilder.withBody("{\"test\":{ TEST3 {test} }}".getBytes());
+    channel.put(event3);
+    tx.commit();
+    tx.close();
+
+    fixture.process();
+    fixture.stop();
+    client.admin().indices()
+        .refresh(Requests.refreshRequest(timestampedIndexName)).actionGet();
+
+    assertMatchAllQuery(3);
+    assertSearch(1,
+        performSearch(QueryBuilders.fieldQuery("@message", "TEST1")),
+        null, event1);
+    assertSearch(1,
+        performSearch(QueryBuilders.fieldQuery("@message", "TEST2")),
+        null, event2);
+    assertSearch(1,
+        performSearch(QueryBuilders.fieldQuery("@message", "TEST3")),
+        null, event3);
+  }
+
+  @Test
+  public void shouldIndexComplexJsonEvent() throws Exception {
+    Configurables.configure(fixture, new Context(parameters));
+    Channel channel = bindAndStartChannel(fixture);
+
+    Transaction tx = channel.getTransaction();
+    tx.begin();
+    Event event = EventBuilder.withBody(
+        "{\"event\":\"json content\",\"num\":1}".getBytes());
+    channel.put(event);
+    tx.commit();
+    tx.close();
+
+    fixture.process();
+    fixture.stop();
+    client.admin().indices()
+            .refresh(Requests.refreshRequest(timestampedIndexName)).actionGet();
+
+    Map<String, Object> expectedBody = new HashMap<String, Object>();
+    expectedBody.put("event", "json content");
+    expectedBody.put("num", 1);
+
+    assertSearch(1,
+        performSearch(QueryBuilders.matchAllQuery()), expectedBody, event);
+    assertSearch(1,
+        performSearch(QueryBuilders.fieldQuery("@message.event", "json")),
+        expectedBody, event);
+  }
+
+  @Test
+>>>>>>> refs/remotes/apache/trunk
   public void shouldIndexFiveEvents() throws Exception {
     // Make it so we only need to call process once
     parameters.put(BATCH_SIZE, "5");
@@ -167,8 +254,12 @@ public class TestElasticSearchSink extends AbstractElasticSearchSinkTest {
     fixture = new ElasticSearchSink();
     fixture.configure(new Context(parameters));
 
+<<<<<<< HEAD
     InetSocketTransportAddress[] expected = { new InetSocketTransportAddress(
         "10.5.5.27", DEFAULT_PORT) };
+=======
+    String[] expected = { "10.5.5.27" };
+>>>>>>> refs/remotes/apache/trunk
 
     assertEquals("testing-cluster-name", fixture.getClusterName());
     assertEquals("testing-index-name", fixture.getIndexName());
@@ -187,8 +278,12 @@ public class TestElasticSearchSink extends AbstractElasticSearchSinkTest {
     fixture = new ElasticSearchSink();
     fixture.configure(new Context(parameters));
 
+<<<<<<< HEAD
     InetSocketTransportAddress[] expected = { new InetSocketTransportAddress(
         "10.5.5.27", DEFAULT_PORT) };
+=======
+    String[] expected = { "10.5.5.27" };
+>>>>>>> refs/remotes/apache/trunk
 
     assertEquals(DEFAULT_INDEX_NAME, fixture.getIndexName());
     assertEquals(DEFAULT_INDEX_TYPE, fixture.getIndexType());
@@ -203,10 +298,26 @@ public class TestElasticSearchSink extends AbstractElasticSearchSinkTest {
     fixture = new ElasticSearchSink();
     fixture.configure(new Context(parameters));
 
+<<<<<<< HEAD
     InetSocketTransportAddress[] expected = {
         new InetSocketTransportAddress("10.5.5.27", DEFAULT_PORT),
         new InetSocketTransportAddress("10.5.5.28", DEFAULT_PORT),
         new InetSocketTransportAddress("10.5.5.29", DEFAULT_PORT) };
+=======
+    String[] expected = { "10.5.5.27", "10.5.5.28", "10.5.5.29" };
+
+    assertArrayEquals(expected, fixture.getServerAddresses());
+  }
+
+  @Test
+  public void shouldParseMultipleHostWithWhitespacesUsingDefaultPorts() {
+    parameters.put(HOSTNAMES, " 10.5.5.27 , 10.5.5.28 , 10.5.5.29 ");
+
+    fixture = new ElasticSearchSink();
+    fixture.configure(new Context(parameters));
+
+    String[] expected = { "10.5.5.27", "10.5.5.28", "10.5.5.29" };
+>>>>>>> refs/remotes/apache/trunk
 
     assertArrayEquals(expected, fixture.getServerAddresses());
   }
@@ -218,10 +329,27 @@ public class TestElasticSearchSink extends AbstractElasticSearchSinkTest {
     fixture = new ElasticSearchSink();
     fixture.configure(new Context(parameters));
 
+<<<<<<< HEAD
     InetSocketTransportAddress[] expected = {
         new InetSocketTransportAddress("10.5.5.27", 9300),
         new InetSocketTransportAddress("10.5.5.28", 9301),
         new InetSocketTransportAddress("10.5.5.29", 9302) };
+=======
+    String[] expected = { "10.5.5.27:9300", "10.5.5.28:9301", "10.5.5.29:9302" };
+
+    assertArrayEquals(expected, fixture.getServerAddresses());
+  }
+
+  @Test
+  public void shouldParseMultipleHostAndPortsWithWhitespaces() {
+    parameters.put(HOSTNAMES,
+        " 10.5.5.27 : 9300 , 10.5.5.28 : 9301 , 10.5.5.29 : 9302 ");
+
+    fixture = new ElasticSearchSink();
+    fixture.configure(new Context(parameters));
+
+    String[] expected = { "10.5.5.27:9300", "10.5.5.28:9301", "10.5.5.29:9302" };
+>>>>>>> refs/remotes/apache/trunk
 
     assertArrayEquals(expected, fixture.getServerAddresses());
   }
@@ -229,11 +357,18 @@ public class TestElasticSearchSink extends AbstractElasticSearchSinkTest {
   @Test
   public void shouldAllowCustomElasticSearchIndexRequestBuilderFactory()
       throws Exception {
+<<<<<<< HEAD
 
     parameters.put(SERIALIZER,
         CustomElasticSearchIndexRequestBuilderFactory.class.getName());
 
     Configurables.configure(fixture, new Context(parameters));
+=======
+    parameters.put(SERIALIZER,
+        CustomElasticSearchIndexRequestBuilderFactory.class.getName());
+
+    fixture.configure(new Context(parameters));
+>>>>>>> refs/remotes/apache/trunk
 
     Channel channel = bindAndStartChannel(fixture);
     Transaction tx = channel.getTransaction();
@@ -247,7 +382,11 @@ public class TestElasticSearchSink extends AbstractElasticSearchSinkTest {
     fixture.process();
     fixture.stop();
 
+<<<<<<< HEAD
     assertEquals(fixture.getIndexName()+"-05_17_36_789",
+=======
+    assertEquals(fixture.getIndexName() + "-05_17_36_789",
+>>>>>>> refs/remotes/apache/trunk
         CustomElasticSearchIndexRequestBuilderFactory.actualIndexName);
     assertEquals(fixture.getIndexType(),
         CustomElasticSearchIndexRequestBuilderFactory.actualIndexType);
@@ -256,6 +395,40 @@ public class TestElasticSearchSink extends AbstractElasticSearchSinkTest {
     assertTrue(CustomElasticSearchIndexRequestBuilderFactory.hasContext);
   }
 
+<<<<<<< HEAD
+=======
+  @Test
+  public void shouldParseFullyQualifiedTTLs() {
+    Map<String, Long> testTTLMap = new HashMap<String, Long>();
+    testTTLMap.put("1ms", Long.valueOf(1));
+    testTTLMap.put("1s", Long.valueOf(1000));
+    testTTLMap.put("1m", Long.valueOf(60000));
+    testTTLMap.put("1h", Long.valueOf(3600000));
+    testTTLMap.put("1d", Long.valueOf(86400000));
+    testTTLMap.put("1w", Long.valueOf(604800000));
+    testTTLMap.put("1", Long.valueOf(86400000));
+
+    parameters.put(HOSTNAMES, "10.5.5.27");
+    parameters.put(CLUSTER_NAME, "testing-cluster-name");
+    parameters.put(INDEX_NAME, "testing-index-name");
+    parameters.put(INDEX_TYPE, "testing-index-type");
+
+    for (String ttl : testTTLMap.keySet()) {
+      parameters.put(TTL, ttl);
+      fixture = new ElasticSearchSink();
+      fixture.configure(new Context(parameters));
+
+      String[] expected = { "10.5.5.27" };
+      assertEquals("testing-cluster-name", fixture.getClusterName());
+      assertEquals("testing-index-name", fixture.getIndexName());
+      assertEquals("testing-index-type", fixture.getIndexType());
+      assertEquals((long) testTTLMap.get(ttl), fixture.getTTLMs());
+      assertArrayEquals(expected, fixture.getServerAddresses());
+
+    }
+  }
+
+>>>>>>> refs/remotes/apache/trunk
   public static final class CustomElasticSearchIndexRequestBuilderFactory
       extends AbstractElasticSearchIndexRequestBuilderFactory {
 
@@ -308,6 +481,7 @@ public class TestElasticSearchSink extends AbstractElasticSearchSinkTest {
     }
   }
 
+<<<<<<< HEAD
   public static class FakeConfigurable implements Configurable {
     @Override
     public void configure(Context arg0) {
@@ -315,3 +489,86 @@ public class TestElasticSearchSink extends AbstractElasticSearchSinkTest {
     }
   }
 }
+=======
+  @Test
+  public void shouldUseSpecifiedSerializer() throws Exception {
+    Context context = new Context();
+    context.put(SERIALIZER,
+        "org.apache.flume.sink.elasticsearch.FakeEventSerializer");
+
+    assertNull(fixture.getEventSerializer());
+    fixture.configure(context);
+    assertTrue(fixture.getEventSerializer() instanceof FakeEventSerializer);
+  }
+
+  @Test
+  public void shouldUseSpecifiedIndexNameBuilder() throws Exception {
+    Context context = new Context();
+    context.put(ElasticSearchSinkConstants.INDEX_NAME_BUILDER,
+            "org.apache.flume.sink.elasticsearch.FakeIndexNameBuilder");
+
+    assertNull(fixture.getIndexNameBuilder());
+    fixture.configure(context);
+    assertTrue(fixture.getIndexNameBuilder() instanceof FakeIndexNameBuilder);
+  }
+
+  public static class FakeConfigurable implements Configurable {
+    @Override
+    public void configure(Context arg0) {
+      // no-op
+    }
+  }
+}
+
+/**
+ * Internal class. Fake event serializer used for tests
+ */
+class FakeEventSerializer implements ElasticSearchEventSerializer {
+
+  static final byte[] FAKE_BYTES = new byte[] { 9, 8, 7, 6 };
+  boolean configuredWithContext, configuredWithComponentConfiguration;
+
+  @Override
+  public BytesStream getContentBuilder(Event event) throws IOException {
+    FastByteArrayOutputStream fbaos = new FastByteArrayOutputStream(4);
+    fbaos.write(FAKE_BYTES);
+    return fbaos;
+  }
+
+  @Override
+  public void configure(Context arg0) {
+    configuredWithContext = true;
+  }
+
+  @Override
+  public void configure(ComponentConfiguration arg0) {
+    configuredWithComponentConfiguration = true;
+  }
+}
+
+/**
+ * Internal class. Fake index name builder used only for tests.
+ */
+class FakeIndexNameBuilder implements IndexNameBuilder {
+
+  static final String INDEX_NAME = "index_name";
+
+  @Override
+  public String getIndexName(Event event) {
+    return INDEX_NAME;
+  }
+
+  @Override
+  public String getIndexPrefix(Event event) {
+    return INDEX_NAME;
+  }
+
+  @Override
+  public void configure(Context context) {
+  }
+
+  @Override
+  public void configure(ComponentConfiguration conf) {
+  }
+}
+>>>>>>> refs/remotes/apache/trunk

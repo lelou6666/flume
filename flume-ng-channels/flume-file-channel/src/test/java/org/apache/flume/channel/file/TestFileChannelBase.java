@@ -38,12 +38,23 @@ public class TestFileChannelBase {
   protected File[] dataDirs;
   protected String dataDir;
   protected File backupDir;
+<<<<<<< HEAD
+=======
+  protected File uncompressedBackupCheckpoint;
+  protected File compressedBackupCheckpoint;
+>>>>>>> refs/remotes/apache/trunk
 
   @Before
   public void setup() throws Exception {
     baseDir = Files.createTempDir();
     checkpointDir = new File(baseDir, "chkpt");
     backupDir = new File(baseDir, "backup");
+<<<<<<< HEAD
+=======
+    uncompressedBackupCheckpoint = new File(backupDir, "checkpoint");
+    compressedBackupCheckpoint = new File(backupDir,
+      "checkpoint.snappy");
+>>>>>>> refs/remotes/apache/trunk
     Assert.assertTrue(checkpointDir.mkdirs() || checkpointDir.isDirectory());
     Assert.assertTrue(backupDir.mkdirs() || backupDir.isDirectory());
     dataDirs = new File[3];

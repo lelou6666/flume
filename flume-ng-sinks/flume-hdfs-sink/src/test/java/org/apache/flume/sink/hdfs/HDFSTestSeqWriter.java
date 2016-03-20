@@ -25,9 +25,17 @@ import org.apache.flume.Event;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
 
-public class HDFSBadSeqWriter extends HDFSSequenceFile {
+public class HDFSTestSeqWriter extends HDFSSequenceFile {
   protected volatile boolean closed, opened;
 
+<<<<<<< HEAD:flume-ng-sinks/flume-hdfs-sink/src/test/java/org/apache/flume/sink/hdfs/HDFSBadSeqWriter.java
+=======
+  private int openCount = 0;
+  HDFSTestSeqWriter(int openCount) {
+    this.openCount = openCount;
+  }
+
+>>>>>>> refs/remotes/apache/trunk:flume-ng-sinks/flume-hdfs-sink/src/test/java/org/apache/flume/sink/hdfs/HDFSTestSeqWriter.java
   @Override
   public void open(String filePath, CompressionCodec codeC,
       CompressionType compType) throws IOException {
@@ -46,7 +54,8 @@ public class HDFSBadSeqWriter extends HDFSSequenceFile {
       e.getHeaders().remove("fault-once");
       throw new IOException("Injected fault");
     } else if (e.getHeaders().containsKey("fault-until-reopen")) {
-      if(!(closed && opened)) {
+      // opening first time.
+      if(openCount == 1) {
         throw new IOException("Injected fault-until-reopen");
       }
     } else if (e.getHeaders().containsKey("slow")) {

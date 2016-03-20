@@ -97,6 +97,7 @@ public enum SourceType {
    * @see org.apache.flume.source.ThriftSource
    */
   THRIFT("org.apache.flume.source.ThriftSource"),
+<<<<<<< HEAD
 
   /**
    * JMS Source
@@ -104,6 +105,23 @@ public enum SourceType {
    * @see org.apache.flume.source.jms.JMSSource
    */
   JMS("org.apache.flume.source.jms.JMSSource");
+=======
+
+  /**
+   * JMS Source
+   *
+   * @see org.apache.flume.source.jms.JMSSource
+   */
+  JMS("org.apache.flume.source.jms.JMSSource"),
+
+  /**
+   * Taildir Source
+   *
+   * @see org.apache.flume.source.taildir.TaildirSource
+   */
+  TAILDIR("org.apache.flume.source.taildir.TaildirSource")
+  ;
+>>>>>>> refs/remotes/apache/trunk
 
   private final String sourceClassName;
 

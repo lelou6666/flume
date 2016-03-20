@@ -21,12 +21,20 @@ package org.apache.flume.channel.file;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+<<<<<<< HEAD
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import org.apache.flume.Channel;
 import org.apache.flume.ChannelException;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
+=======
+import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
+import com.google.common.collect.Iterables;
+import org.apache.flume.*;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.annotations.Disposable;
 import org.apache.flume.annotations.InterfaceAudience;
 import org.apache.flume.annotations.InterfaceStability;
@@ -77,7 +85,11 @@ public class FileChannel extends BasicChannelSemantics {
 
   private Integer capacity = 0;
   private int keepAlive;
+<<<<<<< HEAD
   private Integer transactionCapacity = 0;
+=======
+  protected Integer transactionCapacity = 0;
+>>>>>>> refs/remotes/apache/trunk
   private Long checkpointInterval = 0L;
   private long maxFileSize;
   private long minimumRequiredSpace;
@@ -90,8 +102,6 @@ public class FileChannel extends BasicChannelSemantics {
   private Semaphore queueRemaining;
   private final ThreadLocal<FileBackedTransaction> transactions =
       new ThreadLocal<FileBackedTransaction>();
-  private int logWriteTimeout;
-  private int checkpointWriteTimeout;
   private String channelNameDescriptor = "[channel=unknown]";
   private ChannelCounter channelCounter;
   private boolean useLogReplayV1;
@@ -100,7 +110,14 @@ public class FileChannel extends BasicChannelSemantics {
   private String encryptionActiveKey;
   private String encryptionCipherProvider;
   private boolean useDualCheckpoints;
+<<<<<<< HEAD
   private boolean isTest = false;
+=======
+  private boolean compressBackupCheckpoint;
+  private boolean fsyncPerTransaction;
+  private int fsyncInterval;
+  private boolean checkpointOnClose = true;
+>>>>>>> refs/remotes/apache/trunk
 
   @Override
   public synchronized void setName(String name) {
@@ -114,17 +131,36 @@ public class FileChannel extends BasicChannelSemantics {
     useDualCheckpoints = context.getBoolean(
         FileChannelConfiguration.USE_DUAL_CHECKPOINTS,
         FileChannelConfiguration.DEFAULT_USE_DUAL_CHECKPOINTS);
+<<<<<<< HEAD
+=======
+
+    compressBackupCheckpoint = context.getBoolean(
+        FileChannelConfiguration.COMPRESS_BACKUP_CHECKPOINT,
+        FileChannelConfiguration.DEFAULT_COMPRESS_BACKUP_CHECKPOINT);
+
+>>>>>>> refs/remotes/apache/trunk
     String homePath = System.getProperty("user.home").replace('\\', '/');
 
     String strCheckpointDir =
         context.getString(FileChannelConfiguration.CHECKPOINT_DIR,
+<<<<<<< HEAD
             homePath + "/.flume/file-channel/checkpoint");
+=======
+            homePath + "/.flume/file-channel/checkpoint").trim();
+>>>>>>> refs/remotes/apache/trunk
 
     String strBackupCheckpointDir = context.getString
       (FileChannelConfiguration.BACKUP_CHECKPOINT_DIR, "").trim();
 
+<<<<<<< HEAD
     String[] strDataDirs = context.getString(FileChannelConfiguration.DATA_DIRS,
         homePath + "/.flume/file-channel/data").split(",");
+=======
+    String[] strDataDirs = Iterables.toArray(
+        Splitter.on(",").trimResults().omitEmptyStrings().split(
+            context.getString(FileChannelConfiguration.DATA_DIRS,
+                homePath + "/.flume/file-channel/data")), String.class);
+>>>>>>> refs/remotes/apache/trunk
 
     checkpointDir = new File(strCheckpointDir);
 
@@ -191,11 +227,12 @@ public class FileChannel extends BasicChannelSemantics {
 
     // cannot be over FileChannelConfiguration.DEFAULT_MAX_FILE_SIZE
     maxFileSize = Math.min(
-        context.getLong(FileChannelConfiguration.MAX_FILE_SIZE,
-            FileChannelConfiguration.DEFAULT_MAX_FILE_SIZE),
-            FileChannelConfiguration.DEFAULT_MAX_FILE_SIZE);
+      context.getLong(FileChannelConfiguration.MAX_FILE_SIZE,
+        FileChannelConfiguration.DEFAULT_MAX_FILE_SIZE),
+      FileChannelConfiguration.DEFAULT_MAX_FILE_SIZE);
 
     minimumRequiredSpace = Math.max(
+<<<<<<< HEAD
         context.getLong(FileChannelConfiguration.MINIMUM_REQUIRED_SPACE,
             FileChannelConfiguration.DEFAULT_MINIMUM_REQUIRED_SPACE),
             FileChannelConfiguration.FLOOR_MINIMUM_REQUIRED_SPACE);
@@ -203,31 +240,59 @@ public class FileChannel extends BasicChannelSemantics {
     logWriteTimeout = context.getInteger(
         FileChannelConfiguration.LOG_WRITE_TIMEOUT,
         FileChannelConfiguration.DEFAULT_WRITE_TIMEOUT);
-
-    if (logWriteTimeout < 0) {
-      LOG.warn("Log write time out is invalid: " + logWriteTimeout
-          + ", using default: "
-          + FileChannelConfiguration.DEFAULT_WRITE_TIMEOUT);
-
-      logWriteTimeout = FileChannelConfiguration.DEFAULT_WRITE_TIMEOUT;
-    }
-
-    checkpointWriteTimeout = context.getInteger(
-        FileChannelConfiguration.CHECKPOINT_WRITE_TIMEOUT,
-        FileChannelConfiguration.DEFAULT_CHECKPOINT_WRITE_TIMEOUT);
-
-    if (checkpointWriteTimeout < 0) {
-      LOG.warn("Checkpoint write time out is invalid: " + checkpointWriteTimeout
-          + ", using default: "
-          + FileChannelConfiguration.DEFAULT_CHECKPOINT_WRITE_TIMEOUT);
-
-      checkpointWriteTimeout =
-          FileChannelConfiguration.DEFAULT_CHECKPOINT_WRITE_TIMEOUT;
-    }
+=======
+      context.getLong(FileChannelConfiguration.MINIMUM_REQUIRED_SPACE,
+        FileChannelConfiguration.DEFAULT_MINIMUM_REQUIRED_SPACE),
+      FileChannelConfiguration.FLOOR_MINIMUM_REQUIRED_SPACE);
+>>>>>>> refs/remotes/apache/trunk
 
     useLogReplayV1 = context.getBoolean(
         FileChannelConfiguration.USE_LOG_REPLAY_V1,
           FileChannelConfiguration.DEFAULT_USE_LOG_REPLAY_V1);
+
+    useFastReplay = context.getBoolean(
+            FileChannelConfiguration.USE_FAST_REPLAY,
+            FileChannelConfiguration.DEFAULT_USE_FAST_REPLAY);
+
+    Context encryptionContext = new Context(
+        context.getSubProperties(EncryptionConfiguration.ENCRYPTION_PREFIX +
+            "."));
+    String encryptionKeyProviderName = encryptionContext.getString(
+        EncryptionConfiguration.KEY_PROVIDER);
+    encryptionActiveKey = encryptionContext.getString(
+        EncryptionConfiguration.ACTIVE_KEY);
+    encryptionCipherProvider = encryptionContext.getString(
+        EncryptionConfiguration.CIPHER_PROVIDER);
+    if(encryptionKeyProviderName != null) {
+      Preconditions.checkState(!Strings.isNullOrEmpty(encryptionActiveKey),
+          "Encryption configuration problem: " +
+              EncryptionConfiguration.ACTIVE_KEY + " is missing");
+      Preconditions.checkState(!Strings.isNullOrEmpty(encryptionCipherProvider),
+          "Encryption configuration problem: " +
+              EncryptionConfiguration.CIPHER_PROVIDER + " is missing");
+      Context keyProviderContext = new Context(encryptionContext.
+          getSubProperties(EncryptionConfiguration.KEY_PROVIDER + "."));
+      encryptionKeyProvider = KeyProviderFactory.
+          getInstance(encryptionKeyProviderName, keyProviderContext);
+    } else {
+      Preconditions.checkState(encryptionActiveKey == null,
+          "Encryption configuration problem: " +
+              EncryptionConfiguration.ACTIVE_KEY + " is present while key " +
+          "provider name is not.");
+      Preconditions.checkState(encryptionCipherProvider == null,
+          "Encryption configuration problem: " +
+              EncryptionConfiguration.CIPHER_PROVIDER + " is present while " +
+          "key provider name is not.");
+    }
+
+    fsyncPerTransaction = context.getBoolean(FileChannelConfiguration
+      .FSYNC_PER_TXN, FileChannelConfiguration.DEFAULT_FSYNC_PRE_TXN);
+
+    fsyncInterval = context.getInteger(FileChannelConfiguration
+      .FSYNC_INTERVAL, FileChannelConfiguration.DEFAULT_FSYNC_INTERVAL);
+
+    checkpointOnClose = context.getBoolean(FileChannelConfiguration
+            .CHKPT_ONCLOSE, FileChannelConfiguration.DEFAULT_CHKPT_ONCLOSE);
 
     useFastReplay = context.getBoolean(
             FileChannelConfiguration.USE_FAST_REPLAY,
@@ -286,18 +351,24 @@ public class FileChannel extends BasicChannelSemantics {
       builder.setMaxFileSize(maxFileSize);
       builder.setMinimumRequiredSpace(minimumRequiredSpace);
       builder.setQueueSize(capacity);
-      builder.setLogWriteTimeout(logWriteTimeout);
       builder.setCheckpointDir(checkpointDir);
       builder.setLogDirs(dataDirs);
       builder.setChannelName(getName());
-      builder.setCheckpointWriteTimeout(checkpointWriteTimeout);
       builder.setUseLogReplayV1(useLogReplayV1);
       builder.setUseFastReplay(useFastReplay);
       builder.setEncryptionKeyProvider(encryptionKeyProvider);
       builder.setEncryptionKeyAlias(encryptionActiveKey);
       builder.setEncryptionCipherProvider(encryptionCipherProvider);
       builder.setUseDualCheckpoints(useDualCheckpoints);
+<<<<<<< HEAD
       builder.setBackupCheckpointDir(backupCheckpointDir);
+=======
+      builder.setCompressBackupCheckpoint(compressBackupCheckpoint);
+      builder.setBackupCheckpointDir(backupCheckpointDir);
+      builder.setFsyncPerTransaction(fsyncPerTransaction);
+      builder.setFsyncInterval(fsyncInterval);
+      builder.setCheckpointOnClose(checkpointOnClose);
+>>>>>>> refs/remotes/apache/trunk
       log = builder.build();
       log.replay();
       open = true;
@@ -353,6 +424,10 @@ public class FileChannel extends BasicChannelSemantics {
       }
       throw new IllegalStateException(msg);
     }
+<<<<<<< HEAD
+=======
+
+>>>>>>> refs/remotes/apache/trunk
     FileBackedTransaction trans = transactions.get();
     if(trans != null && !trans.isClosed()) {
       Preconditions.checkState(false,
@@ -360,13 +435,13 @@ public class FileChannel extends BasicChannelSemantics {
               trans.getStateAsString()  + channelNameDescriptor);
     }
     trans = new FileBackedTransaction(log, TransactionIDOracle.next(),
-        transactionCapacity, keepAlive, queueRemaining, getName(),
-        channelCounter);
+      transactionCapacity, keepAlive, queueRemaining, getName(),
+      fsyncPerTransaction, channelCounter);
     transactions.set(trans);
     return trans;
   }
 
-  int getDepth() {
+  protected int getDepth() {
     Preconditions.checkState(open, "Channel closed"  + channelNameDescriptor);
     Preconditions.checkNotNull(log, "log");
     FlumeEventQueue queue = log.getFlumeEventQueue();
@@ -433,9 +508,11 @@ public class FileChannel extends BasicChannelSemantics {
     private final Semaphore queueRemaining;
     private final String channelNameDescriptor;
     private final ChannelCounter channelCounter;
+    private final boolean fsyncPerTransaction;
     public FileBackedTransaction(Log log, long transactionID,
         int transCapacity, int keepAlive, Semaphore queueRemaining,
-        String name, ChannelCounter counter) {
+        String name, boolean fsyncPerTransaction, ChannelCounter
+      counter) {
       this.log = log;
       queue = log.getFlumeEventQueue();
       this.transactionID = transactionID;
@@ -443,6 +520,7 @@ public class FileChannel extends BasicChannelSemantics {
       this.queueRemaining = queueRemaining;
       putList = new LinkedBlockingDeque<FlumeEventPointer>(transCapacity);
       takeList = new LinkedBlockingDeque<FlumeEventPointer>(transCapacity);
+      this.fsyncPerTransaction = fsyncPerTransaction;
       channelNameDescriptor = "[channel=" + name + "]";
       this.channelCounter = counter;
     }
@@ -465,14 +543,22 @@ public class FileChannel extends BasicChannelSemantics {
       // this does not need to be in the critical section as it does not
       // modify the structure of the log or queue.
       if(!queueRemaining.tryAcquire(keepAlive, TimeUnit.SECONDS)) {
+<<<<<<< HEAD
         throw new ChannelException("The channel has reached it's capacity. "
+=======
+        throw new ChannelFullException("The channel has reached it's capacity. "
+>>>>>>> refs/remotes/apache/trunk
             + "This might be the result of a sink on the channel having too "
             + "low of batch size, a downstream system running slower than "
             + "normal, or that the channel capacity is just too low. "
             + channelNameDescriptor);
       }
       boolean success = false;
+<<<<<<< HEAD
       boolean lockAcquired = log.tryLockShared();
+=======
+      log.lockShared();
+>>>>>>> refs/remotes/apache/trunk
       try {
         if(!lockAcquired) {
           throw new ChannelException("Failed to obtain lock for writing to the "
@@ -488,9 +574,13 @@ public class FileChannel extends BasicChannelSemantics {
         throw new ChannelException("Put failed due to IO error "
                 + channelNameDescriptor, e);
       } finally {
+<<<<<<< HEAD
         if(lockAcquired) {
           log.unlockShared();
         }
+=======
+        log.unlockShared();
+>>>>>>> refs/remotes/apache/trunk
         if(!success) {
           // release slot obtained in the case
           // the put fails for any reason
@@ -508,12 +598,16 @@ public class FileChannel extends BasicChannelSemantics {
             "increasing capacity, or increasing thread count. "
                + channelNameDescriptor);
       }
+<<<<<<< HEAD
       if(!log.tryLockShared()) {
         throw new ChannelException("Failed to obtain lock for writing to the "
             + "log. Try increasing the log write timeout value. " +
             channelNameDescriptor);
       }
 
+=======
+      log.lockShared();
+>>>>>>> refs/remotes/apache/trunk
       /*
        * 1. Take an event which is in the queue.
        * 2. If getting that event does not throw NoopRecordException,
@@ -544,6 +638,16 @@ public class FileChannel extends BasicChannelSemantics {
               LOG.warn("Corrupt record replaced by File Channel Integrity " +
                 "tool found. Will retrieve next event", e);
               takeList.remove(ptr);
+<<<<<<< HEAD
+=======
+            } catch (CorruptEventException ex) {
+              if (fsyncPerTransaction) {
+                throw new ChannelException(ex);
+              }
+              LOG.warn("Corrupt record found. Event will be " +
+                "skipped, and next event will be read.", ex);
+              takeList.remove(ptr);
+>>>>>>> refs/remotes/apache/trunk
             }
           }
         }
@@ -558,11 +662,15 @@ public class FileChannel extends BasicChannelSemantics {
       if(puts > 0) {
         Preconditions.checkState(takes == 0, "nonzero puts and takes "
                 + channelNameDescriptor);
+<<<<<<< HEAD
         if(!log.tryLockShared()) {
           throw new ChannelException("Failed to obtain lock for writing to the "
               + "log. Try increasing the log write timeout value. " +
               channelNameDescriptor);
         }
+=======
+        log.lockShared();
+>>>>>>> refs/remotes/apache/trunk
         try {
           log.commitPut(transactionID);
           channelCounter.addToEventPutSuccessCount(puts);
@@ -587,6 +695,7 @@ public class FileChannel extends BasicChannelSemantics {
                   + channelNameDescriptor, e);
         } finally {
           log.unlockShared();
+<<<<<<< HEAD
         }
 
       } else if (takes > 0) {
@@ -595,6 +704,12 @@ public class FileChannel extends BasicChannelSemantics {
               + "log. Try increasing the log write timeout value. " +
               channelNameDescriptor);
         }
+=======
+        }
+
+      } else if (takes > 0) {
+        log.lockShared();
+>>>>>>> refs/remotes/apache/trunk
         try {
           log.commitTake(transactionID);
           queue.completeTransaction(transactionID);
@@ -615,6 +730,7 @@ public class FileChannel extends BasicChannelSemantics {
     protected void doRollback() throws InterruptedException {
       int puts = putList.size();
       int takes = takeList.size();
+<<<<<<< HEAD
       boolean lockAcquired = log.tryLockShared();
       try {
         if(!lockAcquired) {
@@ -622,6 +738,10 @@ public class FileChannel extends BasicChannelSemantics {
               + "log. Try increasing the log write timeout value. " +
               channelNameDescriptor);
         }
+=======
+      log.lockShared();
+      try {
+>>>>>>> refs/remotes/apache/trunk
         if(takes > 0) {
           Preconditions.checkState(puts == 0, "nonzero puts and takes "
               + channelNameDescriptor);
@@ -642,9 +762,13 @@ public class FileChannel extends BasicChannelSemantics {
         throw new ChannelException("Commit failed due to IO error "
             + channelNameDescriptor, e);
       } finally {
+<<<<<<< HEAD
         if(lockAcquired) {
           log.unlockShared();
         }
+=======
+        log.unlockShared();
+>>>>>>> refs/remotes/apache/trunk
         // since rollback is being called, puts will never make it on
         // to the queue and we need to be sure to release the resources
         queueRemaining.release(puts);

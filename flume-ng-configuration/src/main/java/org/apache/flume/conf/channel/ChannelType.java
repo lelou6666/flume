@@ -46,6 +46,15 @@ public enum ChannelType {
    */
   JDBC("org.apache.flume.channel.jdbc.JdbcChannel");
 
+<<<<<<< HEAD
+=======
+  /**
+   * Spillable Memory channel
+   *
+   * @see SpillableMemoryChannel
+   */
+  SPILLABLEMEMORY("org.apache.flume.channel.SpillableMemoryChannel");
+>>>>>>> refs/remotes/apache/trunk
 
   private final String channelClassName;
 

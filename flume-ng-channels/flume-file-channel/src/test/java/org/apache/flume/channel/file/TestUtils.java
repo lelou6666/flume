@@ -190,9 +190,15 @@ public class TestUtils {
           result.add(new String(event.getBody(), Charsets.UTF_8));
         }
         transaction.commit();
+<<<<<<< HEAD
       } catch (Exception ex) {
         transaction.rollback();
         throw ex;
+=======
+      } catch (Throwable ex) {
+        transaction.rollback();
+        throw new RuntimeException(ex);
+>>>>>>> refs/remotes/apache/trunk
       } finally {
         transaction.close();
       }

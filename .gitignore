@@ -17,3 +17,7 @@ derby.log
 .idea
 *.iml
 nb-configuration.xml
+<<<<<<< HEAD
+=======
+.DS_Store
+>>>>>>> refs/remotes/apache/trunk

@@ -68,6 +68,10 @@
         <exclude>flume-ng-clients/**</exclude>
         <exclude>flume-ng-embedded-agent/**</exclude>
         <exclude>flume-tools/**</exclude>
+<<<<<<< HEAD:flume-ng-dist/src/main/assembly/bin.xml
+=======
+        <exclude>flume-ng-auth/**</exclude>
+>>>>>>> refs/remotes/apache/trunk:flume-ng-dist/src/main/assembly/bin.xml
         <exclude>**/target/**</exclude>
         <exclude>**/.classpath</exclude>
         <exclude>**/.project</exclude>

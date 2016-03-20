@@ -21,6 +21,10 @@ package org.apache.flume.agent.embedded;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+<<<<<<< HEAD
+=======
+import java.util.Locale;
+>>>>>>> refs/remotes/apache/trunk
 import java.util.Map;
 import java.util.Set;
 
@@ -102,6 +106,17 @@ public class EmbeddedAgentConfiguration {
    * Embedded Agents.
    */
   public static final String CHANNEL_TYPE_MEMORY = ChannelType.MEMORY.name();
+<<<<<<< HEAD
+=======
+
+  /**
+  * Spillable Memory channel which stores events in heap. See Flume User Guide for
+  * configuration information. This is the recommended channel to use for
+  * Embedded Agents.
+   */
+  public static final String CHANNEL_TYPE_SPILLABLEMEMORY = ChannelType.SPILLABLEMEMORY.name();
+
+>>>>>>> refs/remotes/apache/trunk
   /**
    * File based channel which stores events in on local disk. See Flume User
    * Guide for configuration information.
@@ -164,7 +179,11 @@ public class EmbeddedAgentConfiguration {
     checkRequired(properties, SINKS);
     String sinkNames = properties.get(SINKS);
     for(String sink : sinkNames.split("\\s+")) {
+<<<<<<< HEAD
       if(DISALLOWED_SINK_NAMES.contains(sink.toLowerCase())) {
+=======
+      if(DISALLOWED_SINK_NAMES.contains(sink.toLowerCase(Locale.ENGLISH))) {
+>>>>>>> refs/remotes/apache/trunk
         throw new FlumeException("Sink name " + sink + " is one of the" +
             " disallowed sink names: " + DISALLOWED_SINK_NAMES);
       }
@@ -198,9 +217,16 @@ public class EmbeddedAgentConfiguration {
     }
     String sinkNames = properties.remove(SINKS);
 
+<<<<<<< HEAD
     String sourceName = "source-" + name;
     String channelName = "channel-" + name;
     String sinkGroupName = "sink-group-" + name;
+=======
+    String strippedName = name.replaceAll("\\s+","");
+    String sourceName = "source-" + strippedName;
+    String channelName = "channel-" + strippedName;
+    String sinkGroupName = "sink-group-" + strippedName;
+>>>>>>> refs/remotes/apache/trunk
 
     /*
      * Now we are going to process the user supplied configuration

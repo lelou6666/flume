@@ -21,6 +21,10 @@ package org.apache.flume.event;
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
 import org.apache.flume.Event;
+<<<<<<< HEAD
+=======
+import org.apache.flume.FlumeException;
+>>>>>>> refs/remotes/apache/trunk
 
 /**
  *
@@ -46,8 +50,12 @@ public class JSONEvent implements Event{
       try {
         return body.getBytes(charset);
       } catch (UnsupportedEncodingException ex) {
+<<<<<<< HEAD
         //Should never happen
         return null;
+=======
+        throw new FlumeException(String.format("%s encoding not supported", charset), ex);
+>>>>>>> refs/remotes/apache/trunk
       }
     } else {
       return new byte[0];

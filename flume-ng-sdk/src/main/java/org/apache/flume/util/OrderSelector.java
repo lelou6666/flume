@@ -22,6 +22,10 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+<<<<<<< HEAD
+=======
+import java.util.concurrent.TimeUnit;
+>>>>>>> refs/remotes/apache/trunk
 
 /**
  * A basic implementation of an order selector that implements a simple
@@ -39,7 +43,12 @@ import java.util.Map;
 public abstract class OrderSelector<T> {
 
   private static final int EXP_BACKOFF_COUNTER_LIMIT = 16;
+<<<<<<< HEAD
   private static final long CONSIDER_SEQUENTIAL_RANGE = 2000l;
+=======
+  private static final long CONSIDER_SEQUENTIAL_RANGE = TimeUnit.HOURS
+    .toMillis(1);
+>>>>>>> refs/remotes/apache/trunk
   private static final long MAX_TIMEOUT = 30000l;
   private final Map<T, FailureState> stateMap =
           new LinkedHashMap<T, FailureState>();
@@ -92,12 +101,23 @@ public abstract class OrderSelector<T> {
     long now = System.currentTimeMillis();
     long delta = now - state.lastFail;
 
+<<<<<<< HEAD
     //Should we consider this as a new failure? If the failure happened
     //within backoff length + a grace period (failed within
     //grace period after the component started up again, don't consider this
     //a new sequential failure - the component might have failed again while
     //trying to recover. If the failure is outside backedoff time + grace period
     //consider it a new failure and increase the backoff length.
+=======
+    /*
+     * When do we increase the backoff period?
+     * We basically calculate the time difference between the last failure
+     * and the current one. If this failure happened within one hour of the
+     * last backoff period getting over, then we increase the timeout,
+     * since the object did not recover yet. Else we assume this is a fresh
+     * failure and reset the count.
+     */
+>>>>>>> refs/remotes/apache/trunk
     long lastBackoffLength = Math.min(maxTimeout, 1000 * (1 << state.sequentialFails));
     long allowableDiff = lastBackoffLength + CONSIDER_SEQUENTIAL_RANGE;
     if (allowableDiff > delta) {

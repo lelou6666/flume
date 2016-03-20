@@ -22,7 +22,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+<<<<<<< HEAD
 import org.apache.flume.ChannelException;
+=======
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.annotations.InterfaceAudience;
 import org.apache.flume.annotations.InterfaceStability;
 import org.apache.flume.channel.file.encryption.CipherProvider;
@@ -42,6 +45,12 @@ import java.nio.channels.FileChannel;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+<<<<<<< HEAD
+=======
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+>>>>>>> refs/remotes/apache/trunk
 import java.util.concurrent.atomic.AtomicLong;
 
 @InterfaceAudience.Private
@@ -170,13 +179,26 @@ public abstract class LogFile {
     private long lastCommitPosition;
     private long lastSyncPosition;
 
+<<<<<<< HEAD
+=======
+    private final boolean fsyncPerTransaction;
+    private final int fsyncInterval;
+    private final ScheduledExecutorService syncExecutor;
+    private volatile boolean dirty = false;
+
+>>>>>>> refs/remotes/apache/trunk
     // To ensure we can count the number of fsyncs.
     private long syncCount;
 
 
     Writer(File file, int logFileID, long maxFileSize,
+<<<<<<< HEAD
         CipherProvider.Encryptor encryptor, long usableSpaceRefreshInterval)
         throws IOException {
+=======
+        CipherProvider.Encryptor encryptor, long usableSpaceRefreshInterval,
+        boolean fsyncPerTransaction, int fsyncInterval) throws IOException {
+>>>>>>> refs/remotes/apache/trunk
       this.file = file;
       this.logFileID = logFileID;
       this.maxFileSize = Math.min(maxFileSize,
@@ -184,6 +206,28 @@ public abstract class LogFile {
       this.encryptor = encryptor;
       writeFileHandle = new RandomAccessFile(file, "rw");
       writeFileChannel = writeFileHandle.getChannel();
+<<<<<<< HEAD
+=======
+      this.fsyncPerTransaction = fsyncPerTransaction;
+      this.fsyncInterval = fsyncInterval;
+      if(!fsyncPerTransaction) {
+        LOG.info("Sync interval = " + fsyncInterval);
+        syncExecutor = Executors.newSingleThreadScheduledExecutor();
+        syncExecutor.scheduleWithFixedDelay(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              sync();
+            } catch (Throwable ex) {
+              LOG.error("Data file, " + getFile().toString() + " could not " +
+                "be synced to disk due to an error.", ex);
+            }
+          }
+        }, fsyncInterval, fsyncInterval, TimeUnit.SECONDS);
+      } else {
+        syncExecutor = null;
+      }
+>>>>>>> refs/remotes/apache/trunk
       usableSpace = new CachedFSUsableSpace(file, usableSpaceRefreshInterval);
       LOG.info("Opened " + file);
       open = true;
@@ -216,12 +260,31 @@ public abstract class LogFile {
     @VisibleForTesting
     long getLastCommitPosition(){
       return lastCommitPosition;
+<<<<<<< HEAD
+    }
+
+    @VisibleForTesting
+    long getLastSyncPosition() {
+      return lastSyncPosition;
+=======
     }
 
     @VisibleForTesting
     long getLastSyncPosition() {
       return lastSyncPosition;
     }
+
+    @VisibleForTesting
+    long getSyncCount() {
+      return syncCount;
+>>>>>>> refs/remotes/apache/trunk
+    }
+    synchronized long position() throws IOException {
+      return getFileChannel().position();
+    }
+
+    // encrypt and write methods may not be thread safe in the following
+    // methods, so all methods need to be synchronized.
 
     @VisibleForTesting
     long getSyncCount() {
@@ -259,6 +322,10 @@ public abstract class LogFile {
         buffer = ByteBuffer.wrap(encryptor.encrypt(buffer.array()));
       }
       write(buffer);
+<<<<<<< HEAD
+=======
+      dirty = true;
+>>>>>>> refs/remotes/apache/trunk
       lastCommitPosition = position();
     }
 
@@ -300,6 +367,17 @@ public abstract class LogFile {
      * @throws LogFileRetryableIOException - if this log file is closed.
      */
     synchronized void sync() throws IOException {
+<<<<<<< HEAD
+=======
+      if (!fsyncPerTransaction && !dirty) {
+        if(LOG.isDebugEnabled()) {
+          LOG.debug(
+            "No events written to file, " + getFile().toString() +
+              " in last " + fsyncInterval + " or since last commit.");
+        }
+        return;
+      }
+>>>>>>> refs/remotes/apache/trunk
       if (!isOpen()) {
         throw new LogFileRetryableIOException("File closed " + file);
       }
@@ -307,6 +385,10 @@ public abstract class LogFile {
         getFileChannel().force(false);
         lastSyncPosition = position();
         syncCount++;
+<<<<<<< HEAD
+=======
+        dirty = false;
+>>>>>>> refs/remotes/apache/trunk
       }
     }
 
@@ -316,6 +398,7 @@ public abstract class LogFile {
     }
     protected RandomAccessFile getFileHandle() {
       return writeFileHandle;
+<<<<<<< HEAD
     }
     protected FileChannel getFileChannel() {
       return writeFileChannel;
@@ -323,6 +406,22 @@ public abstract class LogFile {
     synchronized void close() {
       if(open) {
         open = false;
+=======
+    }
+    protected FileChannel getFileChannel() {
+      return writeFileChannel;
+    }
+    synchronized void close() {
+      if(open) {
+        open = false;
+        if (!fsyncPerTransaction) {
+          // Shutdown the executor before attempting to close.
+          if(syncExecutor != null) {
+            // No need to wait for it to shutdown.
+            syncExecutor.shutdown();
+          }
+        }
+>>>>>>> refs/remotes/apache/trunk
         if(writeFileChannel.isOpen()) {
           LOG.info("Closing " + file);
           try {
@@ -349,6 +448,7 @@ public abstract class LogFile {
       }
     }
   }
+<<<<<<< HEAD
 
   /**
    * This is an class meant to be an internal Flume API,
@@ -381,6 +481,40 @@ public abstract class LogFile {
       fileHandle.writeByte(OP_NOOP);
     }
 
+=======
+
+  /**
+   * This is an class meant to be an internal Flume API,
+   * and can change at any time. Intended to be used only from File Channel  Integrity
+   * test tool. Not to be used for any other purpose.
+   */
+  public static class OperationRecordUpdater {
+    private final RandomAccessFile fileHandle;
+    private final File file;
+
+    public OperationRecordUpdater(File file) throws FileNotFoundException {
+      Preconditions.checkState(file.exists(), "File to update, " +
+        file.toString() + " does not exist.");
+      this.file = file;
+      fileHandle = new RandomAccessFile(file, "rw");
+    }
+
+    public void markRecordAsNoop(long offset) throws IOException {
+      // First ensure that the offset actually is an OP_RECORD. There is a
+      // small possibility that it still is OP_RECORD,
+      // but is not actually the beginning of a record. Is there anything we
+      // can do about it?
+      fileHandle.seek(offset);
+      byte byteRead = fileHandle.readByte();
+      Preconditions.checkState(byteRead == OP_RECORD || byteRead == OP_NOOP,
+        "Expected to read a record but the byte read indicates EOF");
+      fileHandle.seek(offset);
+      LOG.info("Marking event as " + OP_NOOP + " at " + offset + " for file " +
+        file.toString());
+      fileHandle.writeByte(OP_NOOP);
+    }
+
+>>>>>>> refs/remotes/apache/trunk
     public void close() {
       try {
         fileHandle.getFD().sync();
@@ -397,12 +531,20 @@ public abstract class LogFile {
     private final BlockingQueue<RandomAccessFile> readFileHandles =
         new ArrayBlockingQueue<RandomAccessFile>(50, true);
     private final KeyProvider encryptionKeyProvider;
+<<<<<<< HEAD
     private volatile boolean open;
     public RandomReader(File file, @Nullable KeyProvider encryptionKeyProvider)
+=======
+    private final boolean fsyncPerTransaction;
+    private volatile boolean open;
+    public RandomReader(File file, @Nullable KeyProvider
+      encryptionKeyProvider, boolean fsyncPerTransaction)
+>>>>>>> refs/remotes/apache/trunk
         throws IOException {
       this.file = file;
       this.encryptionKeyProvider = encryptionKeyProvider;
       readFileHandles.add(open());
+      this.fsyncPerTransaction = fsyncPerTransaction;
       open = true;
     }
 
@@ -431,8 +573,16 @@ public abstract class LogFile {
           throw new NoopRecordException("No op record found. Corrupt record " +
             "may have been repaired by File Channel Integrity tool");
         }
+<<<<<<< HEAD
         Preconditions.checkState(operation == OP_RECORD,
             Integer.toHexString(operation));
+=======
+        if (operation != OP_RECORD) {
+          throw new CorruptEventException(
+            "Operation code is invalid. File " +
+              "is corrupt. Please run File Channel Integrity tool.");
+        }
+>>>>>>> refs/remotes/apache/trunk
         TransactionEventRecord record = doGet(fileHandle);
         if(!(record instanceof Put)) {
           Preconditions.checkState(false, "Record is " +
@@ -492,8 +642,8 @@ public abstract class LogFile {
       }
       int remaining = readFileHandles.remainingCapacity();
       if(remaining > 0) {
-        LOG.info("Opening " + file + " for read, remaining capacity is "
-            + remaining);
+        LOG.info("Opening " + file + " for read, remaining number of file " +
+          "handles available for reads of this file is " + remaining);
         return open();
       }
       return readFileHandles.take();
@@ -648,11 +798,28 @@ public abstract class LogFile {
     output.put(buffer);
   }
   protected static byte[] readDelimitedBuffer(RandomAccessFile fileHandle)
+<<<<<<< HEAD
       throws IOException {
     int length = fileHandle.readInt();
     Preconditions.checkState(length >= 0, Integer.toHexString(length));
     byte[] buffer = new byte[length];
     fileHandle.readFully(buffer);
+=======
+      throws IOException, CorruptEventException {
+    int length = fileHandle.readInt();
+    if (length < 0) {
+      throw new CorruptEventException("Length of event is: " + String.valueOf
+        (length) + ". Event must have length >= 0. Possible corruption of " +
+        "data or partial fsync.");
+    }
+    byte[] buffer = new byte[length];
+    try {
+      fileHandle.readFully(buffer);
+    } catch (EOFException ex) {
+      throw new CorruptEventException("Remaining data in file less than " +
+        "expected size of event.", ex);
+    }
+>>>>>>> refs/remotes/apache/trunk
     return buffer;
   }
 
@@ -660,7 +827,11 @@ public abstract class LogFile {
     File file = new File(args[0]);
     LogFile.SequentialReader reader = null;
     try {
+<<<<<<< HEAD
       reader = LogFileFactory.getSequentialReader(file, null);
+=======
+      reader = LogFileFactory.getSequentialReader(file, null, false);
+>>>>>>> refs/remotes/apache/trunk
       LogRecord entry;
       FlumeEventPointer ptr;
       // for puts the fileId is the fileID of the file they exist in

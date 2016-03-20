@@ -27,7 +27,10 @@ import com.google.common.collect.Sets;
 import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
+<<<<<<< HEAD
 import java.util.Arrays;
+=======
+>>>>>>> refs/remotes/apache/trunk
 import java.util.List;
 import java.util.Set;
 import org.apache.commons.cli.CommandLine;
@@ -50,14 +53,26 @@ public class CheckpointRebuilder {
           HashMultimap.create();
   private final SetMultimap<Long, ComparableFlumeEventPointer>
           uncommittedTakes = HashMultimap.create();
+<<<<<<< HEAD
+=======
+  private final boolean fsyncPerTransaction;
+>>>>>>> refs/remotes/apache/trunk
 
   private static Logger LOG =
           LoggerFactory.getLogger(CheckpointRebuilder.class);
 
   public CheckpointRebuilder(List<File> logFiles,
+<<<<<<< HEAD
           FlumeEventQueue queue) throws IOException {
     this.logFiles = logFiles;
     this.queue = queue;
+=======
+    FlumeEventQueue queue, boolean fsyncPerTransaction) throws
+    IOException {
+    this.logFiles = logFiles;
+    this.queue = queue;
+    this.fsyncPerTransaction = fsyncPerTransaction;
+>>>>>>> refs/remotes/apache/trunk
   }
 
   public boolean rebuild() throws IOException, Exception {
@@ -65,7 +80,12 @@ public class CheckpointRebuilder {
     List<LogFile.SequentialReader> logReaders = Lists.newArrayList();
     for (File logFile : logFiles) {
       try {
+<<<<<<< HEAD
         logReaders.add(LogFileFactory.getSequentialReader(logFile, null));
+=======
+        logReaders.add(LogFileFactory.getSequentialReader(logFile, null,
+          fsyncPerTransaction));
+>>>>>>> refs/remotes/apache/trunk
       } catch(EOFException e) {
         LOG.warn("Ignoring " + logFile + " due to EOF", e);
       }
@@ -251,8 +271,15 @@ public class CheckpointRebuilder {
               capacity, "channel");
       FlumeEventQueue queue = new FlumeEventQueue(backingStore,
               new File(checkpointDir, "inflighttakes"),
+<<<<<<< HEAD
               new File(checkpointDir, "inflightputs"));
       CheckpointRebuilder rebuilder = new CheckpointRebuilder(logFiles, queue);
+=======
+              new File(checkpointDir, "inflightputs"),
+              new File(checkpointDir, Log.QUEUE_SET));
+      CheckpointRebuilder rebuilder = new CheckpointRebuilder(logFiles,
+        queue, true);
+>>>>>>> refs/remotes/apache/trunk
       if(rebuilder.rebuild()) {
         rebuilder.writeCheckpoint();
       } else {

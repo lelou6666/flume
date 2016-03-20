@@ -24,6 +24,7 @@ import org.apache.flume.Event;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+<<<<<<< HEAD
 import com.cloudera.cdk.morphline.api.Command;
 import com.cloudera.cdk.morphline.api.MorphlineCompilationException;
 import com.cloudera.cdk.morphline.api.MorphlineContext;
@@ -33,6 +34,21 @@ import com.cloudera.cdk.morphline.base.FaultTolerance;
 import com.cloudera.cdk.morphline.base.Fields;
 import com.cloudera.cdk.morphline.base.Notifications;
 import com.codahale.metrics.MetricRegistry;
+=======
+import org.kitesdk.morphline.api.Command;
+import org.kitesdk.morphline.api.MorphlineCompilationException;
+import org.kitesdk.morphline.api.MorphlineContext;
+import org.kitesdk.morphline.api.Record;
+import org.kitesdk.morphline.base.Compiler;
+import org.kitesdk.morphline.base.FaultTolerance;
+import org.kitesdk.morphline.base.Fields;
+import org.kitesdk.morphline.base.Metrics;
+import org.kitesdk.morphline.base.Notifications;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.SharedMetricRegistries;
+import com.codahale.metrics.Timer;
+>>>>>>> refs/remotes/apache/trunk
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -46,6 +62,14 @@ public class MorphlineHandlerImpl implements MorphlineHandler {
   private Command finalChild;
   private String morphlineFileAndId;
   
+<<<<<<< HEAD
+=======
+  private Timer mappingTimer;
+  private Meter numRecords;
+  private Meter numFailedRecords;
+  private Meter numExceptionRecords;
+  
+>>>>>>> refs/remotes/apache/trunk
   public static final String MORPHLINE_FILE_PARAM = "morphlineFile";
   public static final String MORPHLINE_ID_PARAM = "morphlineId";
   
@@ -69,6 +93,16 @@ public class MorphlineHandlerImpl implements MorphlineHandler {
 
   @Override
   public void configure(Context context) {
+<<<<<<< HEAD
+=======
+    String morphlineFile = context.getString(MORPHLINE_FILE_PARAM);
+    String morphlineId = context.getString(MORPHLINE_ID_PARAM);
+    if (morphlineFile == null || morphlineFile.trim().length() == 0) {
+      throw new MorphlineCompilationException("Missing parameter: " + MORPHLINE_FILE_PARAM, null);
+    }
+    morphlineFileAndId = morphlineFile + "@" + morphlineId;
+    
+>>>>>>> refs/remotes/apache/trunk
     if (morphlineContext == null) {
       FaultTolerance faultTolerance = new FaultTolerance(
           context.getBoolean(FaultTolerance.IS_PRODUCTION_MODE, false), 
@@ -77,6 +111,7 @@ public class MorphlineHandlerImpl implements MorphlineHandler {
       
       morphlineContext = new MorphlineContext.Builder()
         .setExceptionHandler(faultTolerance)
+<<<<<<< HEAD
         .setMetricRegistry(new MetricRegistry())
         .build();
     }
@@ -89,10 +124,28 @@ public class MorphlineHandlerImpl implements MorphlineHandler {
     Config override = ConfigFactory.parseMap(context.getSubProperties(MORPHLINE_VARIABLE_PARAM + "."));
     morphline = new Compiler().compile(new File(morphlineFile), morphlineId, morphlineContext, finalChild, override);      
     morphlineFileAndId = morphlineFile + "@" + morphlineId;
+=======
+        .setMetricRegistry(SharedMetricRegistries.getOrCreate(morphlineFileAndId))
+        .build();
+    }
+    
+    Config override = ConfigFactory.parseMap(context.getSubProperties(MORPHLINE_VARIABLE_PARAM + "."));
+    morphline = new Compiler().compile(new File(morphlineFile), morphlineId, morphlineContext, finalChild, override);      
+    
+    this.mappingTimer = morphlineContext.getMetricRegistry().timer(
+        MetricRegistry.name("morphline.app", Metrics.ELAPSED_TIME));
+    this.numRecords = morphlineContext.getMetricRegistry().meter(
+        MetricRegistry.name("morphline.app", Metrics.NUM_RECORDS));
+    this.numFailedRecords = morphlineContext.getMetricRegistry().meter(
+        MetricRegistry.name("morphline.app", "numFailedRecords"));
+    this.numExceptionRecords = morphlineContext.getMetricRegistry().meter(
+        MetricRegistry.name("morphline.app", "numExceptionRecords"));
+>>>>>>> refs/remotes/apache/trunk
   }
 
   @Override
   public void process(Event event) {
+<<<<<<< HEAD
     Record record = new Record();
     for (Entry<String, String> entry : event.getHeaders().entrySet()) {
       record.put(entry.getKey(), entry.getValue());
@@ -108,6 +161,31 @@ public class MorphlineHandlerImpl implements MorphlineHandler {
       }
     } catch (RuntimeException t) {
       morphlineContext.getExceptionHandler().handleException(t, record);
+=======
+    numRecords.mark();
+    Timer.Context timerContext = mappingTimer.time();
+    try {
+      Record record = new Record();
+      for (Entry<String, String> entry : event.getHeaders().entrySet()) {
+        record.put(entry.getKey(), entry.getValue());
+      }
+      byte[] bytes = event.getBody();
+      if (bytes != null && bytes.length > 0) {
+        record.put(Fields.ATTACHMENT_BODY, bytes);
+      }    
+      try {
+        Notifications.notifyStartSession(morphline);
+        if (!morphline.process(record)) {
+          numFailedRecords.mark();
+          LOG.warn("Morphline {} failed to process record: {}", morphlineFileAndId, record);
+        }
+      } catch (RuntimeException t) {
+        numExceptionRecords.mark();
+        morphlineContext.getExceptionHandler().handleException(t, record);
+      }
+    } finally {
+      timerContext.stop();
+>>>>>>> refs/remotes/apache/trunk
     }
   }
 

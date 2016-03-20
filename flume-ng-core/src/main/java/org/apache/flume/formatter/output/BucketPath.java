@@ -24,10 +24,18 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
+<<<<<<< HEAD
+=======
+import java.util.concurrent.ConcurrentHashMap;
+>>>>>>> refs/remotes/apache/trunk
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.annotations.VisibleForTesting;
+<<<<<<< HEAD
+=======
+
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.Clock;
 import org.apache.flume.SystemClock;
 import org.apache.flume.tools.TimestampRoundDownUtil;
@@ -72,6 +80,8 @@ public class BucketPath {
       return "datetime";
     case 'd':
       return "day_of_month_xx"; // two digit
+    case 'e':
+      return "day_of_month_x"; // 1 or 2 digit
     case 'D':
       return "date_short"; // "MM/dd/yy";
     case 'H':
@@ -86,6 +96,8 @@ public class BucketPath {
       return "hour_12"; // 1 or 2 digits
     case 'm':
       return "month_xx";
+    case 'n':
+      return "month_x"; // 1 or 2 digits
     case 'M':
       return "minute_xx";
     case 'p':
@@ -184,6 +196,31 @@ public class BucketPath {
     return replaceShorthand(c, headers, timeZone, needRounding, unit,
         roundDown, false, ts);
   }
+<<<<<<< HEAD
+=======
+  
+  protected static final ThreadLocal<HashMap<String, SimpleDateFormat>> simpleDateFormatCache = new ThreadLocal<HashMap<String, SimpleDateFormat>>() {
+	  
+	  @Override
+	  protected HashMap<String, SimpleDateFormat> initialValue() {
+		  return new HashMap<String, SimpleDateFormat>();
+	  }
+  };
+  
+  protected static SimpleDateFormat getSimpleDateFormat(String string) {
+	HashMap<String, SimpleDateFormat> localCache = simpleDateFormatCache.get();
+	
+	SimpleDateFormat simpleDateFormat = localCache.get(string);
+	if (simpleDateFormat == null) {
+		simpleDateFormat = new SimpleDateFormat(string);
+		localCache.put(string, simpleDateFormat);
+		simpleDateFormatCache.set(localCache);
+	}
+	
+	return simpleDateFormat;
+  }
+  
+>>>>>>> refs/remotes/apache/trunk
 
   /**
    * Not intended as a public API
@@ -237,6 +274,9 @@ public class BucketPath {
     case 'd':
       formatString = "dd";
       break;
+    case 'e':
+      formatString = "d";
+      break;
     case 'D':
       formatString = "MM/dd/yy";
       break;
@@ -260,6 +300,9 @@ public class BucketPath {
       break;
     case 'M':
       formatString = "mm";
+      break;
+    case 'n':
+      formatString = "M";
       break;
     case 'p':
       formatString = "a";
@@ -287,9 +330,17 @@ public class BucketPath {
       return "";
     }
 
+<<<<<<< HEAD
     SimpleDateFormat format = new SimpleDateFormat(formatString);
     if (timeZone != null) {
       format.setTimeZone(timeZone);
+=======
+    SimpleDateFormat format = getSimpleDateFormat(formatString);
+    if (timeZone != null) {
+      format.setTimeZone(timeZone);
+    } else {
+      format.setTimeZone(TimeZone.getDefault());
+>>>>>>> refs/remotes/apache/trunk
     }
 
     Date date = new Date(ts);

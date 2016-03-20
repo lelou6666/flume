@@ -63,7 +63,11 @@ public class TestLogFile {
     dataFile = new File(dataDir, String.valueOf(fileID));
     Assert.assertTrue(dataDir.isDirectory());
     logFileWriter = LogFileFactory.getWriter(dataFile, fileID,
+<<<<<<< HEAD
         Integer.MAX_VALUE, null, null, null, Long.MAX_VALUE);
+=======
+        Integer.MAX_VALUE, null, null, null, Long.MAX_VALUE, true, 0);
+>>>>>>> refs/remotes/apache/trunk
   }
   @After
   public void cleanup() throws IOException {
@@ -80,7 +84,11 @@ public class TestLogFile {
     Assert.assertTrue(dataFile.isFile() || dataFile.createNewFile());
     try {
       LogFileFactory.getWriter(dataFile, fileID, Integer.MAX_VALUE, null, null,
+<<<<<<< HEAD
           null, Long.MAX_VALUE);
+=======
+          null, Long.MAX_VALUE, true, 0);
+>>>>>>> refs/remotes/apache/trunk
       Assert.fail();
     } catch (IllegalStateException e) {
       Assert.assertEquals("File already exists " + dataFile.getAbsolutePath(),
@@ -94,7 +102,11 @@ public class TestLogFile {
     Assert.assertTrue(dataFile.mkdirs());
     try {
       LogFileFactory.getWriter(dataFile, fileID, Integer.MAX_VALUE, null, null,
+<<<<<<< HEAD
           null, Long.MAX_VALUE);
+=======
+          null, Long.MAX_VALUE, true, 0);
+>>>>>>> refs/remotes/apache/trunk
       Assert.fail();
     } catch (IllegalStateException e) {
       Assert.assertEquals("File already exists " + dataFile.getAbsolutePath(),
@@ -109,7 +121,11 @@ public class TestLogFile {
     CompletionService<Void> completionService = new ExecutorCompletionService
       <Void>(executorService);
     final LogFile.RandomReader logFileReader =
+<<<<<<< HEAD
         LogFileFactory.getRandomReader(dataFile, null);
+=======
+        LogFileFactory.getRandomReader(dataFile, null, true);
+>>>>>>> refs/remotes/apache/trunk
     for (int i = 0; i < 1000; i++) {
       // first try and throw failures
       synchronized (errors) {
@@ -168,7 +184,11 @@ public class TestLogFile {
       puts.put(ptr.getOffset(), put);
     }
     LogFile.SequentialReader reader =
+<<<<<<< HEAD
         LogFileFactory.getSequentialReader(dataFile, null);
+=======
+        LogFileFactory.getSequentialReader(dataFile, null, true);
+>>>>>>> refs/remotes/apache/trunk
     LogRecord entry;
     while((entry = reader.next()) != null) {
       Integer offset = entry.getOffset();
@@ -202,7 +222,11 @@ public class TestLogFile {
       Assert.fail("Renaming to meta.old failed");
     }
     LogFile.SequentialReader reader =
+<<<<<<< HEAD
             LogFileFactory.getSequentialReader(dataFile, null);
+=======
+            LogFileFactory.getSequentialReader(dataFile, null, true);
+>>>>>>> refs/remotes/apache/trunk
     Assert.assertTrue(metadataFile.exists());
     Assert.assertFalse(oldMetadataFile.exists());
     LogRecord entry;
@@ -240,7 +264,11 @@ public class TestLogFile {
       Assert.fail("Renaming to meta.temp failed");
     }
     LogFile.SequentialReader reader =
+<<<<<<< HEAD
             LogFileFactory.getSequentialReader(dataFile, null);
+=======
+            LogFileFactory.getSequentialReader(dataFile, null, true);
+>>>>>>> refs/remotes/apache/trunk
     Assert.assertTrue(metadataFile.exists());
     Assert.assertFalse(tempMetadataFile.exists());
     Assert.assertFalse(oldMetadataFile.exists());
@@ -281,7 +309,11 @@ public class TestLogFile {
   @Test (expected = CorruptEventException.class)
   public void testPutGetCorruptEvent() throws Exception {
     final LogFile.RandomReader logFileReader =
+<<<<<<< HEAD
       LogFileFactory.getRandomReader(dataFile, null);
+=======
+      LogFileFactory.getRandomReader(dataFile, null, true);
+>>>>>>> refs/remotes/apache/trunk
     final FlumeEvent eventIn = TestUtils.newPersistableEvent(2500);
     final Put put = new Put(++transactionID, WriteOrderOracle.next(),
       eventIn);
@@ -306,7 +338,11 @@ public class TestLogFile {
   @Test (expected = NoopRecordException.class)
   public void testPutGetNoopEvent() throws Exception {
     final LogFile.RandomReader logFileReader =
+<<<<<<< HEAD
       LogFileFactory.getRandomReader(dataFile, null);
+=======
+      LogFileFactory.getRandomReader(dataFile, null, true);
+>>>>>>> refs/remotes/apache/trunk
     final FlumeEvent eventIn = TestUtils.newPersistableEvent(2500);
     final Put put = new Put(++transactionID, WriteOrderOracle.next(),
       eventIn);

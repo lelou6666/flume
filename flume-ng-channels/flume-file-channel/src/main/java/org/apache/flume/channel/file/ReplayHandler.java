@@ -26,7 +26,10 @@ import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import org.apache.commons.collections.MultiMap;
 import org.apache.commons.collections.map.MultiValueMap;
+<<<<<<< HEAD
 import org.apache.flume.ChannelException;
+=======
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.channel.file.encryption.KeyProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +56,10 @@ class ReplayHandler {
   private final Map<Integer, LogFile.SequentialReader> readers;
   private final PriorityQueue<LogRecord> logRecordBuffer;
   private final KeyProvider encryptionKeyProvider;
+<<<<<<< HEAD
+=======
+  private final boolean fsyncPerTransaction;
+>>>>>>> refs/remotes/apache/trunk
   /**
    * This data structure stores takes for which we found a commit in the log
    * files before we found a commit for the put. This can happen if the channel
@@ -92,19 +99,32 @@ class ReplayHandler {
   public int getCommitCount() {
     return commitCount;
   }
+<<<<<<< HEAD
+=======
+
+>>>>>>> refs/remotes/apache/trunk
   @VisibleForTesting
   public int getRollbackCount() {
     return rollbackCount;
   }
 
   ReplayHandler(FlumeEventQueue queue,
+<<<<<<< HEAD
       @Nullable KeyProvider encryptionKeyProvider) {
+=======
+    @Nullable KeyProvider encryptionKeyProvider,
+    boolean fsyncPerTransaction) {
+>>>>>>> refs/remotes/apache/trunk
     this.queue = queue;
     this.lastCheckpoint = queue.getLogWriteOrderID();
     pendingTakes = Lists.newArrayList();
     readers = Maps.newHashMap();
     logRecordBuffer = new PriorityQueue<LogRecord>();
     this.encryptionKeyProvider = encryptionKeyProvider;
+<<<<<<< HEAD
+=======
+    this.fsyncPerTransaction = fsyncPerTransaction;
+>>>>>>> refs/remotes/apache/trunk
   }
   /**
    * Replay logic from Flume1.2 which can be activated if the v2 logic
@@ -130,7 +150,12 @@ class ReplayHandler {
       LOG.info("Replaying " + log);
       LogFile.SequentialReader reader = null;
       try {
+<<<<<<< HEAD
         reader = LogFileFactory.getSequentialReader(log, encryptionKeyProvider);
+=======
+        reader = LogFileFactory.getSequentialReader(log,
+          encryptionKeyProvider, fsyncPerTransaction);
+>>>>>>> refs/remotes/apache/trunk
         reader.skipToLastCheckpointPosition(queue.getLogWriteOrderID());
         LogRecord entry;
         FlumeEventPointer ptr;
@@ -258,7 +283,12 @@ class ReplayHandler {
         LOG.info("Replaying " + log);
         try {
           LogFile.SequentialReader reader =
+<<<<<<< HEAD
               LogFileFactory.getSequentialReader(log, encryptionKeyProvider);
+=======
+            LogFileFactory.getSequentialReader(log, encryptionKeyProvider,
+              fsyncPerTransaction);
+>>>>>>> refs/remotes/apache/trunk
           reader.skipToLastCheckpointPosition(queue.getLogWriteOrderID());
           Preconditions.checkState(!readers.containsKey(reader.getLogFileID()),
               "Readers " + readers + " already contains "
@@ -290,7 +320,13 @@ class ReplayHandler {
             record.getLogWriteOrderID());
         readCount++;
         if(readCount % 10000 == 0 && readCount > 0) {
+<<<<<<< HEAD
           LOG.info("Read " + readCount + " records");
+=======
+          LOG.info("read: " + readCount + ", put: " + putCount + ", take: "
+              + takeCount + ", rollback: " + rollbackCount + ", commit: "
+              + commitCount + ", skip: " + skipCount + ", eventCount:" + count);
+>>>>>>> refs/remotes/apache/trunk
         }
         if (record.getLogWriteOrderID() > lastCheckpoint) {
           if (type == TransactionEventRecord.Type.PUT.get()) {
@@ -339,6 +375,7 @@ class ReplayHandler {
       LOG.info("read: " + readCount + ", put: " + putCount + ", take: "
           + takeCount + ", rollback: " + rollbackCount + ", commit: "
           + commitCount + ", skip: " + skipCount + ", eventCount:" + count);
+      queue.replayComplete();
     } finally {
       TransactionIDOracle.setSeed(transactionIDSeed);
       WriteOrderOracle.setSeed(writeOrderIDSeed);
@@ -363,15 +400,9 @@ class ReplayHandler {
     count += uncommittedTakes;
     int pendingTakesSize = pendingTakes.size();
     if (pendingTakesSize > 0) {
-      String msg = "Pending takes " + pendingTakesSize
-          + " exist after the end of replay";
-      if (LOG.isDebugEnabled()) {
-        for (Long pointer : pendingTakes) {
-          LOG.debug("Pending take " + FlumeEventPointer.fromLong(pointer));
-        }
-      } else {
-        LOG.error(msg + ". Duplicate messages will exist in destination.");
-      }
+      LOG.info("Pending takes " + pendingTakesSize + " exist after the" +
+          " end of replay. Duplicate messages will exist in" +
+          " destination.");
     }
   }
   private LogRecord next() throws IOException, CorruptEventException {

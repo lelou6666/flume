@@ -158,6 +158,30 @@ public class TestElasticSearchIndexRequestBuilderFactory
   }
 
   @Test
+<<<<<<< HEAD
+=======
+  public void shouldSetIndexNameTypeFromHeaderWhenPresent()
+      throws Exception {
+    String indexPrefix = "%{index-name}";
+    String indexType = "%{index-type}";
+    String indexValue = "testing-index-name-from-headers";
+    String typeValue = "testing-index-type-from-headers";
+
+    Event event = new SimpleEvent();
+    event.getHeaders().put("index-name", indexValue);
+    event.getHeaders().put("index-type", typeValue);
+
+    IndexRequestBuilder indexRequestBuilder = factory.createIndexRequest(
+        null, indexPrefix, indexType, event);
+
+    assertEquals(indexValue + '-'
+        + ElasticSearchIndexRequestBuilderFactory.df.format(FIXED_TIME_MILLIS),
+      indexRequestBuilder.request().index());
+    assertEquals(typeValue, indexRequestBuilder.request().type());
+  }
+
+  @Test
+>>>>>>> refs/remotes/apache/trunk
   public void shouldConfigureEventSerializer() throws Exception {
     assertFalse(serializer.configuredWithContext);
     factory.configure(new Context());
@@ -168,6 +192,7 @@ public class TestElasticSearchIndexRequestBuilderFactory
     assertTrue(serializer.configuredWithComponentConfiguration);
   }
 
+<<<<<<< HEAD
 }
 
 class FakeEventSerializer implements ElasticSearchEventSerializer {
@@ -191,4 +216,29 @@ class FakeEventSerializer implements ElasticSearchEventSerializer {
   public void configure(ComponentConfiguration arg0) {
     configuredWithComponentConfiguration = true;
   }
+=======
+  static class FakeEventSerializer implements ElasticSearchEventSerializer {
+
+    static final byte[] FAKE_BYTES = new byte[]{9, 8, 7, 6};
+    boolean configuredWithContext, configuredWithComponentConfiguration;
+
+    @Override
+    public BytesStream getContentBuilder(Event event) throws IOException {
+      FastByteArrayOutputStream fbaos = new FastByteArrayOutputStream(4);
+      fbaos.write(FAKE_BYTES);
+      return fbaos;
+    }
+
+    @Override
+    public void configure(Context arg0) {
+      configuredWithContext = true;
+    }
+
+    @Override
+    public void configure(ComponentConfiguration arg0) {
+      configuredWithComponentConfiguration = true;
+    }
+  }
+
+>>>>>>> refs/remotes/apache/trunk
 }

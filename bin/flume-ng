@@ -161,6 +161,20 @@ add_HBASE_paths() {
   fi
 }
 
+<<<<<<< HEAD
+=======
+add_hive_paths(){
+  if [ -d "${HIVE_HOME}/lib" ]; then
+    info "Including Hive libraries found via ($HIVE_HOME) for Hive access"
+    FLUME_CLASSPATH="$FLUME_CLASSPATH:$HIVE_HOME/lib/*"
+  fi
+  if [ -d "${HCAT_HOME}/share/hcatalog" ]; then
+    info "Including HCatalog libraries found via ($HCAT_HOME) for Hive access"
+    FLUME_CLASSPATH="$FLUME_CLASSPATH:${HCAT_HOME}/share/hcatalog/*"
+  fi
+}
+
+>>>>>>> refs/remotes/apache/trunk
 set_LD_LIBRARY_PATH(){
 #Append the FLUME_JAVA_LIBRARY_PATH to whatever the user may have specified in
 #flume-env.sh
@@ -174,12 +188,13 @@ display_help() {
 Usage: $0 <command> [options]...
 
 commands:
-  help                  display this help text
-  agent                 run a Flume agent
-  avro-client           run an avro Flume client
-  version               show Flume version info
+  help                      display this help text
+  agent                     run a Flume agent
+  avro-client               run an avro Flume client
+  version                   show Flume version info
 
 global options:
+<<<<<<< HEAD
   --conf,-c <conf>      use configs in <conf> directory
   --classpath,-C <cp>   append to the classpath
   --dryrun,-d           do not actually start Flume, just print the command
@@ -188,11 +203,24 @@ global options:
                         Default: \$FLUME_HOME/plugins.d
   -Dproperty=value      sets a Java system property value
   -Xproperty=value      sets a Java -X option
+=======
+  --conf,-c <conf>          use configs in <conf> directory
+  --classpath,-C <cp>       append to the classpath
+  --dryrun,-d               do not actually start Flume, just print the command
+  --plugins-path <dirs>     colon-separated list of plugins.d directories. See the
+                            plugins.d section in the user guide for more details.
+                            Default: \$FLUME_HOME/plugins.d
+  -Dproperty=value          sets a Java system property value
+  -Xproperty=value          sets a Java -X option
+>>>>>>> refs/remotes/apache/trunk
 
 agent options:
-  --conf-file,-f <file> specify a config file (required)
-  --name,-n <name>      the name of this agent (required)
-  --help,-h             display help text
+  --name,-n <name>          the name of this agent (required)
+  --conf-file,-f <file>     specify a config file (required if -z missing)
+  --zkConnString,-z <str>   specify the ZooKeeper connection to use (required if -f missing)
+  --zkBasePath,-p <path>    specify the base path in ZooKeeper for agent configs
+  --no-reload-conf          do not reload config file if changed
+  --help,-h                 display help text
 
 avro-client options:
   --rpcProps,-P <file>   RPC client properties file with server connection params
@@ -224,7 +252,7 @@ run_flume() {
   if [ ${CLEAN_FLAG} -ne 0 ]; then
     set -x
   fi
-  $EXEC $JAVA_HOME/bin/java $JAVA_OPTS -cp "$FLUME_CLASSPATH" \
+  $EXEC $JAVA_HOME/bin/java $JAVA_OPTS $FLUME_JAVA_OPTS "${arr_java_props[@]}" -cp "$FLUME_CLASSPATH" \
       -Djava.library.path=$FLUME_JAVA_LIBRARY_PATH "$FLUME_APPLICATION_CLASS" $*
 }
 
@@ -241,7 +269,12 @@ LD_LIBRARY_PATH=""
 opt_conf=""
 opt_classpath=""
 opt_plugins_dirs=""
+<<<<<<< HEAD
 opt_java_props=""
+=======
+arr_java_props=()
+arr_java_props_ct=0
+>>>>>>> refs/remotes/apache/trunk
 opt_dryrun=""
 
 mode=$1
@@ -300,8 +333,28 @@ while [ -n "$*" ] ; do
       opt_plugins_dirs=$1
       shift
       ;;
+<<<<<<< HEAD
+=======
+    -agentlib*)
+      arr_java_props[arr_java_props_ct]=$arg
+      ((++arr_java_props_ct))
+      ;;
+    -agentpath*)
+      arr_java_props[arr_java_props_ct]=$arg
+      ((++arr_java_props_ct))
+      ;;
+    -javaagent*)
+      arr_java_props[arr_java_props_ct]=$arg
+      ((++arr_java_props_ct))
+      ;;
+>>>>>>> refs/remotes/apache/trunk
     -D*)
-      opt_java_props="$opt_java_props $arg"
+      arr_java_props[arr_java_props_ct]=$arg
+      ((++arr_java_props_ct))
+      ;;
+    -X*)
+      arr_java_props[arr_java_props_ct]=$arg
+      ((++arr_java_props_ct))
       ;;
     -X*)
       opt_java_props="$opt_java_props $arg"
@@ -323,11 +376,6 @@ if [ -z "$opt_conf" ]; then
 elif [ -f "$opt_conf/flume-env.sh" ]; then
   info "Sourcing environment configuration script $opt_conf/flume-env.sh"
   source "$opt_conf/flume-env.sh"
-fi
-
-# append command-line java options to stock or env script JAVA_OPTS
-if [ -n "${opt_java_props}" ]; then
-  JAVA_OPTS="${JAVA_OPTS} ${opt_java_props}"
 fi
 
 # prepend command-line classpath to env script classpath
@@ -416,6 +464,7 @@ fi
 # look for hadoop libs
 add_hadoop_paths
 add_HBASE_paths
+add_hive_paths
 
 # prepend conf dir to classpath
 if [ -n "$opt_conf" ]; then

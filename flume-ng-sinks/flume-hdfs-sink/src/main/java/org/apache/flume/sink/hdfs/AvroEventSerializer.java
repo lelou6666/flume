@@ -24,6 +24,10 @@ import java.io.OutputStream;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+<<<<<<< HEAD
+=======
+import java.util.Locale;
+>>>>>>> refs/remotes/apache/trunk
 import java.util.Map;
 import org.apache.avro.AvroRuntimeException;
 import org.apache.avro.Schema;
@@ -144,7 +148,11 @@ public class AvroEventSerializer implements EventSerializer, Configurable {
   private Schema loadFromUrl(String schemaUrl) throws IOException {
     Configuration conf = new Configuration();
     Schema.Parser parser = new Schema.Parser();
+<<<<<<< HEAD
     if (schemaUrl.toLowerCase().startsWith("hdfs://")) {
+=======
+    if (schemaUrl.toLowerCase(Locale.ENGLISH).startsWith("hdfs://")) {
+>>>>>>> refs/remotes/apache/trunk
       FileSystem fs = FileSystem.get(conf);
       FSDataInputStream input = null;
       try {

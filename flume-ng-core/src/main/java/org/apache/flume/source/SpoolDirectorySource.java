@@ -17,6 +17,7 @@
 
 package org.apache.flume.source;
 
+<<<<<<< HEAD
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -24,18 +25,39 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+=======
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.*;
 import org.apache.flume.client.avro.ReliableSpoolingFileEventReader;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.instrumentation.SourceCounter;
+<<<<<<< HEAD
+=======
+import org.apache.flume.serialization.DecodeErrorPolicy;
+>>>>>>> refs/remotes/apache/trunk
 import org.apache.flume.serialization.LineDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+<<<<<<< HEAD
 import com.google.common.base.Preconditions;
 
 import static org.apache.flume.source
     .SpoolDirectorySourceConfigurationConstants.*;
+=======
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+import static org.apache.flume.source.SpoolDirectorySourceConfigurationConstants.*;
+>>>>>>> refs/remotes/apache/trunk
 
 public class SpoolDirectorySource extends AbstractSource implements
 Configurable, EventDrivenSource {
@@ -43,14 +65,22 @@ Configurable, EventDrivenSource {
   private static final Logger logger = LoggerFactory
       .getLogger(SpoolDirectorySource.class);
 
+<<<<<<< HEAD
   // Delay used when polling for new files
   private static final int POLL_DELAY_MS = 500;
 
+=======
+>>>>>>> refs/remotes/apache/trunk
   /* Config options */
   private String completedSuffix;
   private String spoolDirectory;
   private boolean fileHeader;
   private String fileHeaderKey;
+<<<<<<< HEAD
+=======
+  private boolean basenameHeader;
+  private String basenameHeaderKey;
+>>>>>>> refs/remotes/apache/trunk
   private int batchSize;
   private String ignorePattern;
   private String trackerDirPath;
@@ -58,6 +88,7 @@ Configurable, EventDrivenSource {
   private Context deserializerContext;
   private String deletePolicy;
   private String inputCharset;
+<<<<<<< HEAD
 
   private SourceCounter sourceCounter;
   ReliableSpoolingFileEventReader reader;
@@ -69,6 +100,26 @@ Configurable, EventDrivenSource {
 
     ScheduledExecutorService executor =
         Executors.newSingleThreadScheduledExecutor();
+=======
+  private DecodeErrorPolicy decodeErrorPolicy;
+  private volatile boolean hasFatalError = false;
+
+  private SourceCounter sourceCounter;
+  ReliableSpoolingFileEventReader reader;
+  private ScheduledExecutorService executor;
+  private boolean backoff = true;
+  private boolean hitChannelException = false;
+  private int maxBackoff;
+  private ConsumeOrder consumeOrder;
+  private int pollDelay;
+
+  @Override
+  public synchronized void start() {
+    logger.info("SpoolDirectorySource source starting with directory: {}",
+        spoolDirectory);
+
+    executor = Executors.newSingleThreadScheduledExecutor();
+>>>>>>> refs/remotes/apache/trunk
 
     File directory = new File(spoolDirectory);
     try {
@@ -79,10 +130,20 @@ Configurable, EventDrivenSource {
           .trackerDirPath(trackerDirPath)
           .annotateFileName(fileHeader)
           .fileNameHeader(fileHeaderKey)
+<<<<<<< HEAD
+=======
+          .annotateBaseName(basenameHeader)
+          .baseNameHeader(basenameHeaderKey)
+>>>>>>> refs/remotes/apache/trunk
           .deserializerType(deserializerType)
           .deserializerContext(deserializerContext)
           .deletePolicy(deletePolicy)
           .inputCharset(inputCharset)
+<<<<<<< HEAD
+=======
+          .decodeErrorPolicy(decodeErrorPolicy)
+          .consumeOrder(consumeOrder)
+>>>>>>> refs/remotes/apache/trunk
           .build();
     } catch (IOException ioe) {
       throw new FlumeException("Error instantiating spooling event parser",
@@ -91,7 +152,11 @@ Configurable, EventDrivenSource {
 
     Runnable runner = new SpoolDirectoryRunnable(reader, sourceCounter);
     executor.scheduleWithFixedDelay(
+<<<<<<< HEAD
         runner, 0, POLL_DELAY_MS, TimeUnit.MILLISECONDS);
+=======
+        runner, 0, pollDelay, TimeUnit.MILLISECONDS);
+>>>>>>> refs/remotes/apache/trunk
 
     super.start();
     logger.debug("SpoolDirectorySource source started");
@@ -99,7 +164,19 @@ Configurable, EventDrivenSource {
   }
 
   @Override
+<<<<<<< HEAD
   public void stop() {
+=======
+  public synchronized void stop() {
+    executor.shutdown();
+    try {
+      executor.awaitTermination(10L, TimeUnit.SECONDS);
+    } catch (InterruptedException ex) {
+      logger.info("Interrupted while awaiting termination", ex);
+    }
+    executor.shutdownNow();
+
+>>>>>>> refs/remotes/apache/trunk
     super.stop();
     sourceCounter.stop();
     logger.info("SpoolDir source {} stopped. Metrics: {}", getName(),
@@ -107,7 +184,17 @@ Configurable, EventDrivenSource {
   }
 
   @Override
+<<<<<<< HEAD
   public void configure(Context context) {
+=======
+  public String toString() {
+    return "Spool Directory source " + getName() +
+        ": { spoolDir: " + spoolDirectory + " }";
+  }
+
+  @Override
+  public synchronized void configure(Context context) {
+>>>>>>> refs/remotes/apache/trunk
     spoolDirectory = context.getString(SPOOL_DIRECTORY);
     Preconditions.checkState(spoolDirectory != null,
         "Configuration must specify a spooling directory");
@@ -119,9 +206,22 @@ Configurable, EventDrivenSource {
         DEFAULT_FILE_HEADER);
     fileHeaderKey = context.getString(FILENAME_HEADER_KEY,
         DEFAULT_FILENAME_HEADER_KEY);
+<<<<<<< HEAD
     batchSize = context.getInteger(BATCH_SIZE,
         DEFAULT_BATCH_SIZE);
     inputCharset = context.getString(INPUT_CHARSET, DEFAULT_INPUT_CHARSET);
+=======
+    basenameHeader = context.getBoolean(BASENAME_HEADER,
+        DEFAULT_BASENAME_HEADER);
+    basenameHeaderKey = context.getString(BASENAME_HEADER_KEY,
+        DEFAULT_BASENAME_HEADER_KEY);
+    batchSize = context.getInteger(BATCH_SIZE,
+        DEFAULT_BATCH_SIZE);
+    inputCharset = context.getString(INPUT_CHARSET, DEFAULT_INPUT_CHARSET);
+    decodeErrorPolicy = DecodeErrorPolicy.valueOf(
+        context.getString(DECODE_ERROR_POLICY, DEFAULT_DECODE_ERROR_POLICY)
+        .toUpperCase(Locale.ENGLISH));
+>>>>>>> refs/remotes/apache/trunk
 
     ignorePattern = context.getString(IGNORE_PAT, DEFAULT_IGNORE_PAT);
     trackerDirPath = context.getString(TRACKER_DIR, DEFAULT_TRACKER_DIR);
@@ -129,6 +229,14 @@ Configurable, EventDrivenSource {
     deserializerType = context.getString(DESERIALIZER, DEFAULT_DESERIALIZER);
     deserializerContext = new Context(context.getSubProperties(DESERIALIZER +
         "."));
+<<<<<<< HEAD
+=======
+    
+    consumeOrder = ConsumeOrder.valueOf(context.getString(CONSUME_ORDER, 
+        DEFAULT_CONSUME_ORDER.toString()).toUpperCase(Locale.ENGLISH));
+
+    pollDelay = context.getInteger(POLL_DELAY, DEFAULT_POLL_DELAY);
+>>>>>>> refs/remotes/apache/trunk
 
     // "Hack" to support backwards compatibility with previous generation of
     // spooling directory source, which did not support deserializers
@@ -138,11 +246,46 @@ Configurable, EventDrivenSource {
       deserializerContext.put(LineDeserializer.MAXLINE_KEY,
           bufferMaxLineLength.toString());
     }
+<<<<<<< HEAD
+=======
+
+    maxBackoff = context.getInteger(MAX_BACKOFF, DEFAULT_MAX_BACKOFF);
+>>>>>>> refs/remotes/apache/trunk
     if (sourceCounter == null) {
       sourceCounter = new SourceCounter(getName());
     }
   }
 
+<<<<<<< HEAD
+=======
+  @VisibleForTesting
+  protected boolean hasFatalError() {
+    return hasFatalError;
+  }
+
+
+
+  /**
+   * The class always backs off, this exists only so that we can test without
+   * taking a really long time.
+   * @param backoff - whether the source should backoff if the channel is full
+   */
+  @VisibleForTesting
+  protected void setBackOff(boolean backoff) {
+    this.backoff = backoff;
+  }
+
+  @VisibleForTesting
+  protected boolean hitChannelException() {
+    return hitChannelException;
+  }
+
+  @VisibleForTesting
+  protected SourceCounter getSourceCounter() {
+    return sourceCounter;
+  }
+
+>>>>>>> refs/remotes/apache/trunk
   private class SpoolDirectoryRunnable implements Runnable {
     private ReliableSpoolingFileEventReader reader;
     private SourceCounter sourceCounter;
@@ -155,8 +298,14 @@ Configurable, EventDrivenSource {
 
     @Override
     public void run() {
+<<<<<<< HEAD
       try {
         while (true) {
+=======
+      int backoffInterval = 250;
+      try {
+        while (!Thread.interrupted()) {
+>>>>>>> refs/remotes/apache/trunk
           List<Event> events = reader.readEvents(batchSize);
           if (events.isEmpty()) {
             break;
@@ -164,16 +313,44 @@ Configurable, EventDrivenSource {
           sourceCounter.addToEventReceivedCount(events.size());
           sourceCounter.incrementAppendBatchReceivedCount();
 
+<<<<<<< HEAD
           getChannelProcessor().processEventBatch(events);
           reader.commit();
+=======
+          try {
+            getChannelProcessor().processEventBatch(events);
+            reader.commit();
+          } catch (ChannelException ex) {
+            logger.warn("The channel is full, and cannot write data now. The " +
+              "source will try again after " + String.valueOf(backoffInterval) +
+              " milliseconds");
+            hitChannelException = true;
+            if (backoff) {
+              TimeUnit.MILLISECONDS.sleep(backoffInterval);
+              backoffInterval = backoffInterval << 1;
+              backoffInterval = backoffInterval >= maxBackoff ? maxBackoff :
+                                backoffInterval;
+            }
+            continue;
+          }
+          backoffInterval = 250;
+>>>>>>> refs/remotes/apache/trunk
           sourceCounter.addToEventAcceptedCount(events.size());
           sourceCounter.incrementAppendBatchAcceptedCount();
         }
       } catch (Throwable t) {
+<<<<<<< HEAD
         logger.error("Uncaught exception in Runnable", t);
         if (t instanceof Error) {
           throw (Error) t;
         }
+=======
+        logger.error("FATAL: " + SpoolDirectorySource.this.toString() + ": " +
+            "Uncaught exception in SpoolDirectorySource thread. " +
+            "Restart or reconfigure Flume to continue processing.", t);
+        hasFatalError = true;
+        Throwables.propagate(t);
+>>>>>>> refs/remotes/apache/trunk
       }
     }
   }

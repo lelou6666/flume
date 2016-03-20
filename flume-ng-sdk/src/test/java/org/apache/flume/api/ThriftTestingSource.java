@@ -25,12 +25,29 @@ import org.apache.flume.thrift.Status;
 import org.apache.flume.thrift.ThriftFlumeEvent;
 import org.apache.flume.thrift.ThriftSourceProtocol;
 import org.apache.thrift.TException;
+<<<<<<< HEAD
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.server.THsHaServer;
 import org.apache.thrift.server.TServer;
 import org.apache.thrift.transport.TNonblockingServerSocket;
 import org.apache.thrift.transport.TNonblockingServerTransport;
 
+=======
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TCompactProtocol;
+import org.apache.thrift.protocol.TProtocolFactory;
+import org.apache.thrift.server.THsHaServer;
+import org.apache.thrift.server.TServer;
+import org.apache.thrift.transport.TSSLTransportFactory;
+import org.apache.thrift.transport.TNonblockingServerSocket;
+import org.apache.thrift.transport.TServerSocket;
+import org.apache.thrift.transport.TNonblockingServerTransport;
+import org.apache.thrift.transport.TFastFramedTransport;
+import org.apache.thrift.transport.TServerTransport;
+
+import java.lang.reflect.Method;
+import java.net.InetAddress;
+>>>>>>> refs/remotes/apache/trunk
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Queue;
@@ -180,9 +197,13 @@ public class ThriftTestingSource {
     }
   }
 
+<<<<<<< HEAD
   public ThriftTestingSource(String handlerName, int port) throws Exception {
     TNonblockingServerTransport serverTransport = new TNonblockingServerSocket(new
       InetSocketAddress("0.0.0.0", port));
+=======
+  private ThriftSourceProtocol.Iface getHandler(String handlerName) {
+>>>>>>> refs/remotes/apache/trunk
     ThriftSourceProtocol.Iface handler = null;
     if (handlerName.equals(HandlerType.OK.name())) {
       handler = new ThriftOKHandler();
@@ -197,11 +218,75 @@ public class ThriftTestingSource {
     } else if (handlerName.equals(HandlerType.ALTERNATE.name())) {
       handler = new ThriftAlternateHandler();
     }
+<<<<<<< HEAD
 
     server = new THsHaServer(new THsHaServer.Args
       (serverTransport).processor(
       new ThriftSourceProtocol.Processor(handler)).protocolFactory(
       new TCompactProtocol.Factory()));
+=======
+    return handler;
+  }
+
+  public ThriftTestingSource(String handlerName, int port, String protocol) throws Exception {
+    TNonblockingServerTransport serverTransport = new TNonblockingServerSocket(new
+      InetSocketAddress("0.0.0.0", port));
+    ThriftSourceProtocol.Iface handler = getHandler(handlerName);
+
+    TProtocolFactory transportProtocolFactory = null;
+    if (protocol != null && protocol == ThriftRpcClient.BINARY_PROTOCOL) {
+      transportProtocolFactory = new TBinaryProtocol.Factory();
+    } else {
+      transportProtocolFactory = new TCompactProtocol.Factory();
+    }
+    server = new THsHaServer(new THsHaServer.Args
+      (serverTransport).processor(
+      new ThriftSourceProtocol.Processor(handler)).protocolFactory(
+          transportProtocolFactory));
+    Executors.newSingleThreadExecutor().submit(new Runnable() {
+      @Override
+      public void run() {
+        server.serve();
+      }
+    });
+  }
+
+  public ThriftTestingSource(String handlerName, int port,
+                             String protocol, String keystore,
+                             String keystorePassword, String keyManagerType,
+                             String keystoreType) throws Exception {
+    TSSLTransportFactory.TSSLTransportParameters params =
+            new TSSLTransportFactory.TSSLTransportParameters();
+    params.setKeyStore(keystore, keystorePassword, keyManagerType, keystoreType);
+
+    TServerSocket serverTransport = TSSLTransportFactory.getServerSocket(
+            port, 10000, InetAddress.getByName("0.0.0.0"), params);
+
+    ThriftSourceProtocol.Iface handler = getHandler(handlerName);
+
+    Class serverClass = Class.forName("org.apache.thrift" +
+            ".server.TThreadPoolServer");
+    Class argsClass = Class.forName("org.apache.thrift.server" +
+            ".TThreadPoolServer$Args");
+    TServer.AbstractServerArgs args = (TServer.AbstractServerArgs) argsClass
+            .getConstructor(TServerTransport.class)
+            .newInstance(serverTransport);
+    Method m = argsClass.getDeclaredMethod("maxWorkerThreads", int.class);
+    m.invoke(args, Integer.MAX_VALUE);
+    TProtocolFactory transportProtocolFactory = null;
+    if (protocol != null && protocol == ThriftRpcClient.BINARY_PROTOCOL) {
+      transportProtocolFactory = new TBinaryProtocol.Factory();
+    } else {
+      transportProtocolFactory = new TCompactProtocol.Factory();
+    }
+    args.protocolFactory(transportProtocolFactory);
+    args.inputTransportFactory(new TFastFramedTransport.Factory());
+    args.outputTransportFactory(new TFastFramedTransport.Factory());
+    args.processor(new ThriftSourceProtocol
+            .Processor<ThriftSourceProtocol.Iface>(handler));
+    server = (TServer) serverClass.getConstructor(argsClass).newInstance
+            (args);
+>>>>>>> refs/remotes/apache/trunk
     Executors.newSingleThreadExecutor().submit(new Runnable() {
       @Override
       public void run() {
